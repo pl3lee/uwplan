@@ -16,15 +16,17 @@ type Template = {
   name: string;
 };
 
+type Props = {
+  templates: Template[];
+  userId: string;
+  initialSelectedIds: Set<number>;
+};
+
 export function TemplateSelector({
   templates,
   userId,
   initialSelectedIds,
-}: {
-  templates: Template[];
-  userId: string;
-  initialSelectedIds: Set<number>;
-}) {
+}: Props) {
   const [selectedIds, setSelectedIds] = useState(initialSelectedIds);
 
   const handleCheckedChange = async (templateId: number, checked: boolean) => {

@@ -9,7 +9,7 @@ export async function getTemplates() {
       name: templates.name,
     })
     .from(templates)
-    .orderBy(desc(templates.id));
+    .orderBy(templates.name);
 }
 
 export async function getUserTemplates(userId: string) {
@@ -42,4 +42,38 @@ export async function toggleUserTemplate(userId: string, templateId: number) {
       templateId,
     });
   }
+}
+
+export async function getUserTemplateDetails(userId: string) {
+  const userSelectedTemplates = await db.query.userTemplates.findMany({
+    where: eq(userTemplates.userId, userId),
+    with: {
+      template: {
+        columns: {
+          id: true,
+          name: true,
+        },
+        with: {
+          items: {
+            columns: {
+              id: true,
+              type: true,
+              description: true,
+              orderIndex: true,
+            },
+            with: {
+              courses: {
+                with: {
+                  course: true,
+                },
+              },
+            },
+            orderBy: (items) => [items.orderIndex],
+          },
+        },
+      },
+    },
+  });
+
+  return { templates: userSelectedTemplates, revalidated: Date.now() };
 }
