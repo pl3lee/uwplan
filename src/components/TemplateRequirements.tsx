@@ -1,3 +1,5 @@
+"use client";
+
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
@@ -8,6 +10,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { toggleCourse } from "@/server/actions";
+import { useState } from "react";
 
 type Course = {
   id: number;
@@ -23,13 +27,35 @@ type TemplateItem = {
   type: "requirement" | "instruction" | "separator";
   description: string;
   orderIndex: number;
+  templateId: number; // Add this
   templateName: string;
   courses: {
     course: Course;
   }[];
 };
 
-export function TemplateRequirements({ items }: { items: TemplateItem[] }) {
+type Props = {
+  items: TemplateItem[];
+  userId: string;
+  initialSelections: Map<number, boolean>;
+};
+
+export function TemplateRequirements({
+  items,
+  userId,
+  initialSelections,
+}: Props) {
+  const [selections, setSelections] = useState(initialSelections);
+
+  const handleCheckedChange = async (
+    templateId: number,
+    courseId: number,
+    checked: boolean,
+  ) => {
+    await toggleCourse(userId, templateId, courseId, checked);
+    setSelections(new Map(selections).set(courseId, checked));
+  };
+
   return (
     <div className="space-y-8">
       {items.map((item) => (
@@ -54,7 +80,16 @@ export function TemplateRequirements({ items }: { items: TemplateItem[] }) {
                 {item.courses.map(({ course }) => (
                   <TableRow key={course.id}>
                     <TableCell>
-                      <Checkbox />
+                      <Checkbox
+                        checked={selections.get(course.id) ?? false}
+                        onCheckedChange={(checked) =>
+                          handleCheckedChange(
+                            item.templateId,
+                            course.id,
+                            checked as boolean,
+                          )
+                        }
+                      />
                     </TableCell>
                     <TableCell>{course.code}</TableCell>
                     <TableCell>{course.name}</TableCell>

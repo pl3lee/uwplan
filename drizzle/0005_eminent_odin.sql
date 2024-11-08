@@ -1,0 +1,1 @@
+ALTER TABLE "uw-course-planner_user_plan_course" ALTER COLUMN "plan_id" DROP NOT NULL;

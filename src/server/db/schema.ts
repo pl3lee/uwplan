@@ -167,13 +167,15 @@ export const requirementCourses = createTable("requirement_course", {
 export const userPlanCourses = createTable("user_plan_course", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id", { length: 255 }).notNull(),
-  planId: integer("plan_id").notNull().references(() => plans.id),
+  planId: integer("plan_id").references(() => plans.id), // Remove notNull
   courseId: integer("course_id").notNull().references(() => courses.id),
   take: boolean("take").notNull().default(false),
 }, (upc) => ({
   userIdIdx: index("user_plan_course_user_id_idx").on(upc.userId),
   planIdIdx: index("user_plan_course_plan_id_idx").on(upc.planId),
   courseIdIdx: index("user_plan_course_course_id_idx").on(upc.courseId),
+  // Add unique constraint for userId + courseId
+  uniqUserCourse: uniqueIndex("user_plan_course_user_course_idx").on(upc.userId, upc.courseId),
 }));
 
 // User's template selections

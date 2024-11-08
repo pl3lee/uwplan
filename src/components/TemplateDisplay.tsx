@@ -10,13 +10,20 @@ type Props = {
       items: any[];
     };
   }[];
+  userId: string;
+  initialSelections: Map<number, boolean>;
 };
 
-export function TemplateDisplay({ userTemplates }: Props) {
+export function TemplateDisplay({
+  userTemplates,
+  userId,
+  initialSelections,
+}: Props) {
   const allItems = userTemplates
     .flatMap(({ template }) =>
       template.items.map((item) => ({
         ...item,
+        templateId: template.id, // Add template ID
         templateName: template.name,
       })),
     )
@@ -30,7 +37,11 @@ export function TemplateDisplay({ userTemplates }: Props) {
   return (
     <div className="space-y-12">
       {userTemplates.length > 0 ? (
-        <TemplateRequirements items={allItems} />
+        <TemplateRequirements
+          items={allItems}
+          userId={userId}
+          initialSelections={initialSelections}
+        />
       ) : (
         <p className="text-muted-foreground">
           No academic plans selected. Please select plans from the dropdown

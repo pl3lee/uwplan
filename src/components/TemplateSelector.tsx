@@ -29,14 +29,14 @@ export function TemplateSelector({
 }: Props) {
   const [selectedIds, setSelectedIds] = useState(initialSelectedIds);
 
-  const handleCheckedChange = async (templateId: number, checked: boolean) => {
-    await toggleTemplate(userId, templateId);
+  const handleCheckedChange = async (template: Template, checked: boolean) => {
+    await toggleTemplate(userId, template.id, template.name);
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (checked) {
-        next.add(templateId);
+        next.add(template.id);
       } else {
-        next.delete(templateId);
+        next.delete(template.id);
       }
       return next;
     });
@@ -56,7 +56,7 @@ export function TemplateSelector({
             key={template.id}
             checked={selectedIds.has(template.id)}
             onCheckedChange={(checked) =>
-              handleCheckedChange(template.id, checked)
+              handleCheckedChange(template, checked)
             }
           >
             {template.name}
