@@ -1,9 +1,13 @@
 import { auth, signIn, signOut } from "@/server/auth";
+import { getTemplates, getUserTemplates } from "@/server/db/queries";
 import { Button } from "./ui/button";
 import {
   DropdownMenu,
-  DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
@@ -17,10 +21,19 @@ import {
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
+import { TemplateSelector } from "./TemplateSelector";
 
 export default async function Navbar() {
   const session = await auth();
-  // TODO: fetch academic plans to populate the select options
+  const templates = await getTemplates();
+  const userTemplateSelections = session?.user
+    ? await getUserTemplates(session.user.id)
+    : [];
+
+  const selectedTemplateIds = new Set(
+    userTemplateSelections.map((ut) => ut.templateId),
+  );
+
   return (
     <nav className="p-4">
       <div className="container mx-auto flex items-center justify-end gap-4">
@@ -35,16 +48,13 @@ export default async function Navbar() {
           </TabsList>
         </Tabs>
 
-        <Select>
-          <SelectTrigger className="w-56">
-            <SelectValue placeholder="Select Academic Plans" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="placeholder1">placeholder1</SelectItem>
-            <SelectItem value="placeholder2">placeholder2</SelectItem>
-            <SelectItem value="placeholder3">placeholder3</SelectItem>
-          </SelectContent>
-        </Select>
+        {session?.user && (
+          <TemplateSelector
+            templates={templates}
+            userId={session.user.id}
+            initialSelectedIds={selectedTemplateIds}
+          />
+        )}
 
         {!session?.user ? (
           <DropdownMenu>

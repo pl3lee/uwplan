@@ -8,6 +8,27 @@
       "when": 1731092150270,
       "tag": "0000_old_skaar",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1731097528889,
+      "tag": "0001_furry_raider",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1731098604128,
+      "tag": "0002_normal_turbo",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1731099149161,
+      "tag": "0003_tiny_princess_powerful",
+      "breakpoints": true
     }
   ]
 }
