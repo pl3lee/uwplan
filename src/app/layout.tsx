@@ -1,4 +1,6 @@
 import "@/styles/globals.css";
+import Container from "@/components/Container";
+import Navbar from "@/components/Navbar";
 
 import { GeistSans } from "geist/font/sans";
 import { type Metadata } from "next";
@@ -14,7 +16,10 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${GeistSans.variable}`}>
-      <body>{children}</body>
+      <body className="flex min-h-screen flex-col">
+        <Navbar />
+        <Container>{children}</Container>
+      </body>
     </html>
   );
 }
