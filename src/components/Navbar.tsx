@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import Link from "next/link";
 
 export default async function Navbar() {
   const session = await auth();
@@ -25,8 +26,12 @@ export default async function Navbar() {
       <div className="container mx-auto flex items-center justify-end gap-4">
         <Tabs defaultValue="select" className="">
           <TabsList>
-            <TabsTrigger value="select">Select</TabsTrigger>
-            <TabsTrigger value="schedule">Schedule</TabsTrigger>
+            <TabsTrigger value="select" asChild>
+              <Link href="/select">Select</Link>
+            </TabsTrigger>
+            <TabsTrigger value="schedule" asChild>
+              <Link href="/schedule">Schedule</Link>
+            </TabsTrigger>
           </TabsList>
         </Tabs>
 

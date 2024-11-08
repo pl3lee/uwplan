@@ -1,0 +1,7 @@
+.pageTitle {
+  @apply flex flex-col items-start py-8;
+}
+
+.pageTitleText {
+  @apply text-4xl font-bold tracking-tight text-primary;
+}
