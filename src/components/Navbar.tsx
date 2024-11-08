@@ -1,38 +1,86 @@
-"use client";
+import { auth, signIn, signOut } from "@/server/auth";
 import { Button } from "./ui/button";
-import { useState } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
-export default function Navbar() {
-  const [dropdownOpen, setDropdownOpen] = useState(false);
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+export default async function Navbar() {
+  const session = await auth();
+  // TODO: fetch academic plans to populate the select options
   return (
-    <nav className="bg-primary text-primary-foreground p-4">
-      <div className="container mx-auto flex items-center justify-between">
-        <div className="text-lg font-bold">MyApp</div>
-        <div className="relative">
-          <Button
-            variant="default"
-            onClick={() => setDropdownOpen(!dropdownOpen)}
+    <nav className="p-4">
+      <div className="container mx-auto flex items-center justify-end gap-4">
+        <Tabs defaultValue="select" className="">
+          <TabsList>
+            <TabsTrigger value="select">Select</TabsTrigger>
+            <TabsTrigger value="schedule">Schedule</TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        <Select>
+          <SelectTrigger className="w-56">
+            <SelectValue placeholder="Select Academic Plans" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="placeholder1">placeholder1</SelectItem>
+            <SelectItem value="placeholder2">placeholder2</SelectItem>
+            <SelectItem value="placeholder3">placeholder3</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {!session?.user ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="default">Sign in</Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem asChild>
+                <form
+                  action={async () => {
+                    "use server";
+                    await signIn("google");
+                  }}
+                >
+                  <button type="submit">with Google</button>
+                </form>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <form
+                  action={async () => {
+                    "use server";
+                    await signIn("github");
+                  }}
+                >
+                  <button type="submit">with GitHub</button>
+                </form>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <form
+            action={async () => {
+              "use server";
+              await signOut();
+            }}
           >
-            Sign in
-          </Button>
-          {dropdownOpen && (
-            <div className="absolute right-0 mt-2 w-48 rounded-md bg-white shadow-lg">
-              <a
-                href="/auth/google"
-                className="block px-4 py-2 text-gray-800 hover:bg-gray-100"
-              >
-                Sign in with Google
-              </a>
-              <a
-                href="/auth/github"
-                className="block px-4 py-2 text-gray-800 hover:bg-gray-100"
-              >
-                Sign in with GitHub
-              </a>
-            </div>
-          )}
-        </div>
+            <Button type="submit" variant="default">
+              Sign Out
+            </Button>
+          </form>
+        )}
       </div>
     </nav>
   );
