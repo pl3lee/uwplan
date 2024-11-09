@@ -31,6 +31,19 @@ export async function getTemplates() {
 }
 
 /**
+ * Gets all templates linked to a user's plan.
+ */
+export async function getUserSelectedTemplates(userId: string) {
+  return await db
+    .select({
+      templateId: planTemplates.templateId,
+    })
+    .from(planTemplates)
+    .innerJoin(plans, eq(plans.id, planTemplates.planId))
+    .where(eq(plans.userId, userId));
+}
+
+/**
  * Gets a user's plan.
  * Each user has exactly one plan as per architecture.
  */

@@ -25,7 +25,6 @@ import { TemplateSelector } from "./TemplateSelector";
 
 export default async function Navbar() {
   const session = await auth();
-  const templates = await getTemplates();
 
   return (
     <nav className="p-4">
@@ -41,13 +40,7 @@ export default async function Navbar() {
           </TabsList>
         </Tabs>
 
-        {/* {session?.user && (
-          <TemplateSelector
-            templates={templates}
-            userId={session.user.id}
-            initialSelectedIds={selectedTemplateIds}
-          />
-        )} */}
+        {session?.user && <TemplateSelector />}
 
         {!session?.user ? (
           <DropdownMenu>
