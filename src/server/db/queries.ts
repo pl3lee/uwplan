@@ -36,10 +36,12 @@ export async function getTemplates() {
 export async function getUserSelectedTemplates(userId: string) {
   return await db
     .select({
-      templateId: planTemplates.templateId,
+      name: templates.name,
+      id: planTemplates.templateId,
     })
     .from(planTemplates)
     .innerJoin(plans, eq(plans.id, planTemplates.planId))
+    .innerJoin(templates, eq(templates.id, planTemplates.templateId))
     .where(eq(plans.userId, userId));
 }
 
@@ -217,4 +219,28 @@ export async function removeTemplateFromPlan(planId: number, templateId: number)
       eq(planTemplates.planId, planId),
       eq(planTemplates.templateId, templateId)
     ));
+}
+
+export async function toggleUserTemplate(userId: string, templateId: number) {
+  const userPlan = await getOrCreateUserPlan(userId);
+  if (!userPlan) {
+    throw new Error(`Failed to get or create plan for user ${userId}`);
+  }
+
+  const planId = userPlan.id;
+
+  const [existingTemplate] = await db
+    .select()
+    .from(planTemplates)
+    .where(and(
+      eq(planTemplates.planId, planId),
+      eq(planTemplates.templateId, templateId)
+    ))
+    .limit(1);
+
+  if (existingTemplate) {
+    await removeTemplateFromPlan(planId, templateId);
+  } else {
+    await addTemplateToPlan(planId, templateId);
+  }
 }

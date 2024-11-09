@@ -1,5 +1,6 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
-import { auth } from "@/server/auth";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -7,18 +8,34 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { getTemplates } from "@/server/db/queries";
+import { toggleTemplate } from "@/server/actions";
+import {
+  addTemplateToPlan,
+  removeTemplateFromPlan,
+  toggleUserTemplate,
+} from "@/server/db/queries";
 
 type Template = {
   id: number;
   name: string;
 };
 
-export async function TemplateSelector() {
-  const session = await auth();
-  // if (!session?.user) return null;
-  const templates = await getTemplates();
-  console.log(templates);
+type Plan = {
+  id: number;
+  userId: string;
+};
+
+type Props = {
+  templates: Template[];
+  selectedTemplates: Template[];
+  userPlan: Plan;
+};
+
+export function TemplateSelector({
+  templates,
+  selectedTemplates,
+  userPlan,
+}: Props) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -29,10 +46,13 @@ export async function TemplateSelector() {
         {templates.map((template) => (
           <DropdownMenuCheckboxItem
             key={template.id}
-            // checked={selectedIds.has(template.id)}
             // onCheckedChange={(checked) =>
             //   handleCheckedChange(template, checked)
             // }
+            checked={selectedTemplates.some((item) => item.id === template.id)}
+            onCheckedChange={async (checked) =>
+              await toggleTemplate(userPlan.userId, template.id)
+            }
           >
             {template.name}
           </DropdownMenuCheckboxItem>

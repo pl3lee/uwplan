@@ -1,5 +1,9 @@
 import { auth, signIn, signOut } from "@/server/auth";
-import { getTemplates } from "@/server/db/queries";
+import {
+  getTemplates,
+  getUserPlan,
+  getUserSelectedTemplates,
+} from "@/server/db/queries";
 import { Button } from "./ui/button";
 import {
   DropdownMenu,
@@ -25,7 +29,13 @@ import { TemplateSelector } from "./TemplateSelector";
 
 export default async function Navbar() {
   const session = await auth();
-
+  const templates = await getTemplates();
+  const selectedTemplates = session?.user
+    ? await getUserSelectedTemplates(session.user.id)
+    : [];
+  const userPlan = session?.user ? await getUserPlan(session.user.id) : null;
+  console.log(templates);
+  console.log(selectedTemplates);
   return (
     <nav className="p-4">
       <div className="container mx-auto flex items-center justify-end gap-4">
@@ -40,7 +50,13 @@ export default async function Navbar() {
           </TabsList>
         </Tabs>
 
-        {session?.user && <TemplateSelector />}
+        {session?.user && userPlan && (
+          <TemplateSelector
+            templates={templates}
+            selectedTemplates={selectedTemplates}
+            userPlan={userPlan}
+          />
+        )}
 
         {!session?.user ? (
           <DropdownMenu>
