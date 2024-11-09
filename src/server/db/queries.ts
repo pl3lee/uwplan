@@ -244,3 +244,38 @@ export async function toggleUserTemplate(userId: string, templateId: number) {
     await addTemplateToPlan(planId, templateId);
   }
 }
+
+export async function getCoursesWithRatings() {
+  return await db
+    .select({
+      id: courses.id,
+      code: courses.code,
+      name: courses.name,
+      usefulRating: courses.usefulRating,
+      likedRating: courses.likedRating,
+      easyRating: courses.easyRating,
+      numRatings: courses.numRatings,
+    })
+    .from(courses)
+    .orderBy(courses.code);
+}
+
+export async function getUserTemplatesWithCourses(userId: string) {
+  const userPlan = await getUserPlan(userId);
+  if (!userPlan) return [];
+
+  // Get templates selected by user
+  const selectedTemplates = await db
+    .select({
+      templateId: planTemplates.templateId,
+    })
+    .from(planTemplates)
+    .where(eq(planTemplates.planId, userPlan.id));
+
+  // Get details for each template
+  const templateDetails = await Promise.all(
+    selectedTemplates.map(t => getTemplateDetails(t.templateId))
+  );
+
+  return templateDetails.filter((t): t is NonNullable<typeof t> => t !== null);
+}

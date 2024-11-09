@@ -1,0 +1,87 @@
+"use client";
+
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useState } from "react";
+
+type Course = {
+  id: number;
+  code: string;
+  name: string;
+  usefulRating: string | null;
+  likedRating: string | null;
+  easyRating: string | null;
+  numRatings: number | null;
+};
+
+type Props = {
+  courses: Course[];
+  requirementId: number;
+};
+
+export function CourseTable({ courses, requirementId }: Props) {
+  const [selectedCourses, setSelectedCourses] = useState<Set<number>>(
+    new Set(),
+  );
+
+  const toggleCourse = (courseId: number) => {
+    const newSelected = new Set(selectedCourses);
+    if (newSelected.has(courseId)) {
+      newSelected.delete(courseId);
+    } else {
+      newSelected.add(courseId);
+    }
+    setSelectedCourses(newSelected);
+  };
+
+  return (
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-[50px]"></TableHead>
+            <TableHead>Code</TableHead>
+            <TableHead>Name</TableHead>
+            <TableHead className="text-right">Useful</TableHead>
+            <TableHead className="text-right">Liked</TableHead>
+            <TableHead className="text-right">Easy</TableHead>
+            <TableHead className="text-right"># Ratings</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {courses.map((course) => (
+            <TableRow key={course.id}>
+              <TableCell>
+                <Checkbox
+                  checked={selectedCourses.has(course.id)}
+                  onCheckedChange={() => toggleCourse(course.id)}
+                />
+              </TableCell>
+              <TableCell>{course.code}</TableCell>
+              <TableCell>{course.name}</TableCell>
+              <TableCell className="text-right">
+                {course.usefulRating ?? "N/A"}
+              </TableCell>
+              <TableCell className="text-right">
+                {course.likedRating ?? "N/A"}
+              </TableCell>
+              <TableCell className="text-right">
+                {course.easyRating ?? "N/A"}
+              </TableCell>
+              <TableCell className="text-right">
+                {course.numRatings ?? "N/A"}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}

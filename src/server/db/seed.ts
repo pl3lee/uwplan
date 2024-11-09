@@ -64,46 +64,57 @@ async function main() {
       // First year section
       {
         templateId: compMathTemplate.id,
-        type: "separator",
-        description: "First Year Requirements",
+        type: "requirement",
+        description: "Complete all of the following:",
         orderIndex: 0,
-      },
-      {
-        templateId: compMathTemplate.id,
-        type: "instruction",
-        description: "Complete all of the following courses in your first year:",
-        orderIndex: 1,
+        // cs230, cs234
       },
       {
         templateId: compMathTemplate.id,
         type: "requirement",
-        description: "Required Core Courses",
-        orderIndex: 2,
+        description: "Complete 1 of the following:",
+        orderIndex: 1,
+        // amath242, cs371
       },
-      // Second year section
+      {
+        templateId: compMathTemplate.id,
+        type: "requirement",
+        description: "Complete 1 of the following",
+        orderIndex: 2,
+        // math237, math247
+      },
+      {
+        templateId: compMathTemplate.id,
+        type: "requirement",
+        description: "Complete 1 of the following",
+        orderIndex: 3,
+        // math239, math249
+      },
       {
         templateId: compMathTemplate.id,
         type: "separator",
-        description: "Second Year Options",
-        orderIndex: 3,
-      },
-      {
-        templateId: compMathTemplate.id,
-        type: "instruction",
-        description: "Choose at least one course from each of the following groups:",
+        description: "",
         orderIndex: 4,
       },
       {
         templateId: compMathTemplate.id,
-        type: "requirement",
-        description: "Choose one computational course",
+        type: "instruction",
+        description: "Complete 2 of the following",
         orderIndex: 5,
       },
       {
         templateId: compMathTemplate.id,
         type: "requirement",
-        description: "Choose one advanced course",
+        description: "Complete 1 of the following",
         orderIndex: 6,
+        // amath250, amath251, amath350
+      },
+      {
+        templateId: compMathTemplate.id,
+        type: "requirement",
+        description: "Complete 1 of the following",
+        orderIndex: 7,
+        // co250, co255
       },
     ])
     .returning();
@@ -172,9 +183,26 @@ async function main() {
   // Core courses - Computational Mathematics
   console.log("Processing Computational Mathematics requirements...");
   const compMathPromises = [
-    // Core courses
     Promise.all(
-      ['MATH137', 'MATH138', 'CS115'].map(async (code) => {
+      ['CS230', 'CS234'].map(async (code) => {
+        const courseId = await findCourse(code);
+        return db.insert(templateRequirementCourses).values({
+          itemId: getItemId(compMathItems, 0),
+          courseId,
+        });
+      })
+    ),
+    Promise.all(
+      ['AMATH242', 'CS371'].map(async (code) => {
+        const courseId = await findCourse(code);
+        return db.insert(templateRequirementCourses).values({
+          itemId: getItemId(compMathItems, 1),
+          courseId,
+        });
+      })
+    ),
+    Promise.all(
+      ['MATH237', 'MATH247'].map(async (code) => {
         const courseId = await findCourse(code);
         return db.insert(templateRequirementCourses).values({
           itemId: getItemId(compMathItems, 2),
@@ -182,22 +210,29 @@ async function main() {
         });
       })
     ),
-    // Computational options
     Promise.all(
-      ['AMATH242', 'CS371'].map(async (code) => {
+      ['MATH239', 'MATH249'].map(async (code) => {
         const courseId = await findCourse(code);
         return db.insert(templateRequirementCourses).values({
-          itemId: getItemId(compMathItems, 5),
+          itemId: getItemId(compMathItems, 3),
           courseId,
         });
       })
     ),
-    // Advanced options
     Promise.all(
-      ['AMATH331', 'AMATH342'].map(async (code) => {
+      ['AMATH250', 'AMATH251', 'AMATH350'].map(async (code) => {
         const courseId = await findCourse(code);
         return db.insert(templateRequirementCourses).values({
           itemId: getItemId(compMathItems, 6),
+          courseId,
+        });
+      })
+    ),
+    Promise.all(
+      ['CO250', 'CO255'].map(async (code) => {
+        const courseId = await findCourse(code);
+        return db.insert(templateRequirementCourses).values({
+          itemId: getItemId(compMathItems, 7),
           courseId,
         });
       })
