@@ -26,6 +26,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import { TemplateSelector } from "./TemplateSelector";
+import { headers } from "next/headers";
+import { TabSelector } from "./TabSelector";
 
 export default async function Navbar() {
   const session = await auth();
@@ -39,7 +41,7 @@ export default async function Navbar() {
   return (
     <nav className="p-4">
       <div className="container mx-auto flex items-center justify-end gap-4">
-        <Tabs defaultValue="select" className="">
+        {/* <Tabs defaultValue="select" className="">
           <TabsList>
             <TabsTrigger value="select" asChild>
               <Link href="/select">Select</Link>
@@ -48,7 +50,8 @@ export default async function Navbar() {
               <Link href="/schedule">Schedule</Link>
             </TabsTrigger>
           </TabsList>
-        </Tabs>
+        </Tabs> */}
+        <TabSelector />
 
         {session?.user && userPlan && (
           <TemplateSelector
