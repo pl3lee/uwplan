@@ -22,6 +22,7 @@ import { type AdapterAccount } from "next-auth/adapters";
  */
 export const createTable = pgTableCreator((name) => `${name}`); // Remove prefix
 
+// NextAuth required tables
 export const users = createTable("user", {
   id: varchar("id", { length: 255 })
     .notNull()
@@ -38,8 +39,6 @@ export const users = createTable("user", {
 
 export const usersRelations = relations(users, ({ many }) => ({
   accounts: many(accounts),
-  plans: many(plans),
-  templates: many(userTemplates),
 }));
 
 export const accounts = createTable(
@@ -113,186 +112,95 @@ export const verificationTokens = createTable(
   })
 );
 
-// Enum for item types
+// Enum for template item types (requirement, instruction, or separator)
 export const itemTypeEnum = pgEnum("item_type", ["requirement", "instruction", "separator"]);
 
-// Course table
+// Courses that students can take
+// Contains course information and pre-populated ratings from external sources
 export const courses = createTable("course", {
   id: serial("id").primaryKey(),
   code: varchar("code", { length: 10 }).notNull(),
   name: varchar("name", { length: 255 }).notNull(),
-  rating: integer("rating"),
-  difficulty: integer("difficulty"),
-  workload: integer("workload"),
+  usefulRating: integer("useful_rating"),
+  likedRating: integer("liked_rating"),
+  easyRating: integer("easy_rating"),
+  generalRating: integer("general_rating"),
 });
 
-// Academic Plan table
-export const plans = createTable("plan", {
-  id: serial("id").primaryKey(),
-  name: varchar("name", { length: 255 }).notNull(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id),
-  templateId: integer("template_id")
-    .notNull()
-    .references(() => templates.id),
-}, (plan) => ({
-  userIdIdx: index("plan_user_id_idx").on(plan.userId),
-  templateIdIdx: index("plan_template_id_idx").on(plan.templateId),
-}));
-
-// Items table
-export const items = createTable("item", {
-  id: serial("id").primaryKey(),
-  planId: integer("plan_id").notNull().references(() => plans.id),
-  type: itemTypeEnum("type").notNull(),
-  description: text("description"),
-  orderIndex: integer("order_index").notNull(),
-}, (item) => ({
-  planIdIdx: index("item_plan_id_idx").on(item.planId),
-}));
-
-// Course selections for requirements
-export const requirementCourses = createTable("requirement_course", {
-  id: serial("id").primaryKey(),
-  itemId: integer("item_id").notNull().references(() => items.id),
-  courseId: integer("course_id").notNull().references(() => courses.id),
-}, (rc) => ({
-  itemIdIdx: index("requirement_course_item_id_idx").on(rc.itemId),
-  courseIdIdx: index("requirement_course_course_id_idx").on(rc.courseId),
-}));
-
-// User's course selections
-export const userPlanCourses = createTable("user_plan_course", {
-  id: serial("id").primaryKey(),
-  userId: varchar("user_id", { length: 255 }).notNull(),
-  planId: integer("plan_id").references(() => plans.id), // Remove notNull
-  courseId: integer("course_id").notNull().references(() => courses.id),
-  take: boolean("take").notNull().default(false),
-}, (upc) => ({
-  userIdIdx: index("user_plan_course_user_id_idx").on(upc.userId),
-  planIdIdx: index("user_plan_course_plan_id_idx").on(upc.planId),
-  courseIdIdx: index("user_plan_course_course_id_idx").on(upc.courseId),
-  // Add unique constraint for userId + courseId
-  uniqUserCourse: uniqueIndex("user_plan_course_user_course_idx").on(upc.userId, upc.courseId),
-}));
-
-// User's template selections
-export const userTemplates = createTable("user_template", {
-  id: serial("id").primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id),
-  templateId: integer("template_id")
-    .notNull()
-    .references(() => templates.id),
-}, (ut) => ({
-  userIdIdx: index("user_template_user_id_idx").on(ut.userId),
-  templateIdIdx: index("user_template_template_id_idx").on(ut.templateId),
-  // Ensure users can't select the same template twice
-  uniqUserTemplate: uniqueIndex("user_template_user_template_idx").on(ut.userId, ut.templateId),
-}));
-
-// Template table - predefined academic plans
+// Templates represent predefined academic plans (e.g., Computational Mathematics Major)
+// Contains basic template information
 export const templates = createTable("template", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
 });
 
-// Template items table - requirements/instructions/separators for templates
+// Academic plans for users
+// Each user has exactly one plan (enforced by unique index on userId)
+// Plans are built from one or more templates
+export const plans = createTable("plan", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id", { length: 255 })
+    .notNull()
+    .references(() => users.id),
+}, (plan) => ({
+  userIdIdx: uniqueIndex("plan_user_id_idx").on(plan.userId), // Ensure 1:1 with user
+}));
+
+// Items that make up a template
+// Can be a requirement, instruction, or separator
+// Order is maintained through orderIndex
 export const templateItems = createTable("template_item", {
   id: serial("id").primaryKey(),
   templateId: integer("template_id").notNull().references(() => templates.id),
   type: itemTypeEnum("type").notNull(),
   description: text("description"),
   orderIndex: integer("order_index").notNull(),
-}, (item) => ({
-  templateIdIdx: index("template_item_template_id_idx").on(item.templateId),
-}));
+});
 
-// Template courses table - courses for template requirements
+// Junction table between template requirements and courses
+// Maps which courses fulfill which template requirements
 export const templateRequirementCourses = createTable("template_requirement_course", {
-  id: serial("id").primaryKey(),
   itemId: integer("item_id").notNull().references(() => templateItems.id),
   courseId: integer("course_id").notNull().references(() => courses.id),
-}, (trc) => ({
-  itemIdIdx: index("template_requirement_course_item_id_idx").on(trc.itemId),
-  courseIdIdx: index("template_requirement_course_course_id_idx").on(trc.courseId),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.itemId, t.courseId] }),
 }));
 
-// Relations (keeping the same relations with updated table references)
-export const itemsRelations = relations(items, ({ one, many }) => ({
-  plan: one(plans, {
-    fields: [items.planId],
-    references: [plans.id],
-  }),
-  courses: many(requirementCourses),
+// Junction table between plans and templates
+// Tracks which templates are used in each plan
+export const planTemplates = createTable("plan_template", {
+  planId: integer("plan_id").notNull().references(() => plans.id),
+  templateId: integer("template_id").notNull().references(() => templates.id),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.planId, t.templateId] }),
 }));
 
-export const requirementCoursesRelations = relations(requirementCourses, ({ one }) => ({
-  item: one(items, {
-    fields: [requirementCourses.itemId],
-    references: [items.id],
-  }),
-  course: one(courses, {
-    fields: [requirementCourses.courseId],
-    references: [courses.id],
-  }),
+// Schedules created by users to plan when they will take courses
+// Each schedule belongs to a plan and has a name
+export const schedules = createTable("schedule", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  planId: integer("plan_id").notNull().references(() => plans.id),
+});
+
+// Junction table between schedules and courses
+// Tracks which courses are scheduled in which terms
+// A course can only appear once in a schedule
+export const scheduleCourses = createTable("schedule_course", {
+  scheduleId: integer("schedule_id").notNull().references(() => schedules.id),
+  courseId: integer("course_id").notNull().references(() => courses.id),
+  term: varchar("term", { length: 20 }).notNull(), // e.g., "Fall 2023"
+}, (t) => ({
+  pk: primaryKey({ columns: [t.scheduleId, t.courseId] }),
 }));
 
-export const userPlanCoursesRelations = relations(userPlanCourses, ({ one }) => ({
-  plan: one(plans, {
-    fields: [userPlanCourses.planId],
-    references: [plans.id],
-  }),
-  course: one(courses, {
-    fields: [userPlanCourses.courseId],
-    references: [courses.id],
-  }),
-}));
-
-export const templatesRelations = relations(templates, ({ many }) => ({
-  items: many(templateItems),
-  users: many(userTemplates),
-}));
-
-export const templateItemsRelations = relations(templateItems, ({ one, many }) => ({
-  template: one(templates, {
-    fields: [templateItems.templateId],
-    references: [templates.id],
-  }),
-  courses: many(templateRequirementCourses),
-}));
-
-export const templateRequirementCoursesRelations = relations(templateRequirementCourses, ({ one }) => ({
-  item: one(templateItems, {
-    fields: [templateRequirementCourses.itemId],
-    references: [templateItems.id],
-  }),
-  course: one(courses, {
-    fields: [templateRequirementCourses.courseId],
-    references: [courses.id],
-  }),
-}));
-
-export const plansRelations = relations(plans, ({ one }) => ({
-  user: one(users, {
-    fields: [plans.userId],
-    references: [users.id],
-  }),
-  template: one(templates, {
-    fields: [plans.templateId],
-    references: [templates.id],
-  }),
-}));
-
-export const userTemplatesRelations = relations(userTemplates, ({ one }) => ({
-  user: one(users, {
-    fields: [userTemplates.userId],
-    references: [users.id],
-  }),
-  template: one(templates, {
-    fields: [userTemplates.templateId],
-    references: [templates.id],
-  }),
+// Junction table between plans and courses
+// Tracks which courses a user has selected in their plan
+export const selectedCourses = createTable("selected_course", {
+  planId: integer("plan_id").notNull().references(() => plans.id),
+  courseId: integer("course_id").notNull().references(() => courses.id),
+  selected: boolean("selected").notNull().default(false),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.planId, t.courseId] }),
 }));
