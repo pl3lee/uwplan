@@ -25,10 +25,6 @@ import { TemplateSelector } from "./TemplateSelector";
 
 export default async function Navbar() {
   const session = await auth();
-  const templates = await getTemplates();
-  const userTemplateSelections = session?.user
-    ? await getUserTemplates(session.user.id)
-    : [];
 
   const selectedTemplateIds = new Set(
     userTemplateSelections.map((ut) => ut.templateId),
