@@ -17,6 +17,10 @@ export default async function SelectPage() {
     getUserCourseSelections(session.user.id),
   ]);
 
+  // Add cache headers to prevent stale data
+  const headers = new Headers();
+  headers.set("Cache-Control", "no-store");
+
   return (
     <div className="container mx-auto py-8">
       <div className={styles.pageTitle}>

@@ -5,14 +5,22 @@ import {
   templates,
   templateItems,
   templateRequirementCourses,
-  userTemplates, // Add this import
+  userTemplates,
+  userPlanCourses,
+  plans,
+  items,
+  requirementCourses,
 } from "@/server/db/schema";
 
 async function main() {
-  // Clear existing data in correct order
+  // Clear existing data in correct order (following foreign key dependencies)
+  await db.delete(userPlanCourses);
+  await db.delete(requirementCourses);
   await db.delete(templateRequirementCourses);
+  await db.delete(items);
   await db.delete(templateItems);
-  await db.delete(userTemplates); // Add this line
+  await db.delete(plans);
+  await db.delete(userTemplates);
   await db.delete(courses);
   await db.delete(templates);
 

@@ -7,7 +7,23 @@ type Props = {
     template: {
       id: number;
       name: string;
-      items: any[];
+      items: Array<{
+        id: number;
+        type: "requirement" | "instruction" | "separator";
+        description: string;
+        orderIndex: number;
+        templateId: number;
+        courses: Array<{
+          course: {
+            id: number;
+            code: string;
+            name: string;
+            rating: number | null;
+            difficulty: number | null;
+            workload: number | null;
+          };
+        }>;
+      }>;
     };
   }[];
   userId: string;
@@ -19,11 +35,13 @@ export function TemplateDisplay({
   userId,
   initialSelections,
 }: Props) {
+  console.log("userTemplates:", userTemplates); // For debugging
+
   const allItems = userTemplates
     .flatMap(({ template }) =>
       template.items.map((item) => ({
         ...item,
-        templateId: template.id, // Add template ID
+        templateId: template.id,
         templateName: template.name,
       })),
     )
@@ -33,6 +51,8 @@ export function TemplateDisplay({
       }
       return a.orderIndex - b.orderIndex;
     });
+
+  console.log("allItems:", allItems); // For debugging
 
   return (
     <div className="space-y-12">

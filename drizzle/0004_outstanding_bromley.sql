@@ -1,1 +1,0 @@
-CREATE UNIQUE INDEX IF NOT EXISTS "user_plan_course_user_course_idx" ON "uw-course-planner_user_plan_course" USING btree ("user_id","course_id");

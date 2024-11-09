@@ -11,7 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toggleCourse } from "@/server/actions";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 type Course = {
   id: number;
@@ -45,16 +45,25 @@ export function TemplateRequirements({
   userId,
   initialSelections,
 }: Props) {
-  const [selections, setSelections] = useState(initialSelections);
+  const [selections, setSelections] = useState<Map<number, boolean>>(
+    new Map(initialSelections),
+  );
 
   const handleCheckedChange = async (
     templateId: number,
     courseId: number,
     checked: boolean,
   ) => {
+    const newSelections = new Map(selections);
+    newSelections.set(courseId, checked);
+    setSelections(newSelections);
     await toggleCourse(userId, templateId, courseId, checked);
-    setSelections(new Map(selections).set(courseId, checked));
   };
+
+  // Add useEffect to update selections when initialSelections changes
+  useEffect(() => {
+    setSelections(new Map(initialSelections));
+  }, [initialSelections]);
 
   return (
     <div className="space-y-8">

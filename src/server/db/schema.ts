@@ -20,8 +20,7 @@ import { type AdapterAccount } from "next-auth/adapters";
  *
  * @see https://orm.drizzle.team/docs/goodies#multi-project-schema
  */
-export const createTable = pgTableCreator((name) => `uw-course-planner_${name}`);
-
+export const createTable = pgTableCreator((name) => `${name}`); // Remove prefix
 
 export const users = createTable("user", {
   id: varchar("id", { length: 255 })
