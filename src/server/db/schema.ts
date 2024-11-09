@@ -11,6 +11,7 @@ import {
   pgEnum,
   serial,
   uniqueIndex,
+  decimal,
 } from "drizzle-orm/pg-core";
 import { type AdapterAccount } from "next-auth/adapters";
 
@@ -119,12 +120,12 @@ export const itemTypeEnum = pgEnum("item_type", ["requirement", "instruction", "
 // Contains course information and pre-populated ratings from external sources
 export const courses = createTable("course", {
   id: serial("id").primaryKey(),
-  code: varchar("code", { length: 10 }).notNull(),
+  code: varchar("code", { length: 10 }).notNull().unique(), // Add unique constraint
   name: varchar("name", { length: 255 }).notNull(),
-  usefulRating: integer("useful_rating"),
-  likedRating: integer("liked_rating"),
-  easyRating: integer("easy_rating"),
-  generalRating: integer("general_rating"),
+  usefulRating: decimal("useful_rating", { precision: 4, scale: 3 }),
+  likedRating: decimal("liked_rating", { precision: 4, scale: 3 }),
+  easyRating: decimal("easy_rating", { precision: 4, scale: 3 }),
+  numRatings: integer("num_ratings"), // Changed from generalRating decimal to numRatings integer
 });
 
 // Templates represent predefined academic plans (e.g., Computational Mathematics Major)

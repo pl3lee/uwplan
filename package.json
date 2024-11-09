@@ -18,7 +18,8 @@
     "typecheck": "tsc --noEmit",
     "format:write": "prettier --write \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
-    "db:seed": "tsx src/server/db/seed.ts"
+    "db:seed": "tsx src/server/db/seed.ts",
+    "fetch-courses": "tsx src/scripts/fetchUWFlowCourses.ts"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.7.2",

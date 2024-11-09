@@ -17,7 +17,11 @@ Our app is composed of the following entities:
 5. Requirement: A requirement that a user must fulfill. The requirement description provides guidelines for course selection (e.g., "complete 3 of the 5 courses listed"), but these are not enforced by the system.
 6. Instruction: Instructions that is used to guide the user.
 7. Separator: A separator that is used to separate groups of requirements.
-8. Course: A course that a user can take. A course has a course code, name, and various ratings (useful, liked, easy, general) which are pre-populated from external sources.
+8. Course: A course that a user can take. A course has a course code, name, and various ratings from external sources:
+   - useful rating (0-1 scale)
+   - liked rating (0-1 scale)
+   - easy rating (0-1 scale)
+   - number of ratings (integer count)
 9. Schedule: A schedule that a user can create. A schedule consists of a name and course-term assignments. Each course can only appear once in a schedule.
 
 # Relationships
