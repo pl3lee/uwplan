@@ -116,6 +116,9 @@ export const verificationTokens = createTable(
 // Enum for template item types (requirement, instruction, or separator)
 export const itemTypeEnum = pgEnum("item_type", ["requirement", "instruction", "separator"]);
 
+// Enum for course item types (fixed or free)
+export const courseItemTypeEnum = pgEnum("course_item_type", ["fixed", "free"]);
+
 // Courses that students can take
 // Contains course information and pre-populated ratings from external sources
 export const courses = createTable("course", {
@@ -159,13 +162,19 @@ export const templateItems = createTable("template_item", {
   orderIndex: integer("order_index").notNull(),
 });
 
-// Junction table between template requirements and courses
-// Maps which courses fulfill which template requirements
-export const templateRequirementCourses = createTable("template_requirement_course", {
-  itemId: integer("item_id").notNull().references(() => templateItems.id),
-  courseId: integer("course_id").notNull().references(() => courses.id),
+// Each requirement has course items
+export const courseItems = createTable("course_item", {
+  id: serial("id").primaryKey(),
+  requirementId: integer("requirement_id")
+    .notNull()
+    .references(() => templateItems.id),
+  type: courseItemTypeEnum("type").notNull(), // Using the enum type
+  courseId: integer("course_id")
+    .references(() => courses.id), // Only set for fixed courses
+  orderIndex: integer("order_index").notNull(), // To maintain order of items in a requirement
 }, (t) => ({
-  pk: primaryKey({ columns: [t.itemId, t.courseId] }),
+  // Add index for faster lookups
+  requirementIdIdx: index("course_item_requirement_id_idx").on(t.requirementId),
 }));
 
 // Junction table between plans and templates
@@ -204,4 +213,22 @@ export const selectedCourses = createTable("selected_course", {
   selected: boolean("selected").notNull().default(false),
 }, (t) => ({
   pk: primaryKey({ columns: [t.planId, t.courseId] }),
+}));
+
+// When a user fills in a free course
+export const freeCourses = createTable("free_course", {
+  id: serial("id").primaryKey(),
+  courseItemId: integer("course_item_id")
+    .notNull()
+    .references(() => courseItems.id),
+  userId: varchar("user_id", { length: 255 })
+    .notNull()
+    .references(() => users.id),
+  filledCourseId: integer("filled_course_id")
+    .notNull()
+    .references(() => courses.id),
+  selected: boolean("selected").default(false),
+}, (t) => ({
+  // Add unique constraint to ensure one user can only fill a course item once
+  uniqueCourseItemUser: uniqueIndex("free_course_item_user_idx").on(t.courseItemId, t.userId),
 }));
