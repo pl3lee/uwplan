@@ -23,6 +23,8 @@ Our app is composed of the following entities:
    - easy rating (0-1 scale)
    - number of ratings (integer count)
 9. Schedule: A schedule that a user can create. A schedule consists of a name and course-term assignments. Each course can only appear once in a schedule.
+10. Course Item: a course item can be a free course or a course.
+11. Free Course: a course that is free to choose. For example, if the requirement description is "Complete 3 non-math courses", then the requirement will have 3 free courses.
 
 # Relationships
 
@@ -34,3 +36,6 @@ Our app is composed of the following entities:
 6. A user can take several courses, and a course can be taken by several users. So M:N relationship between User and Course.
 7. A user can create several schedules for their plan. So 1:M relationship between Plan and Schedule.
 8. A schedule consists of several courses with their assigned terms. A course can appear in multiple schedules but only once per schedule. So M:N relationship between Schedule and Course, with term as an attribute of the relationship.
+9. A course item can be a course or a free course. So 1:1 relationship between Course Item and Course/Free Course.
+10. A user fills in several free courses, but a free course can only be filled in by a single user. So 1:M relationship between User and Free Course.
+11. A free course, if filled in, is then a course. A free course can only be filled in once. However, a course can be multiple free courses. So N:1 relationship between free course and course.
