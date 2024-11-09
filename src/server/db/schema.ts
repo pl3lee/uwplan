@@ -171,7 +171,6 @@ export const courseItems = createTable("course_item", {
   type: courseItemTypeEnum("type").notNull(), // Using the enum type
   courseId: integer("course_id")
     .references(() => courses.id), // Only set for fixed courses
-  orderIndex: integer("order_index").notNull(), // To maintain order of items in a requirement
 }, (t) => ({
   // Add index for faster lookups
   requirementIdIdx: index("course_item_requirement_id_idx").on(t.requirementId),

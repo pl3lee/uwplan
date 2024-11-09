@@ -5,7 +5,7 @@ import {
   courses,
   templates,
   templateItems,
-  templateRequirementCourses,
+  courseItems,
 } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
 import { type InferSelectModel } from 'drizzle-orm';
@@ -30,7 +30,7 @@ const findCourse = async (code: string) => {
 async function main() {
   // Clear existing data
   console.log("Clearing existing data...");
-  await db.delete(templateRequirementCourses);
+  await db.delete(courseItems);
   await db.delete(templateItems);
   await db.delete(templates);
   await db.delete(courses);
@@ -186,54 +186,60 @@ async function main() {
     Promise.all(
       ['CS230', 'CS234'].map(async (code) => {
         const courseId = await findCourse(code);
-        return db.insert(templateRequirementCourses).values({
-          itemId: getItemId(compMathItems, 0),
+        return db.insert(courseItems).values({
+          requirementId: getItemId(compMathItems, 0),
           courseId,
+          type: "fixed",
         });
       })
     ),
     Promise.all(
       ['AMATH242', 'CS371'].map(async (code) => {
         const courseId = await findCourse(code);
-        return db.insert(templateRequirementCourses).values({
-          itemId: getItemId(compMathItems, 1),
+        return db.insert(courseItems).values({
+          requirementId: getItemId(compMathItems, 1),
           courseId,
+          type: "fixed",
         });
       })
     ),
     Promise.all(
       ['MATH237', 'MATH247'].map(async (code) => {
         const courseId = await findCourse(code);
-        return db.insert(templateRequirementCourses).values({
-          itemId: getItemId(compMathItems, 2),
+        return db.insert(courseItems).values({
+          requirementId: getItemId(compMathItems, 2),
           courseId,
+          type: "fixed",
         });
       })
     ),
     Promise.all(
       ['MATH239', 'MATH249'].map(async (code) => {
         const courseId = await findCourse(code);
-        return db.insert(templateRequirementCourses).values({
-          itemId: getItemId(compMathItems, 3),
+        return db.insert(courseItems).values({
+          requirementId: getItemId(compMathItems, 3),
           courseId,
+          type: "fixed",
         });
       })
     ),
     Promise.all(
       ['AMATH250', 'AMATH251', 'AMATH350'].map(async (code) => {
         const courseId = await findCourse(code);
-        return db.insert(templateRequirementCourses).values({
-          itemId: getItemId(compMathItems, 6),
+        return db.insert(courseItems).values({
+          requirementId: getItemId(compMathItems, 6),
           courseId,
+          type: "fixed",
         });
       })
     ),
     Promise.all(
       ['CO250', 'CO255'].map(async (code) => {
         const courseId = await findCourse(code);
-        return db.insert(templateRequirementCourses).values({
-          itemId: getItemId(compMathItems, 7),
+        return db.insert(courseItems).values({
+          requirementId: getItemId(compMathItems, 7),
           courseId,
+          type: "fixed",
         });
       })
     ),
@@ -246,9 +252,10 @@ async function main() {
     Promise.all(
       ['MATH137', 'MATH138', 'MATH239'].map(async (code) => {
         const courseId = await findCourse(code);
-        return db.insert(templateRequirementCourses).values({
-          itemId: getItemId(coItems, 2),
+        return db.insert(courseItems).values({
+          requirementId: getItemId(coItems, 2),
           courseId,
+          type: "fixed",
         });
       })
     ),
@@ -256,9 +263,10 @@ async function main() {
     Promise.all(
       ['CO342', 'MATH239'].map(async (code) => {
         const courseId = await findCourse(code);
-        return db.insert(templateRequirementCourses).values({
-          itemId: getItemId(coItems, 5),
+        return db.insert(courseItems).values({
+          requirementId: getItemId(coItems, 5),
           courseId,
+          type: "fixed",
         });
       })
     ),
@@ -266,9 +274,10 @@ async function main() {
     Promise.all(
       ['CO250', 'CO351'].map(async (code) => {
         const courseId = await findCourse(code);
-        return db.insert(templateRequirementCourses).values({
-          itemId: getItemId(coItems, 6),
+        return db.insert(courseItems).values({
+          requirementId: getItemId(coItems, 6),
           courseId,
+          type: "fixed",
         });
       })
     ),

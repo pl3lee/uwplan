@@ -3,7 +3,7 @@ import {
   templates,
   plans,
   templateItems,
-  templateRequirementCourses,
+  courseItems,
   selectedCourses,
   courses,
   planTemplates,
@@ -106,7 +106,7 @@ export async function getTemplateDetails(templateId: number) {
   // Get courses for requirements
   const coursesForItems = await db
     .select({
-      itemId: templateRequirementCourses.itemId,
+      itemId: courseItems.requirementId,
       courseId: courses.id,
       code: courses.code,
       name: courses.name,
@@ -115,12 +115,12 @@ export async function getTemplateDetails(templateId: number) {
       easyRating: courses.easyRating,
       numRatings: courses.numRatings,
     })
-    .from(templateRequirementCourses)
-    .innerJoin(courses, eq(courses.id, templateRequirementCourses.courseId))
-    .where(inArray(
-      templateRequirementCourses.itemId,
+    .from(courseItems)
+    .innerJoin(courses, eq(courses.id, courseItems.courseId))
+    .where(and(inArray(
+      courseItems.requirementId,
       items.map(item => item.id)
-    ));
+    ), eq(courseItems.type, "fixed")));
 
   // Combine the data
   return {
@@ -193,13 +193,13 @@ export async function addTemplateToPlan(planId: number, templateId: number) {
 export async function removeTemplateFromPlan(planId: number, templateId: number) {
   // Get courses that are only in this template
   const templateCourses = await db
-    .select({ courseId: templateRequirementCourses.courseId })
+    .select({ courseId: courseItems.courseId })
     .from(templateItems)
     .innerJoin(
-      templateRequirementCourses,
-      eq(templateRequirementCourses.itemId, templateItems.id)
+      courseItems,
+      eq(courseItems.requirementId, templateItems.id)
     )
-    .where(eq(templateItems.templateId, templateId));
+    .where(and(eq(templateItems.templateId, templateId), eq(courseItems.type, "fixed")));
 
   // Remove course selections for courses unique to this template
   await db
@@ -208,7 +208,7 @@ export async function removeTemplateFromPlan(planId: number, templateId: number)
       eq(selectedCourses.planId, planId),
       inArray(
         selectedCourses.courseId,
-        templateCourses.map(c => c.courseId)
+        templateCourses.map(c => c.courseId).filter((id): id is number => id !== null)
       )
     ));
 
