@@ -7,6 +7,7 @@ import {
   sessions,
   users,
   verificationTokens,
+  plans,
 } from "@/server/db/schema";
 import Google from "next-auth/providers/google";
 import GitHub from "next-auth/providers/github";
@@ -65,5 +66,21 @@ export const authConfig = {
         id: user.id,
       },
     }),
+  },
+  events: {
+    createUser: async ({ user }) => {
+      if (!user.id) {
+        throw new Error("User ID is required");
+      }
+
+      try {
+        await db.insert(plans).values({
+          userId: user.id,
+        });
+      } catch (error) {
+        console.error("Failed to create plan for new user:", error);
+        throw error;
+      }
+    },
   },
 } satisfies NextAuthConfig;

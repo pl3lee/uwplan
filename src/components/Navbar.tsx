@@ -1,5 +1,5 @@
 import { auth, signIn, signOut } from "@/server/auth";
-import { getTemplates, getUserTemplates } from "@/server/db/queries";
+import { getTemplates } from "@/server/db/queries";
 import { Button } from "./ui/button";
 import {
   DropdownMenu,
@@ -25,10 +25,7 @@ import { TemplateSelector } from "./TemplateSelector";
 
 export default async function Navbar() {
   const session = await auth();
-
-  const selectedTemplateIds = new Set(
-    userTemplateSelections.map((ut) => ut.templateId),
-  );
+  const templates = await getTemplates();
 
   return (
     <nav className="p-4">
@@ -44,13 +41,13 @@ export default async function Navbar() {
           </TabsList>
         </Tabs>
 
-        {session?.user && (
+        {/* {session?.user && (
           <TemplateSelector
             templates={templates}
             userId={session.user.id}
             initialSelectedIds={selectedTemplateIds}
           />
-        )}
+        )} */}
 
         {!session?.user ? (
           <DropdownMenu>
