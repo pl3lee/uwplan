@@ -1,87 +1,109 @@
 import "dotenv/config";
 import { db } from "@/server/db";
+import { fetchUWFlowData, insertUWFlowCourses } from "@/scripts/fetchUWFlowCourses";
 import {
   courses,
   templates,
   templateItems,
   templateRequirementCourses,
-  userTemplates,
-  userPlanCourses,
-  plans,
-  items,
-  requirementCourses,
 } from "@/server/db/schema";
+import { eq } from "drizzle-orm";
+import { type InferSelectModel } from 'drizzle-orm';
+
+// Add type definitions
+type Template = InferSelectModel<typeof templates>;
+type TemplateItem = InferSelectModel<typeof templateItems>;
+
+// Helper function to find course ID with better type safety
+const findCourse = async (code: string) => {
+  const found = await db
+    .select()
+    .from(courses)
+    .where(eq(courses.code, code))
+    .limit(1);
+  if (!found[0]) throw new Error(`Course ${code} not found`);
+  return found[0].id;
+};
+
+
 
 async function main() {
-  // Clear existing data in correct order (following foreign key dependencies)
-  await db.delete(userPlanCourses);
-  await db.delete(requirementCourses);
+  // Clear existing data
+  console.log("Clearing existing data...");
   await db.delete(templateRequirementCourses);
-  await db.delete(items);
   await db.delete(templateItems);
-  await db.delete(plans);
-  await db.delete(userTemplates);
-  await db.delete(courses);
   await db.delete(templates);
+  await db.delete(courses);
 
-  // Insert core courses
-  const coursesData = await db
-    .insert(courses)
-    .values([
-      // Core math courses
-      { code: "MATH137", name: "Calculus 1", rating: null, difficulty: null, workload: null },
-      { code: "MATH138", name: "Calculus 2", rating: null, difficulty: null, workload: null },
-      { code: "MATH237", name: "Calculus 3 for Honours Mathematics", rating: null, difficulty: null, workload: null },
-      { code: "MATH239", name: "Introduction to Combinatorics", rating: null, difficulty: null, workload: null },
+  // Fetch and populate courses from UWFlow
+  console.log("Fetching and inserting UWFlow courses...");
+  const courseData = await fetchUWFlowData();
+  await insertUWFlowCourses(courseData);
 
-      // CS courses
-      { code: "CS115", name: "Introduction to Computer Science 1", rating: null, difficulty: null, workload: null },
-      { code: "CS136", name: "Algorithm Design and Data Abstraction", rating: null, difficulty: null, workload: null },
-      { code: "CS234", name: "Data Types and Structures", rating: null, difficulty: null, workload: null },
-      { code: "CS371", name: "Introduction to Computational Mathematics", rating: null, difficulty: null, workload: null },
-
-      // CO courses
-      { code: "CO250", name: "Introduction to Optimization", rating: null, difficulty: null, workload: null },
-      { code: "CO342", name: "Introduction to Graph Theory", rating: null, difficulty: null, workload: null },
-      { code: "CO351", name: "Network Flow Theory", rating: null, difficulty: null, workload: null },
-
-      // AMATH courses
-      { code: "AMATH242", name: "Introduction to Computational Mathematics", rating: null, difficulty: null, workload: null },
-      { code: "AMATH331", name: "Applied Real Analysis", rating: null, difficulty: null, workload: null },
-      { code: "AMATH342", name: "Computational Methods for Differential Equations", rating: null, difficulty: null, workload: null },
-    ])
-    .returning();
-
-  // Create templates
-  const [compMathTemplate, coTemplate] = await db
+  console.log("Creating templates and requirements...");
+  // Create templates with proper typing
+  const createdTemplates = await db
     .insert(templates)
     .values([
-      { name: "Computational Mathematics Major" },
-      { name: "Combinatorics & Optimization Major" },
+      { name: "Computational Mathematics Major", description: "A major combining mathematics and computational methods" },
+      { name: "Combinatorics & Optimization Major", description: "A major focusing on discrete mathematics and optimization" },
     ])
     .returning();
+
+  // Type assertion with runtime check
+  if (createdTemplates.length !== 2) {
+    throw new Error("Failed to create both templates");
+  }
+
+  const [compMathTemplate, coTemplate] = createdTemplates as [Template, Template];
 
   // Create Computational Mathematics template items
   const compMathItems = await db
     .insert(templateItems)
     .values([
+      // First year section
       {
         templateId: compMathTemplate.id,
-        type: "requirement",
-        description: "Required Core Courses",
+        type: "separator",
+        description: "First Year Requirements",
+        orderIndex: 0,
+      },
+      {
+        templateId: compMathTemplate.id,
+        type: "instruction",
+        description: "Complete all of the following courses in your first year:",
         orderIndex: 1,
       },
       {
         templateId: compMathTemplate.id,
         type: "requirement",
-        description: "Choose one computational course",
+        description: "Required Core Courses",
         orderIndex: 2,
+      },
+      // Second year section
+      {
+        templateId: compMathTemplate.id,
+        type: "separator",
+        description: "Second Year Options",
+        orderIndex: 3,
+      },
+      {
+        templateId: compMathTemplate.id,
+        type: "instruction",
+        description: "Choose at least one course from each of the following groups:",
+        orderIndex: 4,
+      },
+      {
+        templateId: compMathTemplate.id,
+        type: "requirement",
+        description: "Choose one computational course",
+        orderIndex: 5,
       },
       {
         templateId: compMathTemplate.id,
         type: "requirement",
         description: "Choose one advanced course",
-        orderIndex: 3,
+        orderIndex: 6,
       },
     ])
     .returning();
@@ -90,70 +112,143 @@ async function main() {
   const coItems = await db
     .insert(templateItems)
     .values([
+      // Core requirements section
       {
         templateId: coTemplate.id,
-        type: "requirement",
-        description: "Required Mathematics Courses",
+        type: "separator",
+        description: "Core Mathematics Requirements",
+        orderIndex: 0,
+      },
+      {
+        templateId: coTemplate.id,
+        type: "instruction",
+        description: "These courses form the foundation of your major:",
         orderIndex: 1,
       },
       {
         templateId: coTemplate.id,
         type: "requirement",
-        description: "Choose one combinatorics course",
+        description: "Required Mathematics Courses",
         orderIndex: 2,
+      },
+      // Advanced requirements section
+      {
+        templateId: coTemplate.id,
+        type: "separator",
+        description: "Advanced Requirements",
+        orderIndex: 3,
+      },
+      {
+        templateId: coTemplate.id,
+        type: "instruction",
+        description: "Select advanced courses to specialize in combinatorics or optimization:",
+        orderIndex: 4,
+      },
+      {
+        templateId: coTemplate.id,
+        type: "requirement",
+        description: "Choose one combinatorics course",
+        orderIndex: 5,
       },
       {
         templateId: coTemplate.id,
         type: "requirement",
         description: "Choose one optimization course",
-        orderIndex: 3,
+        orderIndex: 6,
       },
     ])
     .returning();
 
-  // Helper function to find course ID
-  const findCourse = (code: string) => {
-    const course = coursesData.find(c => c.code === code);
-    if (!course) throw new Error(`Course ${code} not found`);
-    return course.id;
+  // Type assertion helper for array index access
+  const getItemId = (items: typeof compMathItems, index: number) => {
+    const item = items[index];
+    if (!item) throw new Error(`Template item at index ${index} not found`);
+    return item.id;
   };
 
-  // Link courses to Computational Mathematics requirements
-  await db.insert(templateRequirementCourses).values([
+  // Link courses to templates steps:
+  console.log("Linking courses to templates...");
+
+  // Core courses - Computational Mathematics
+  console.log("Processing Computational Mathematics requirements...");
+  const compMathPromises = [
     // Core courses
-    { itemId: compMathItems[0].id, courseId: findCourse("MATH137") },
-    { itemId: compMathItems[0].id, courseId: findCourse("MATH138") },
-    { itemId: compMathItems[0].id, courseId: findCourse("CS115") },
-
+    Promise.all(
+      ['MATH137', 'MATH138', 'CS115'].map(async (code) => {
+        const courseId = await findCourse(code);
+        return db.insert(templateRequirementCourses).values({
+          itemId: getItemId(compMathItems, 2),
+          courseId,
+        });
+      })
+    ),
     // Computational options
-    { itemId: compMathItems[1].id, courseId: findCourse("AMATH242") },
-    { itemId: compMathItems[1].id, courseId: findCourse("CS371") },
-
+    Promise.all(
+      ['AMATH242', 'CS371'].map(async (code) => {
+        const courseId = await findCourse(code);
+        return db.insert(templateRequirementCourses).values({
+          itemId: getItemId(compMathItems, 5),
+          courseId,
+        });
+      })
+    ),
     // Advanced options
-    { itemId: compMathItems[2].id, courseId: findCourse("AMATH331") },
-    { itemId: compMathItems[2].id, courseId: findCourse("AMATH342") },
-  ]);
+    Promise.all(
+      ['AMATH331', 'AMATH342'].map(async (code) => {
+        const courseId = await findCourse(code);
+        return db.insert(templateRequirementCourses).values({
+          itemId: getItemId(compMathItems, 6),
+          courseId,
+        });
+      })
+    ),
+  ];
 
-  // Link courses to C&O requirements
-  await db.insert(templateRequirementCourses).values([
-    // Core math courses
-    { itemId: coItems[0].id, courseId: findCourse("MATH137") },
-    { itemId: coItems[0].id, courseId: findCourse("MATH138") },
-    { itemId: coItems[0].id, courseId: findCourse("MATH239") },
-
+  // C&O courses
+  console.log("Processing C&O requirements...");
+  const coPromises = [
+    // Core courses
+    Promise.all(
+      ['MATH137', 'MATH138', 'MATH239'].map(async (code) => {
+        const courseId = await findCourse(code);
+        return db.insert(templateRequirementCourses).values({
+          itemId: getItemId(coItems, 2),
+          courseId,
+        });
+      })
+    ),
     // Combinatorics options
-    { itemId: coItems[1].id, courseId: findCourse("CO342") },
-    { itemId: coItems[1].id, courseId: findCourse("MATH239") },
-
+    Promise.all(
+      ['CO342', 'MATH239'].map(async (code) => {
+        const courseId = await findCourse(code);
+        return db.insert(templateRequirementCourses).values({
+          itemId: getItemId(coItems, 5),
+          courseId,
+        });
+      })
+    ),
     // Optimization options
-    { itemId: coItems[2].id, courseId: findCourse("CO250") },
-    { itemId: coItems[2].id, courseId: findCourse("CO351") },
+    Promise.all(
+      ['CO250', 'CO351'].map(async (code) => {
+        const courseId = await findCourse(code);
+        return db.insert(templateRequirementCourses).values({
+          itemId: getItemId(coItems, 6),
+          courseId,
+        });
+      })
+    ),
+  ];
+
+  // Wait for all promises to complete
+  await Promise.all([
+    ...compMathPromises,
+    ...coPromises,
   ]);
 
   console.log("Database seeded successfully!");
 }
 
-main().catch((err) => {
+main().then(() => process.exit(0)).catch((err) => {
   console.error("Failed to seed database:", err);
   process.exit(1);
 });

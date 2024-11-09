@@ -17,77 +17,61 @@ type UWFlowCourseResponse = {
   };
 };
 
-async function fetchUWFlowCourses() {
-  try {
-    console.log("Fetching courses from UWFlow...");
+// Function to only fetch the data
+export async function fetchUWFlowData() {
+  console.log("Fetching courses from UWFlow...");
+  const res = await fetch("https://uwflow.com/graphql", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({
+      operationName: "exploreAll",
+      variables: {},
+      query: "query exploreAll { course_search_index { ...CourseSearch __typename } } fragment CourseSearch on course_search_index { course_id name code useful ratings liked easy __typename }",
+    }),
+  });
 
-    const res = await fetch("https://uwflow.com/graphql", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({
-        operationName: "exploreAll",
-        variables: {},
-        query: "query exploreAll { course_search_index { ...CourseSearch __typename } } fragment CourseSearch on course_search_index { course_id name code useful ratings liked easy __typename }",
-      }),
-    });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch from UWFlow: ${res.statusText}`);
+  }
 
-    if (!res.ok) {
-      throw new Error(`Failed to fetch from UWFlow: ${res.statusText}`);
-    }
+  const { data }: UWFlowCourseResponse = await res.json();
+  console.log(`Fetched ${data.course_search_index.length} courses`);
+  return data.course_search_index;
+}
 
-    const { data }: UWFlowCourseResponse = await res.json();
-    console.log(`Fetched ${data.course_search_index.length} courses`);
-
-    // Process courses in batches to avoid overwhelming the database
-    const BATCH_SIZE = 100;
-    for (let i = 0; i < data.course_search_index.length; i += BATCH_SIZE) {
-      const batch = data.course_search_index.slice(i, i + BATCH_SIZE);
-
-      await Promise.all(
-        batch.map((course) =>
-          db
-            .insert(courses)
-            .values({
-              code: course.code.toUpperCase(), // Ensure consistent casing
+// Function to insert the data
+export async function insertUWFlowCourses(courseData: UWFlowCourseResponse["data"]["course_search_index"]) {
+  const BATCH_SIZE = 100;
+  for (let i = 0; i < courseData.length; i += BATCH_SIZE) {
+    const batch = courseData.slice(i, i + BATCH_SIZE);
+    await Promise.all(
+      batch.map((course) =>
+        db
+          .insert(courses)
+          .values({
+            code: course.code.toUpperCase(),
+            name: course.name,
+            usefulRating: course.useful,
+            likedRating: course.liked,
+            easyRating: course.easy,
+            numRatings: course.ratings,
+          })
+          .onConflictDoUpdate({
+            target: [courses.code],
+            set: {
               name: course.name,
               usefulRating: course.useful,
               likedRating: course.liked,
               easyRating: course.easy,
-              numRatings: course.ratings, // Changed from generalRating to numRatings
-            })
-            .onConflictDoUpdate({
-              target: [courses.code],
-              set: {
-                name: course.name,
-                usefulRating: course.useful,
-                likedRating: course.liked,
-                easyRating: course.easy,
-                numRatings: course.ratings, // Changed here too
-              },
-            })
-        )
-      );
-
-      console.log(`Processed ${Math.min(i + BATCH_SIZE, data.course_search_index.length)} courses`);
-    }
-
-    console.log("Successfully updated course database!");
-  } catch (error) {
-    console.error("Failed to fetch and update courses:", error);
-    throw error;
+              numRatings: course.ratings,
+            },
+          })
+      )
+    );
+    console.log(`Processed ${Math.min(i + BATCH_SIZE, courseData.length)} courses`);
   }
+  console.log("Successfully updated course database!");
 }
-
-// Run the script
-fetchUWFlowCourses()
-  .then(() => {
-    console.log("Script completed successfully");
-    process.exit(0);
-  })
-  .catch((error) => {
-    console.error("Script failed:", error);
-    process.exit(1);
-  });
