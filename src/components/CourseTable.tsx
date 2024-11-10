@@ -50,7 +50,18 @@ export function CourseTable({
   const [selectedCourses, setSelectedCourses] = useState<Set<number>>(
     new Set(),
   );
-  const [courseInputs, setCourseInputs] = useState<Record<number, string>>({});
+  // Initialize courseInputs with existing course codes
+  const [courseInputs, setCourseInputs] = useState<Record<number, string>>(
+    () => {
+      const inputs: Record<number, string> = {};
+      freeCourses.forEach((fc) => {
+        if (fc.course) {
+          inputs[fc.courseItemId] = fc.course.code;
+        }
+      });
+      return inputs;
+    },
+  );
 
   const toggleCourse = (courseId: number) => {
     const newSelected = new Set(selectedCourses);
@@ -71,13 +82,8 @@ export function CourseTable({
 
   const handleCourseUpdate = async (courseItemId: number) => {
     const courseCode = courseInputs[courseItemId];
-    if (!courseCode) return;
-
     const course = allCourses.find((c) => c.code === courseCode);
-    if (course) {
-      // Use server action to update course
-      await updateFreeCourse(userId, courseItemId, course.id);
-    }
+    await updateFreeCourse(userId, courseItemId, course?.id ?? null);
   };
 
   return (
@@ -135,9 +141,7 @@ export function CourseTable({
                 />
               </TableCell>
               <TableCell>
-                {freeCourse.course ? (
-                  freeCourse.course.code
-                ) : (
+                <div className="space-y-1">
                   <Input
                     value={courseInputs[freeCourse.courseItemId] || ""}
                     onChange={(e) =>
@@ -147,10 +151,15 @@ export function CourseTable({
                     placeholder="Enter course code"
                     className="w-24"
                   />
-                )}
+                  {freeCourse.course && (
+                    <div className="text-xs text-muted-foreground">
+                      Current: {freeCourse.course.code}
+                    </div>
+                  )}
+                </div>
               </TableCell>
               <TableCell>
-                {freeCourse.course?.name ?? "Enter a course code"}
+                {freeCourse.course?.name ?? "No course selected"}
               </TableCell>
               <TableCell className="text-right">
                 {freeCourse.course?.usefulRating ?? "N/A"}
