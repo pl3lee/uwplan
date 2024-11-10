@@ -1,5 +1,8 @@
 import styles from "@/styles/utils.module.css";
-import { getUserTemplatesWithCourses } from "@/server/db/queries";
+import {
+  getCoursesWithRatings,
+  getUserTemplatesWithCourses,
+} from "@/server/db/queries";
 import { CourseTable } from "@/components/CourseTable";
 import { auth } from "@/server/auth";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -11,7 +14,10 @@ export default async function SelectPage() {
     return <div>Please sign in to view your requirements</div>;
   }
 
-  const templates = await getUserTemplatesWithCourses(session.user.id);
+  const [templates, allCourses] = await Promise.all([
+    getUserTemplatesWithCourses(session.user.id),
+    getCoursesWithRatings(),
+  ]);
 
   return (
     <div className="container mx-auto py-10">
@@ -24,7 +30,6 @@ export default async function SelectPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {console.log(template.items)}
             {template.items.map((item) => (
               <div key={item.id} className="mt-4">
                 {item.type === "requirement" && (
@@ -33,8 +38,11 @@ export default async function SelectPage() {
                       {item.description}
                     </h3>
                     <CourseTable
-                      courses={item.courses.map((c) => c.course)}
+                      fixedCourses={item.fixedCourses}
+                      freeCourses={item.freeCourses}
                       requirementId={item.id}
+                      allCourses={allCourses}
+                      userId={session.user.id}
                     />
                   </>
                 )}

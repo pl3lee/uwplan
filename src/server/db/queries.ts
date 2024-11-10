@@ -7,6 +7,7 @@ import {
   selectedCourses,
   courses,
   planTemplates,
+  freeCourses, // Add import
 } from "@/server/db/schema";
 import { desc, eq, and, not, inArray } from "drizzle-orm";
 import { type InferSelectModel } from 'drizzle-orm';
@@ -103,8 +104,8 @@ export async function getTemplateDetails(templateId: number) {
     .where(eq(templateItems.templateId, templateId))
     .orderBy(templateItems.orderIndex);
 
-  // Get courses for requirements
-  const coursesForItems = await db
+  // Get fixed courses for requirements
+  const fixedCoursesForItems = await db
     .select({
       itemId: courseItems.requirementId,
       courseId: courses.id,
@@ -114,20 +115,43 @@ export async function getTemplateDetails(templateId: number) {
       likedRating: courses.likedRating,
       easyRating: courses.easyRating,
       numRatings: courses.numRatings,
+      type: courseItems.type,
     })
     .from(courseItems)
     .innerJoin(courses, eq(courses.id, courseItems.courseId))
-    .where(and(inArray(
-      courseItems.requirementId,
-      items.map(item => item.id)
-    ), eq(courseItems.type, "fixed")));
+    .where(and(
+      inArray(courseItems.requirementId, items.map(item => item.id)),
+      eq(courseItems.type, "fixed")
+    ));
+
+  // Get free course items and their filled courses if any
+  const freeCourseItems = await db
+    .select({
+      itemId: courseItems.requirementId,
+      courseItemId: courseItems.id,
+      filledCourseId: freeCourses.filledCourseId,
+      code: courses.code,
+      name: courses.name,
+      usefulRating: courses.usefulRating,
+      likedRating: courses.likedRating,
+      easyRating: courses.easyRating,
+      numRatings: courses.numRatings,
+      selected: freeCourses.selected,
+    })
+    .from(courseItems)
+    .leftJoin(freeCourses, eq(freeCourses.courseItemId, courseItems.id))
+    .leftJoin(courses, eq(courses.id, freeCourses.filledCourseId))
+    .where(and(
+      inArray(courseItems.requirementId, items.map(item => item.id)),
+      eq(courseItems.type, "free")
+    ));
 
   // Combine the data
   return {
     ...template,
     items: items.map(item => ({
       ...item,
-      courses: coursesForItems
+      fixedCourses: fixedCoursesForItems
         .filter(c => c.itemId === item.id)
         .map(c => ({
           course: {
@@ -139,6 +163,21 @@ export async function getTemplateDetails(templateId: number) {
             easyRating: c.easyRating,
             numRatings: c.numRatings,
           }
+        })),
+      freeCourses: freeCourseItems
+        .filter(c => c.itemId === item.id)
+        .map(c => ({
+          courseItemId: c.courseItemId,
+          course: c.filledCourseId ? {
+            id: c.filledCourseId,
+            code: c.code,
+            name: c.name,
+            usefulRating: c.usefulRating,
+            likedRating: c.likedRating,
+            easyRating: c.easyRating,
+            numRatings: c.numRatings,
+            selected: c.selected,
+          } : null
         }))
     }))
   };
@@ -278,4 +317,46 @@ export async function getUserTemplatesWithCourses(userId: string) {
   );
 
   return templateDetails.filter((t): t is NonNullable<typeof t> => t !== null);
+}
+
+/**
+ * Updates a free course selection for a user
+ */
+export async function updateFreeCourse(userId: string, courseItemId: number, filledCourseId: number | null) {
+  if (filledCourseId === null) {
+    // Remove the free course selection
+    await db
+      .delete(freeCourses)
+      .where(and(
+        eq(freeCourses.userId, userId),
+        eq(freeCourses.courseItemId, courseItemId)
+      ));
+  } else {
+    // Insert or update the free course selection
+    await db
+      .insert(freeCourses)
+      .values({
+        userId,
+        courseItemId,
+        filledCourseId,
+        selected: false,
+      })
+      .onConflictDoUpdate({
+        target: [freeCourses.userId, freeCourses.courseItemId],
+        set: { filledCourseId },
+      });
+  }
+}
+
+/**
+ * Toggles selection state of a free course
+ */
+export async function toggleFreeCourseSelection(userId: string, courseItemId: number, selected: boolean) {
+  await db
+    .update(freeCourses)
+    .set({ selected })
+    .where(and(
+      eq(freeCourses.userId, userId),
+      eq(freeCourses.courseItemId, courseItemId)
+    ));
 }

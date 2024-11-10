@@ -92,28 +92,40 @@ async function main() {
       },
       {
         templateId: compMathTemplate.id,
+        type: "requirement",
+        description: "Complete 3 non-math courses, at least one of which is at the 200-, 300-, or 400-level, all from the same subject code, from the following choices: AE, BIOL, BME, CHE, CHEM, CIVE, EARTH, ECE, ECON, ENVE, GEOE, ME, MNS, MSE, MTE, NE, PHYS, SYDE",
+        orderIndex: 4,
+      },
+      {
+        templateId: compMathTemplate.id,
+        type: "requirement",
+        description: "Complete 4 additional courses, taken from List 2 or List 3; choices must be in at least two different subject codes (AMATH, CO, CS, PMATH, STAT), and 2 courses must be at the 400-level",
+        orderIndex: 5,
+      },
+      {
+        templateId: compMathTemplate.id,
         type: "separator",
         description: "",
-        orderIndex: 4,
+        orderIndex: 6,
       },
       {
         templateId: compMathTemplate.id,
         type: "instruction",
         description: "Complete 2 of the following",
-        orderIndex: 5,
+        orderIndex: 7,
       },
       {
         templateId: compMathTemplate.id,
         type: "requirement",
         description: "Complete 1 of the following",
-        orderIndex: 6,
+        orderIndex: 8,
         // amath250, amath251, amath350
       },
       {
         templateId: compMathTemplate.id,
         type: "requirement",
         description: "Complete 1 of the following",
-        orderIndex: 7,
+        orderIndex: 9,
         // co250, co255
       },
     ])
@@ -227,7 +239,7 @@ async function main() {
       ['AMATH250', 'AMATH251', 'AMATH350'].map(async (code) => {
         const courseId = await findCourse(code);
         return db.insert(courseItems).values({
-          requirementId: getItemId(compMathItems, 6),
+          requirementId: getItemId(compMathItems, 8),
           courseId,
           type: "fixed",
         });
@@ -237,9 +249,28 @@ async function main() {
       ['CO250', 'CO255'].map(async (code) => {
         const courseId = await findCourse(code);
         return db.insert(courseItems).values({
-          requirementId: getItemId(compMathItems, 7),
+          requirementId: getItemId(compMathItems, 9),
           courseId,
           type: "fixed",
+        });
+      })
+    ),
+    // Add 3 free course slots for non-math courses (orderIndex 4)
+    Promise.all(
+      Array(3).fill(null).map(() => {
+        return db.insert(courseItems).values({
+          requirementId: getItemId(compMathItems, 4),
+          type: "free",
+        });
+      })
+    ),
+
+    // Add 4 free course slots for additional courses from List 2 or List 3 (orderIndex 5)
+    Promise.all(
+      Array(4).fill(null).map(() => {
+        return db.insert(courseItems).values({
+          requirementId: getItemId(compMathItems, 5),
+          type: "free",
         });
       })
     ),

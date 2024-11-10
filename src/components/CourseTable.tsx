@@ -9,7 +9,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { useState } from "react";
+import { updateFreeCourse } from "@/server/actions";
 
 type Course = {
   id: number;
@@ -21,15 +23,34 @@ type Course = {
   numRatings: number | null;
 };
 
-type Props = {
-  courses: Course[];
-  requirementId: number;
+type FixedCourse = {
+  course: Course;
 };
 
-export function CourseTable({ courses, requirementId }: Props) {
+type FreeCourse = {
+  courseItemId: number;
+  course: Course | null;
+};
+
+type Props = {
+  fixedCourses?: FixedCourse[];
+  freeCourses?: FreeCourse[];
+  requirementId: number;
+  allCourses: Course[];
+  userId: string;
+};
+
+export function CourseTable({
+  fixedCourses = [],
+  freeCourses = [],
+  requirementId,
+  allCourses,
+  userId,
+}: Props) {
   const [selectedCourses, setSelectedCourses] = useState<Set<number>>(
     new Set(),
   );
+  const [courseInputs, setCourseInputs] = useState<Record<number, string>>({});
 
   const toggleCourse = (courseId: number) => {
     const newSelected = new Set(selectedCourses);
@@ -39,6 +60,24 @@ export function CourseTable({ courses, requirementId }: Props) {
       newSelected.add(courseId);
     }
     setSelectedCourses(newSelected);
+  };
+
+  const handleCourseInput = (courseItemId: number, value: string) => {
+    setCourseInputs((prev) => ({
+      ...prev,
+      [courseItemId]: value.toUpperCase(),
+    }));
+  };
+
+  const handleCourseUpdate = async (courseItemId: number) => {
+    const courseCode = courseInputs[courseItemId];
+    if (!courseCode) return;
+
+    const course = allCourses.find((c) => c.code === courseCode);
+    if (course) {
+      // Use server action to update course
+      await updateFreeCourse(userId, courseItemId, course.id);
+    }
   };
 
   return (
@@ -56,7 +95,7 @@ export function CourseTable({ courses, requirementId }: Props) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {courses.map((course) => (
+          {fixedCourses.map(({ course }) => (
             <TableRow key={course.id}>
               <TableCell>
                 <Checkbox
@@ -77,6 +116,53 @@ export function CourseTable({ courses, requirementId }: Props) {
               </TableCell>
               <TableCell className="text-right">
                 {course.numRatings ?? "N/A"}
+              </TableCell>
+            </TableRow>
+          ))}
+          {freeCourses.map((freeCourse) => (
+            <TableRow key={freeCourse.courseItemId}>
+              <TableCell>
+                <Checkbox
+                  checked={
+                    freeCourse.course
+                      ? selectedCourses.has(freeCourse.course.id)
+                      : false
+                  }
+                  onCheckedChange={() =>
+                    freeCourse.course && toggleCourse(freeCourse.course.id)
+                  }
+                  disabled={!freeCourse.course}
+                />
+              </TableCell>
+              <TableCell>
+                {freeCourse.course ? (
+                  freeCourse.course.code
+                ) : (
+                  <Input
+                    value={courseInputs[freeCourse.courseItemId] || ""}
+                    onChange={(e) =>
+                      handleCourseInput(freeCourse.courseItemId, e.target.value)
+                    }
+                    onBlur={() => handleCourseUpdate(freeCourse.courseItemId)}
+                    placeholder="Enter course code"
+                    className="w-24"
+                  />
+                )}
+              </TableCell>
+              <TableCell>
+                {freeCourse.course?.name ?? "Enter a course code"}
+              </TableCell>
+              <TableCell className="text-right">
+                {freeCourse.course?.usefulRating ?? "N/A"}
+              </TableCell>
+              <TableCell className="text-right">
+                {freeCourse.course?.likedRating ?? "N/A"}
+              </TableCell>
+              <TableCell className="text-right">
+                {freeCourse.course?.easyRating ?? "N/A"}
+              </TableCell>
+              <TableCell className="text-right">
+                {freeCourse.course?.numRatings ?? "N/A"}
               </TableCell>
             </TableRow>
           ))}
