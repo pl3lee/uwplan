@@ -83,7 +83,7 @@ export function CourseTable({
   const handleCourseUpdate = async (courseItemId: number) => {
     const courseCode = courseInputs[courseItemId];
     const course = allCourses.find((c) => c.code === courseCode);
-    await updateFreeCourse(userId, courseItemId, course?.id ?? null);
+    await updateFreeCourse(courseItemId, course?.id ?? null);
   };
 
   return (

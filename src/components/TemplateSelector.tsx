@@ -16,12 +16,13 @@ import {
 } from "@/server/db/queries";
 
 type Template = {
-  id: number;
+  id: string;
   name: string;
+  description: string | null;
 };
 
 type Plan = {
-  id: number;
+  id: string;
   userId: string;
 };
 
@@ -46,12 +47,9 @@ export function TemplateSelector({
         {templates.map((template) => (
           <DropdownMenuCheckboxItem
             key={template.id}
-            // onCheckedChange={(checked) =>
-            //   handleCheckedChange(template, checked)
-            // }
             checked={selectedTemplates.some((item) => item.id === template.id)}
             onCheckedChange={async (checked) =>
-              await toggleTemplate(userPlan.userId, template.id)
+              await toggleTemplate(template.id)
             }
           >
             {template.name}

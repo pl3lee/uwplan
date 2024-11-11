@@ -12,6 +12,7 @@ import {
   serial,
   uniqueIndex,
   decimal,
+  uuid,
 } from "drizzle-orm/pg-core";
 import { type AdapterAccount } from "next-auth/adapters";
 
@@ -122,7 +123,7 @@ export const courseItemTypeEnum = pgEnum("course_item_type", ["fixed", "free"]);
 // Courses that students can take
 // Contains course information and pre-populated ratings from external sources
 export const courses = createTable("course", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").defaultRandom().primaryKey(),
   code: varchar("code", { length: 10 }).notNull().unique(), // Add unique constraint
   name: varchar("name", { length: 255 }).notNull(),
   usefulRating: decimal("useful_rating", { precision: 4, scale: 3 }),
@@ -134,7 +135,7 @@ export const courses = createTable("course", {
 // Templates represent predefined academic plans (e.g., Computational Mathematics Major)
 // Contains basic template information
 export const templates = createTable("template", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").defaultRandom().primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
 });
@@ -143,7 +144,7 @@ export const templates = createTable("template", {
 // Each user has exactly one plan (enforced by unique index on userId)
 // Plans are built from one or more templates
 export const plans = createTable("plan", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").defaultRandom().primaryKey(),
   userId: varchar("user_id", { length: 255 })
     .notNull()
     .references(() => users.id),
@@ -155,8 +156,8 @@ export const plans = createTable("plan", {
 // Can be a requirement, instruction, or separator
 // Order is maintained through orderIndex
 export const templateItems = createTable("template_item", {
-  id: serial("id").primaryKey(),
-  templateId: integer("template_id").notNull().references(() => templates.id),
+  id: uuid("id").defaultRandom().primaryKey(),
+  templateId: uuid("template_id").notNull().references(() => templates.id),
   type: itemTypeEnum("type").notNull(),
   description: text("description"),
   orderIndex: integer("order_index").notNull(),
@@ -164,12 +165,12 @@ export const templateItems = createTable("template_item", {
 
 // Each requirement has course items
 export const courseItems = createTable("course_item", {
-  id: serial("id").primaryKey(),
-  requirementId: integer("requirement_id")
+  id: uuid("id").defaultRandom().primaryKey(),
+  requirementId: uuid("requirement_id")
     .notNull()
     .references(() => templateItems.id),
   type: courseItemTypeEnum("type").notNull(), // Using the enum type
-  courseId: integer("course_id")
+  courseId: uuid("course_id")
     .references(() => courses.id), // Only set for fixed courses
 }, (t) => ({
   // Add index for faster lookups
@@ -179,8 +180,8 @@ export const courseItems = createTable("course_item", {
 // Junction table between plans and templates
 // Tracks which templates are used in each plan
 export const planTemplates = createTable("plan_template", {
-  planId: integer("plan_id").notNull().references(() => plans.id),
-  templateId: integer("template_id").notNull().references(() => templates.id),
+  planId: uuid("plan_id").notNull().references(() => plans.id),
+  templateId: uuid("template_id").notNull().references(() => templates.id),
 }, (t) => ({
   pk: primaryKey({ columns: [t.planId, t.templateId] }),
 }));
@@ -188,17 +189,17 @@ export const planTemplates = createTable("plan_template", {
 // Schedules created by users to plan when they will take courses
 // Each schedule belongs to a plan and has a name
 export const schedules = createTable("schedule", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").defaultRandom().primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
-  planId: integer("plan_id").notNull().references(() => plans.id),
+  planId: uuid("plan_id").notNull().references(() => plans.id),
 });
 
 // Junction table between schedules and courses
 // Tracks which courses are scheduled in which terms
 // A course can only appear once in a schedule
 export const scheduleCourses = createTable("schedule_course", {
-  scheduleId: integer("schedule_id").notNull().references(() => schedules.id),
-  courseId: integer("course_id").notNull().references(() => courses.id),
+  scheduleId: uuid("schedule_id").notNull().references(() => schedules.id),
+  courseId: uuid("course_id").notNull().references(() => courses.id),
   term: varchar("term", { length: 20 }).notNull(), // e.g., "Fall 2023"
 }, (t) => ({
   pk: primaryKey({ columns: [t.scheduleId, t.courseId] }),
@@ -207,8 +208,8 @@ export const scheduleCourses = createTable("schedule_course", {
 // Junction table between plans and courses
 // Tracks which courses a user has selected in their plan
 export const selectedCourses = createTable("selected_course", {
-  planId: integer("plan_id").notNull().references(() => plans.id),
-  courseId: integer("course_id").notNull().references(() => courses.id),
+  planId: uuid("plan_id").notNull().references(() => plans.id),
+  courseId: uuid("course_id").notNull().references(() => courses.id),
   selected: boolean("selected").notNull().default(false),
 }, (t) => ({
   pk: primaryKey({ columns: [t.planId, t.courseId] }),
@@ -216,17 +217,16 @@ export const selectedCourses = createTable("selected_course", {
 
 // When a user fills in a free course
 export const freeCourses = createTable("free_course", {
-  id: serial("id").primaryKey(),
-  courseItemId: integer("course_item_id")
+  id: uuid("id").defaultRandom().primaryKey(),
+  courseItemId: uuid("course_item_id")
     .notNull()
     .references(() => courseItems.id),
   userId: varchar("user_id", { length: 255 })
     .notNull()
     .references(() => users.id),
-  filledCourseId: integer("filled_course_id")
+  filledCourseId: uuid("filled_course_id")
     .notNull()
     .references(() => courses.id),
-  selected: boolean("selected").default(false),
 }, (t) => ({
   // Add unique constraint to ensure one user can only fill a course item once
   uniqueCourseItemUser: uniqueIndex("free_course_item_user_idx").on(t.courseItemId, t.userId),

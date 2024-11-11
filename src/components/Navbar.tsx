@@ -36,21 +36,9 @@ export default async function Navbar() {
     ? await getUserSelectedTemplates(session.user.id)
     : [];
   const userPlan = session?.user ? await getUserPlan(session.user.id) : null;
-  console.log(templates);
-  console.log(selectedTemplates);
   return (
     <nav className="p-4">
       <div className="container mx-auto flex items-center justify-end gap-4">
-        {/* <Tabs defaultValue="select" className="">
-          <TabsList>
-            <TabsTrigger value="select" asChild>
-              <Link href="/select">Select</Link>
-            </TabsTrigger>
-            <TabsTrigger value="schedule" asChild>
-              <Link href="/schedule">Schedule</Link>
-            </TabsTrigger>
-          </TabsList>
-        </Tabs> */}
         <TabSelector />
 
         {session?.user && userPlan && (

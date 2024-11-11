@@ -39,6 +39,7 @@ export async function getUserSelectedTemplates(userId: string) {
     .select({
       name: templates.name,
       id: planTemplates.templateId,
+      description: templates.description,
     })
     .from(planTemplates)
     .innerJoin(plans, eq(plans.id, planTemplates.planId))
@@ -87,7 +88,7 @@ export async function getOrCreateUserPlan(userId: string) {
 /**
  * Gets detailed information about a template including all its items and courses.
  */
-export async function getTemplateDetails(templateId: number) {
+export async function getTemplateDetails(templateId: string) {
   // Get template
   const [template] = await db
     .select()
@@ -136,7 +137,6 @@ export async function getTemplateDetails(templateId: number) {
       likedRating: courses.likedRating,
       easyRating: courses.easyRating,
       numRatings: courses.numRatings,
-      selected: freeCourses.selected,
     })
     .from(courseItems)
     .leftJoin(freeCourses, eq(freeCourses.courseItemId, courseItems.id))
@@ -175,8 +175,7 @@ export async function getTemplateDetails(templateId: number) {
             usefulRating: c.usefulRating,
             likedRating: c.likedRating,
             easyRating: c.easyRating,
-            numRatings: c.numRatings,
-            selected: c.selected,
+            numRatings: c.numRatings
           } : null
         }))
     }))
@@ -186,7 +185,7 @@ export async function getTemplateDetails(templateId: number) {
 /**
  * Gets all selected courses for a plan
  */
-export async function getSelectedCourses(planId: number) {
+export async function getSelectedCourses(planId: string) {
   return await db
     .select({
       courseId: selectedCourses.courseId,
@@ -199,7 +198,7 @@ export async function getSelectedCourses(planId: number) {
 /**
  * Toggles a course selection in a plan
  */
-export async function toggleCourseSelection(planId: number, courseId: number, selected: boolean) {
+export async function toggleCourseSelection(planId: string, courseId: string, selected: boolean) {
   await db
     .insert(selectedCourses)
     .values({
@@ -216,7 +215,7 @@ export async function toggleCourseSelection(planId: number, courseId: number, se
 /**
  * Links a template to a plan
  */
-export async function addTemplateToPlan(planId: number, templateId: number) {
+export async function addTemplateToPlan(planId: string, templateId: string) {
   await db
     .insert(planTemplates)
     .values({
@@ -229,7 +228,7 @@ export async function addTemplateToPlan(planId: number, templateId: number) {
 /**
  * Removes a template from a plan and cleans up related course selections
  */
-export async function removeTemplateFromPlan(planId: number, templateId: number) {
+export async function removeTemplateFromPlan(planId: string, templateId: string) {
   // Get courses that are only in this template
   const templateCourses = await db
     .select({ courseId: courseItems.courseId })
@@ -247,7 +246,7 @@ export async function removeTemplateFromPlan(planId: number, templateId: number)
       eq(selectedCourses.planId, planId),
       inArray(
         selectedCourses.courseId,
-        templateCourses.map(c => c.courseId).filter((id): id is number => id !== null)
+        templateCourses.map(c => c.courseId).filter((id): id is string => id !== null)
       )
     ));
 
@@ -260,7 +259,7 @@ export async function removeTemplateFromPlan(planId: number, templateId: number)
     ));
 }
 
-export async function toggleUserTemplate(userId: string, templateId: number) {
+export async function toggleUserTemplate(userId: string, templateId: string) {
   const userPlan = await getOrCreateUserPlan(userId);
   if (!userPlan) {
     throw new Error(`Failed to get or create plan for user ${userId}`);
@@ -322,7 +321,7 @@ export async function getUserTemplatesWithCourses(userId: string) {
 /**
  * Updates a free course selection for a user
  */
-export async function updateFreeCourse(userId: string, courseItemId: number, filledCourseId: number | null) {
+export async function updateFreeCourse(userId: string, courseItemId: string, filledCourseId: string | null) {
   if (filledCourseId === null) {
     // Remove the free course selection
     await db
@@ -338,8 +337,7 @@ export async function updateFreeCourse(userId: string, courseItemId: number, fil
       .values({
         userId,
         courseItemId,
-        filledCourseId,
-        selected: false,
+        filledCourseId
       })
       .onConflictDoUpdate({
         target: [freeCourses.userId, freeCourses.courseItemId],
@@ -348,15 +346,3 @@ export async function updateFreeCourse(userId: string, courseItemId: number, fil
   }
 }
 
-/**
- * Toggles selection state of a free course
- */
-export async function toggleFreeCourseSelection(userId: string, courseItemId: number, selected: boolean) {
-  await db
-    .update(freeCourses)
-    .set({ selected })
-    .where(and(
-      eq(freeCourses.userId, userId),
-      eq(freeCourses.courseItemId, courseItemId)
-    ));
-}
