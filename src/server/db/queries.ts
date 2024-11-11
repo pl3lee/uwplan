@@ -7,7 +7,8 @@ import {
   selectedCourses,
   courses,
   planTemplates,
-  freeCourses, // Add import
+  freeCourses,
+  users, // Add import
 } from "@/server/db/schema";
 import { desc, eq, and, not, inArray } from "drizzle-orm";
 import { type InferSelectModel } from 'drizzle-orm';
@@ -183,26 +184,32 @@ export async function getTemplateDetails(templateId: string) {
 }
 
 /**
- * Gets all selected courses for a plan
+ * Gets all selected courses for a user
  */
-export async function getSelectedCourses(planId: string) {
+export async function getSelectedCourses(userId: string) {
   return await db
     .select({
-      courseId: selectedCourses.courseId,
-      selected: selectedCourses.selected,
+      courseId: selectedCourses.courseId
     })
     .from(selectedCourses)
-    .where(eq(selectedCourses.planId, planId));
+    .innerJoin(plans, eq(plans.id, selectedCourses.planId))
+    .innerJoin(users, eq(users.id, plans.userId))
+    .where(eq(users.id, userId));
 }
 
 /**
- * Toggles a course selection in a plan
+ * Toggles a course selection for a user
  */
-export async function toggleCourseSelection(planId: string, courseId: string, selected: boolean) {
+export async function toggleCourseSelection(userId: string, courseId: string, selected: boolean) {
+  const userPlan = await getOrCreateUserPlan(userId);
+  if (!userPlan) {
+    throw new Error(`Failed to get or create plan for user ${userId}`);
+  }
+
   await db
     .insert(selectedCourses)
     .values({
-      planId,
+      planId: userPlan.id,
       courseId,
       selected,
     })

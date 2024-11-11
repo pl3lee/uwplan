@@ -1,5 +1,3 @@
-"use client";
-
 import {
   Table,
   TableBody,
@@ -10,11 +8,13 @@ import {
 } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
-import { updateFreeCourse } from "@/server/actions";
+// import { useState } from "react";
+// import { toggleCourse, updateFreeCourse } from "@/server/actions";
+import { auth } from "@/server/auth";
+import { getSelectedCourses, toggleCourseSelection } from "@/server/db/queries";
 
 type Course = {
-  id: number;
+  id: string;
   code: string;
   name: string;
   usefulRating: string | null;
@@ -28,63 +28,32 @@ type FixedCourse = {
 };
 
 type FreeCourse = {
-  courseItemId: number;
+  courseItemId: string;
   course: Course | null;
 };
 
 type Props = {
   fixedCourses?: FixedCourse[];
   freeCourses?: FreeCourse[];
-  requirementId: number;
+  requirementId: string;
   allCourses: Course[];
   userId: string;
 };
 
-export function CourseTable({
+export async function CourseTable({
   fixedCourses = [],
   freeCourses = [],
   requirementId,
   allCourses,
-  userId,
 }: Props) {
-  const [selectedCourses, setSelectedCourses] = useState<Set<number>>(
-    new Set(),
+  const session = await auth();
+  if (!session?.user) {
+    return <div>Please sign in to view your requirements</div>;
+  }
+  const selectedCoursesResult = await getSelectedCourses(session?.user.id);
+  const selectedCourses = new Set(
+    selectedCoursesResult.map((course) => course.courseId),
   );
-  // Initialize courseInputs with existing course codes
-  const [courseInputs, setCourseInputs] = useState<Record<number, string>>(
-    () => {
-      const inputs: Record<number, string> = {};
-      freeCourses.forEach((fc) => {
-        if (fc.course) {
-          inputs[fc.courseItemId] = fc.course.code;
-        }
-      });
-      return inputs;
-    },
-  );
-
-  const toggleCourse = (courseId: number) => {
-    const newSelected = new Set(selectedCourses);
-    if (newSelected.has(courseId)) {
-      newSelected.delete(courseId);
-    } else {
-      newSelected.add(courseId);
-    }
-    setSelectedCourses(newSelected);
-  };
-
-  const handleCourseInput = (courseItemId: number, value: string) => {
-    setCourseInputs((prev) => ({
-      ...prev,
-      [courseItemId]: value.toUpperCase(),
-    }));
-  };
-
-  const handleCourseUpdate = async (courseItemId: number) => {
-    const courseCode = courseInputs[courseItemId];
-    const course = allCourses.find((c) => c.code === courseCode);
-    await updateFreeCourse(courseItemId, course?.id ?? null);
-  };
 
   return (
     <div className="rounded-md border">
@@ -106,7 +75,13 @@ export function CourseTable({
               <TableCell>
                 <Checkbox
                   checked={selectedCourses.has(course.id)}
-                  onCheckedChange={() => toggleCourse(course.id)}
+                  onCheckedChange={(checked) =>
+                    toggleCourseSelection(
+                      session?.user.id,
+                      course.id,
+                      checked as boolean,
+                    )
+                  }
                 />
               </TableCell>
               <TableCell>{course.code}</TableCell>
@@ -125,7 +100,7 @@ export function CourseTable({
               </TableCell>
             </TableRow>
           ))}
-          {freeCourses.map((freeCourse) => (
+          {/* {freeCourses.map((freeCourse) => (
             <TableRow key={freeCourse.courseItemId}>
               <TableCell>
                 <Checkbox
@@ -174,7 +149,7 @@ export function CourseTable({
                 {freeCourse.course?.numRatings ?? "N/A"}
               </TableCell>
             </TableRow>
-          ))}
+          ))} */}
         </TableBody>
       </Table>
     </div>
