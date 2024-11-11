@@ -112,6 +112,7 @@ export function CourseTable({
               <TableCell>
                 <div className="space-y-1">
                   <Input
+                    value={freeCourse.course?.code ?? ""}
                     onChange={async (event) => {
                       const filledCourseId = allCourses.find(
                         (c) => c.code === event.target.value,
