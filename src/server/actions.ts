@@ -23,13 +23,12 @@ export async function updateFreeCourse(courseItemId: string, filledCourseId: str
   revalidatePath('/select');
 }
 
-export async function toggleCourse(userId: string, templateId: string, courseId: string, take: boolean) {
+export async function toggleCourse(courseId: string, take: boolean) {
   const session = await auth();
   if (!session?.user) {
     throw new Error('Not authenticated');
   }
-  console.log(`Toggling course ${courseId} for user ${userId} in template ${templateId}`);
 
-  // await toggleCourseSelection(courseId, take);
+  await toggleCourseSelection(session.user.id, courseId, take);
   revalidatePath('/select');
 }

@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Table,
   TableBody,
@@ -12,6 +14,7 @@ import { Input } from "@/components/ui/input";
 // import { toggleCourse, updateFreeCourse } from "@/server/actions";
 import { auth } from "@/server/auth";
 import { getSelectedCourses, toggleCourseSelection } from "@/server/db/queries";
+import { toggleCourse } from "@/server/actions";
 
 type Course = {
   id: string;
@@ -38,23 +41,17 @@ type Props = {
   requirementId: string;
   allCourses: Course[];
   userId: string;
+  selectedCourses: Set<string>;
 };
 
-export async function CourseTable({
+export function CourseTable({
   fixedCourses = [],
   freeCourses = [],
   requirementId,
   allCourses,
+  userId,
+  selectedCourses,
 }: Props) {
-  const session = await auth();
-  if (!session?.user) {
-    return <div>Please sign in to view your requirements</div>;
-  }
-  const selectedCoursesResult = await getSelectedCourses(session?.user.id);
-  const selectedCourses = new Set(
-    selectedCoursesResult.map((course) => course.courseId),
-  );
-
   return (
     <div className="rounded-md border">
       <Table>
@@ -76,11 +73,7 @@ export async function CourseTable({
                 <Checkbox
                   checked={selectedCourses.has(course.id)}
                   onCheckedChange={(checked) =>
-                    toggleCourseSelection(
-                      session?.user.id,
-                      course.id,
-                      checked as boolean,
-                    )
+                    toggleCourse(course.id, checked as boolean)
                   }
                 />
               </TableCell>

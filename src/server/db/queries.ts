@@ -194,7 +194,7 @@ export async function getSelectedCourses(userId: string) {
     .from(selectedCourses)
     .innerJoin(plans, eq(plans.id, selectedCourses.planId))
     .innerJoin(users, eq(users.id, plans.userId))
-    .where(eq(users.id, userId));
+    .where(and(eq(users.id, userId), eq(selectedCourses.selected, true)));
 }
 
 /**
@@ -205,7 +205,7 @@ export async function toggleCourseSelection(userId: string, courseId: string, se
   if (!userPlan) {
     throw new Error(`Failed to get or create plan for user ${userId}`);
   }
-
+  console.log("Toggling course selection", userId, courseId, selected);
   await db
     .insert(selectedCourses)
     .values({

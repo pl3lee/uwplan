@@ -1,6 +1,7 @@
 import styles from "@/styles/utils.module.css";
 import {
   getCoursesWithRatings,
+  getSelectedCourses,
   getUserTemplatesWithCourses,
 } from "@/server/db/queries";
 import { CourseTable } from "@/components/CourseTable";
@@ -14,9 +15,10 @@ export default async function SelectPage() {
     return <div>Please sign in to view your requirements</div>;
   }
 
-  const [templates, allCourses] = await Promise.all([
+  const [templates, allCourses, selectedCourses] = await Promise.all([
     getUserTemplatesWithCourses(session.user.id),
     getCoursesWithRatings(),
+    getSelectedCourses(session.user.id),
   ]);
 
   return (
@@ -41,8 +43,12 @@ export default async function SelectPage() {
                       fixedCourses={item.fixedCourses}
                       freeCourses={item.freeCourses}
                       requirementId={item.id}
-                      allCourses={allCourses}
                       userId={session.user.id}
+                      selectedCourses={
+                        new Set(
+                          selectedCourses.map((course) => course.courseId),
+                        )
+                      }
                     />
                   </>
                 )}
