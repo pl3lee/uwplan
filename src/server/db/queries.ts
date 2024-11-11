@@ -308,7 +308,7 @@ export async function getUserTemplatesWithCourses(userId: string) {
  */
 export async function updateFreeCourse(userId: string, courseItemId: string, filledCourseId: string | null) {
   if (filledCourseId === null) {
-    // Remove the free course selection
+    // Delete the free course from table
     await db
       .delete(freeCourses)
       .where(and(

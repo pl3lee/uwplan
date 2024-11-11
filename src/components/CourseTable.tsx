@@ -14,12 +14,12 @@ import { Input } from "@/components/ui/input";
 // import { toggleCourse, updateFreeCourse } from "@/server/actions";
 import { auth } from "@/server/auth";
 import { getSelectedCourses, toggleCourseSelection } from "@/server/db/queries";
-import { toggleCourse } from "@/server/actions";
+import { toggleCourse, updateFreeCourse } from "@/server/actions";
 
 type Course = {
   id: string;
-  code: string;
-  name: string;
+  code: string | null;
+  name: string | null;
   usefulRating: string | null;
   likedRating: string | null;
   easyRating: string | null;
@@ -93,7 +93,7 @@ export function CourseTable({
               </TableCell>
             </TableRow>
           ))}
-          {/* {freeCourses.map((freeCourse) => (
+          {freeCourses.map((freeCourse) => (
             <TableRow key={freeCourse.courseItemId}>
               <TableCell>
                 <Checkbox
@@ -102,8 +102,9 @@ export function CourseTable({
                       ? selectedCourses.has(freeCourse.course.id)
                       : false
                   }
-                  onCheckedChange={() =>
-                    freeCourse.course && toggleCourse(freeCourse.course.id)
+                  onCheckedChange={(checked) =>
+                    freeCourse.course &&
+                    toggleCourse(freeCourse.course.id, checked as boolean)
                   }
                   disabled={!freeCourse.course}
                 />
@@ -111,11 +112,18 @@ export function CourseTable({
               <TableCell>
                 <div className="space-y-1">
                   <Input
-                    value={courseInputs[freeCourse.courseItemId] || ""}
-                    onChange={(e) =>
-                      handleCourseInput(freeCourse.courseItemId, e.target.value)
-                    }
-                    onBlur={() => handleCourseUpdate(freeCourse.courseItemId)}
+                    onChange={async (event) => {
+                      const filledCourseId = allCourses.find(
+                        (c) => c.code === event.target.value,
+                      )?.id;
+                      if (!filledCourseId) {
+                        return;
+                      }
+                      await updateFreeCourse(
+                        freeCourse.courseItemId,
+                        filledCourseId,
+                      );
+                    }}
                     placeholder="Enter course code"
                     className="w-24"
                   />
@@ -142,7 +150,7 @@ export function CourseTable({
                 {freeCourse.course?.numRatings ?? "N/A"}
               </TableCell>
             </TableRow>
-          ))} */}
+          ))}
         </TableBody>
       </Table>
     </div>

@@ -42,6 +42,7 @@ export default async function SelectPage() {
                     <CourseTable
                       fixedCourses={item.fixedCourses}
                       freeCourses={item.freeCourses}
+                      allCourses={allCourses}
                       requirementId={item.id}
                       userId={session.user.id}
                       selectedCourses={
