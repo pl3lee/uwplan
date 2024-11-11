@@ -236,28 +236,6 @@ export async function addTemplateToPlan(planId: string, templateId: string) {
  * Removes a template from a plan and cleans up related course selections
  */
 export async function removeTemplateFromPlan(planId: string, templateId: string) {
-  // Get courses that are only in this template
-  const templateCourses = await db
-    .select({ courseId: courseItems.courseId })
-    .from(templateItems)
-    .innerJoin(
-      courseItems,
-      eq(courseItems.requirementId, templateItems.id)
-    )
-    .where(and(eq(templateItems.templateId, templateId), eq(courseItems.type, "fixed")));
-
-  // Remove course selections for courses unique to this template
-  await db
-    .delete(selectedCourses)
-    .where(and(
-      eq(selectedCourses.planId, planId),
-      inArray(
-        selectedCourses.courseId,
-        templateCourses.map(c => c.courseId).filter((id): id is string => id !== null)
-      )
-    ));
-
-  // Remove template from plan
   await db
     .delete(planTemplates)
     .where(and(
