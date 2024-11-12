@@ -18,6 +18,11 @@ type Course = InferSelectModel<typeof courses>;
 type TemplateItem = InferSelectModel<typeof templateItems>;
 type Template = InferSelectModel<typeof templates>;
 
+// Add type guard helper
+function isValidCourse(course: { code: string | null; name: string | null; }): course is { code: string; name: string; } {
+  return course.code !== null && course.name !== null;
+}
+
 /**
  * Retrieves all available academic plan templates.
  */
@@ -123,7 +128,7 @@ export async function getTemplateDetails(templateId: string) {
     .innerJoin(courses, eq(courses.id, courseItems.courseId))
     .where(and(
       inArray(courseItems.requirementId, items.map(item => item.id)),
-      eq(courseItems.type, "fixed")
+      eq(courseItems.type, "fixed"),
     ));
 
   // Get free course items and their filled courses if any
@@ -147,13 +152,13 @@ export async function getTemplateDetails(templateId: string) {
       eq(courseItems.type, "free")
     ));
 
-  // Combine the data
+  // Combine the data and filter out invalid courses
   return {
     ...template,
     items: items.map(item => ({
       ...item,
       fixedCourses: fixedCoursesForItems
-        .filter(c => c.itemId === item.id)
+        .filter(c => c.itemId === item.id && isValidCourse(c))
         .map(c => ({
           course: {
             id: c.courseId,
@@ -169,7 +174,7 @@ export async function getTemplateDetails(templateId: string) {
         .filter(c => c.itemId === item.id)
         .map(c => ({
           courseItemId: c.courseItemId,
-          course: c.filledCourseId ? {
+          course: c.filledCourseId && isValidCourse(c) ? {
             id: c.filledCourseId,
             code: c.code,
             name: c.name,
@@ -268,8 +273,9 @@ export async function toggleUserTemplate(userId: string, templateId: string) {
   }
 }
 
+// Modify getCoursesWithRatings to filter out invalid courses
 export async function getCoursesWithRatings() {
-  return await db
+  const coursesResults = await db
     .select({
       id: courses.id,
       code: courses.code,
@@ -281,6 +287,8 @@ export async function getCoursesWithRatings() {
     })
     .from(courses)
     .orderBy(courses.code);
+
+  return coursesResults.filter(isValidCourse);
 }
 
 export async function getUserTemplatesWithCourses(userId: string) {

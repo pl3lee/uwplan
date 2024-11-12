@@ -10,48 +10,35 @@ import {
 } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-// import { useState } from "react";
-// import { toggleCourse, updateFreeCourse } from "@/server/actions";
 import { auth } from "@/server/auth";
 import { getSelectedCourses, toggleCourseSelection } from "@/server/db/queries";
 import { toggleCourse, updateFreeCourse } from "@/server/actions";
+import { FixedCourse, FreeCourse, Course } from "@/types/course";
+import { useState } from "react";
 
-type Course = {
-  id: string;
-  code: string | null;
-  name: string | null;
-  usefulRating: string | null;
-  likedRating: string | null;
-  easyRating: string | null;
-  numRatings: number | null;
-};
-
-type FixedCourse = {
-  course: Course;
-};
-
-type FreeCourse = {
-  courseItemId: string;
-  course: Course | null;
-};
-
-type Props = {
+type CourseTableProps = {
   fixedCourses?: FixedCourse[];
   freeCourses?: FreeCourse[];
-  requirementId: string;
   allCourses: Course[];
-  userId: string;
   selectedCourses: Set<string>;
 };
 
 export function CourseTable({
   fixedCourses = [],
   freeCourses = [],
-  requirementId,
   allCourses,
-  userId,
   selectedCourses,
-}: Props) {
+}: CourseTableProps) {
+  const initFreeCourseMap = new Map();
+  freeCourses.forEach((freeCourse) => {
+    initFreeCourseMap.set(
+      freeCourse.courseItemId,
+      freeCourse.course?.code ?? "",
+    );
+  });
+  const [freeCourseInputs, setFreeCourseInputs] =
+    useState<Map<string, string>>(initFreeCourseMap);
+
   return (
     <div className="rounded-md border">
       <Table>
@@ -112,8 +99,13 @@ export function CourseTable({
               <TableCell>
                 <div className="space-y-1">
                   <Input
-                    value={freeCourse.course?.code ?? ""}
+                    value={freeCourseInputs.get(freeCourse.courseItemId)}
                     onChange={async (event) => {
+                      setFreeCourseInputs((prev) => {
+                        const newMap = new Map(prev);
+                        newMap.set(freeCourse.courseItemId, event.target.value);
+                        return newMap;
+                      });
                       const filledCourseId = allCourses.find(
                         (c) => c.code === event.target.value,
                       )?.id;

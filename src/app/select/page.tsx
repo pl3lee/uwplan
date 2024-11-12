@@ -8,6 +8,7 @@ import { CourseTable } from "@/components/CourseTable";
 import { auth } from "@/server/auth";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { FixedCourse } from "@/types/course";
 
 export default async function SelectPage() {
   const session = await auth();
@@ -21,9 +22,32 @@ export default async function SelectPage() {
     getSelectedCourses(session.user.id),
   ]);
 
+  const selectedCoursesWithDetails = selectedCourses
+    .map(({ courseId }) => {
+      const course = allCourses.find((course) => course.id === courseId);
+      return course ? { course } : undefined;
+    })
+    .filter((course): course is FixedCourse => course !== undefined);
+
   return (
     <div className="container mx-auto py-10">
       <h1 className={styles.pageTitleText}>Select Your Courses</h1>
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="text-lg font-medium">
+            Your Selected Courses
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <CourseTable
+            fixedCourses={selectedCoursesWithDetails}
+            allCourses={allCourses}
+            selectedCourses={
+              new Set(selectedCourses.map((course) => course.courseId))
+            }
+          />
+        </CardContent>
+      </Card>
       {templates.map((template) => (
         <Card key={template.id} className="mt-6">
           <CardHeader>
@@ -43,8 +67,6 @@ export default async function SelectPage() {
                       fixedCourses={item.fixedCourses}
                       freeCourses={item.freeCourses}
                       allCourses={allCourses}
-                      requirementId={item.id}
-                      userId={session.user.id}
                       selectedCourses={
                         new Set(
                           selectedCourses.map((course) => course.courseId),
