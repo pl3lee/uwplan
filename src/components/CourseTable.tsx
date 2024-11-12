@@ -15,6 +15,9 @@ import { getSelectedCourses, toggleCourseSelection } from "@/server/db/queries";
 import { toggleCourse, updateFreeCourse } from "@/server/actions";
 import { FixedCourse, FreeCourse, Course } from "@/types/course";
 import { useState } from "react";
+import Link from "next/link";
+import { Button } from "./ui/button";
+import { normalizeCourseCode } from "@/lib/utils";
 
 type CourseTableProps = {
   fixedCourses?: FixedCourse[];
@@ -44,13 +47,13 @@ export function CourseTable({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[50px]">Take?</TableHead>
+            <TableHead className="w-1/12">Take?</TableHead>
             <TableHead className="w-2/12">Code</TableHead>
-            <TableHead className="w-4/12">Name</TableHead>
-            <TableHead className="text-right">Useful</TableHead>
-            <TableHead className="text-right">Liked</TableHead>
-            <TableHead className="text-right">Easy</TableHead>
-            <TableHead className="text-right"># Ratings</TableHead>
+            <TableHead className="w-5/12">Name</TableHead>
+            <TableHead className="w-1/12 text-right">Useful</TableHead>
+            <TableHead className="w-1/12 text-right">Liked</TableHead>
+            <TableHead className="w-1/12 text-right">Easy</TableHead>
+            <TableHead className="w-1/12 text-right"># Ratings</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -64,7 +67,16 @@ export function CourseTable({
                   }
                 />
               </TableCell>
-              <TableCell>{course.code}</TableCell>
+              <TableCell>
+                <Button asChild variant="link">
+                  <Link
+                    href={`https://uwflow.com/course/${course.code}`}
+                    target="_blank"
+                  >
+                    {course.code}
+                  </Link>
+                </Button>
+              </TableCell>
               <TableCell>{course.name}</TableCell>
               <TableCell className="text-right">
                 {course.usefulRating ?? "N/A"}
@@ -101,13 +113,19 @@ export function CourseTable({
                   <Input
                     value={freeCourseInputs.get(freeCourse.courseItemId)}
                     onChange={async (event) => {
+                      const normalizedCourseCode = normalizeCourseCode(
+                        event.target.value,
+                      );
                       setFreeCourseInputs((prev) => {
                         const newMap = new Map(prev);
-                        newMap.set(freeCourse.courseItemId, event.target.value);
+                        newMap.set(
+                          freeCourse.courseItemId,
+                          normalizedCourseCode,
+                        );
                         return newMap;
                       });
                       const filledCourseId = allCourses.find(
-                        (c) => c.code === event.target.value,
+                        (c) => c.code === normalizedCourseCode,
                       )?.id;
                       if (!filledCourseId) {
                         return;
@@ -117,12 +135,23 @@ export function CourseTable({
                         filledCourseId,
                       );
                     }}
-                    placeholder="Enter course code"
-                    className="w-24"
+                    placeholder="Course code"
+                    className="w-full"
                   />
                   {freeCourse.course && (
                     <div className="text-xs text-muted-foreground">
-                      Current: {freeCourse.course.code}
+                      Current:
+                      <Button asChild variant="link">
+                        <Link
+                          href={`https://uwflow.com/course/${freeCourse.course.code}`}
+                          target="_blank"
+                          className="text-xs"
+                        >
+                          <span className="text-muted-foreground">
+                            {freeCourse.course.code}
+                          </span>
+                        </Link>
+                      </Button>
                     </div>
                   )}
                 </div>
