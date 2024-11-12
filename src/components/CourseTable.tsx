@@ -44,9 +44,9 @@ export function CourseTable({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[50px]"></TableHead>
-            <TableHead>Code</TableHead>
-            <TableHead>Name</TableHead>
+            <TableHead className="w-[50px]">Take?</TableHead>
+            <TableHead className="w-2/12">Code</TableHead>
+            <TableHead className="w-4/12">Name</TableHead>
             <TableHead className="text-right">Useful</TableHead>
             <TableHead className="text-right">Liked</TableHead>
             <TableHead className="text-right">Easy</TableHead>
