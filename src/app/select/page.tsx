@@ -6,7 +6,13 @@ import {
 } from "@/server/db/queries";
 import { CourseTable } from "@/components/CourseTable";
 import { auth } from "@/server/auth";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardDescription,
+} from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { FixedCourse } from "@/types/course";
 
@@ -54,13 +60,14 @@ export default async function SelectPage() {
             <CardTitle className="text-lg font-medium">
               {template.name}
             </CardTitle>
+            <CardDescription>{template.description}</CardDescription>
           </CardHeader>
           <CardContent>
             {template.items.map((item) => (
-              <div key={item.id} className="mt-4">
+              <div key={item.id} className="mt-6">
                 {item.type === "requirement" && (
                   <>
-                    <h3 className="text-md mb-2 text-foreground">
+                    <h3 className="text-md mb-2 text-card-foreground">
                       {item.description}
                     </h3>
                     <CourseTable
@@ -76,7 +83,7 @@ export default async function SelectPage() {
                   </>
                 )}
                 {item.type === "instruction" && (
-                  <h3 className="mb-2 text-xl font-medium text-accent-foreground">
+                  <h3 className="mb-2 text-lg font-medium text-accent-foreground">
                     {item.description}
                   </h3>
                 )}
