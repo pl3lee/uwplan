@@ -18,6 +18,35 @@ type Course = InferSelectModel<typeof courses>;
 type TemplateItem = InferSelectModel<typeof templateItems>;
 type Template = InferSelectModel<typeof templates>;
 
+// Update type definitions
+type RequirementItem = {
+  type: "requirement";
+  description: string;
+  orderIndex: number;
+  courseType: "fixed" | "free";
+  courses: string[]; // Array of course codes
+  courseCount?: number; // Only for free courses
+};
+
+type InstructionItem = {
+  type: "instruction";
+  description: string;
+  orderIndex: number;
+};
+
+type SeparatorItem = {
+  type: "separator";
+  orderIndex: number;
+};
+
+type CreateTemplateItemInput = RequirementItem | InstructionItem | SeparatorItem;
+
+type CreateTemplateInput = {
+  name: string;
+  description?: string;
+  items: CreateTemplateItemInput[];
+};
+
 // Add type guard helper
 function isValidCourse(course: { code: string | null; name: string | null; }): course is { code: string; name: string; } {
   return course.code !== null && course.name !== null;
@@ -340,5 +369,85 @@ export async function updateFreeCourse(userId: string, courseItemId: string, fil
         set: { filledCourseId },
       });
   }
+}
+
+// Add this new function to create templates
+export async function createTemplate(input: CreateTemplateInput) {
+  return await db.transaction(async (tx) => {
+    // Insert the template first
+    const [template] = await tx
+      .insert(templates)
+      .values({
+        name: input.name,
+        description: input.description,
+      })
+      .returning();
+
+    if (!template) {
+      tx.rollback();
+      throw new Error("Failed to create template");
+    }
+
+    // Insert all template items
+
+    for (const item of input.items) {
+      const insertedTemplateItem = await tx
+        .insert(templateItems)
+        .values({
+          templateId: template.id,
+          type: item.type,
+          description: 'description' in item ? item.description ?? null : null,
+          orderIndex: item.orderIndex,
+        })
+        .returning({
+          id: templateItems.id,
+        });
+      if ((insertedTemplateItem.length !== 1) || !insertedTemplateItem[0]) {
+        tx.rollback();
+        throw new Error("Failed to create template item");
+      }
+      const templateItemId = insertedTemplateItem[0].id;
+      if (item.type === "requirement") {
+        if (item.courseType == "fixed") {
+          for (const courseCode of item.courses) {
+            const [course] = await db.select({ id: courses.id }).from(courses).where(eq(courses.code, courseCode)).limit(1);
+            const courseId = course?.id;
+            if (!courseId) {
+              tx.rollback();
+              throw new Error(`Course with code ${courseCode} not found`);
+            }
+            const insertedCourse = await tx
+              .insert(courseItems)
+              .values({
+                requirementId: templateItemId,
+                courseId,
+                type: item.courseType
+              })
+              .returning();
+            if (insertedCourse.length !== 1) {
+              tx.rollback()
+              throw new Error("Failed to create course item");
+            }
+          }
+        } else if (item.courseType == "free" && item.courseCount) {
+          // Free courses
+          for (let i = 0; i < item.courseCount; i++) {
+            const insertedCourse = await tx
+              .insert(courseItems)
+              .values({
+                requirementId: templateItemId,
+                type: item.courseType
+              })
+              .returning();
+            if (insertedCourse.length !== 1) {
+              tx.rollback()
+              throw new Error("Failed to create course item");
+            }
+          }
+        }
+      }
+
+    }
+  });
 }
 
