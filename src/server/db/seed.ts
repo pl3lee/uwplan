@@ -1,26 +1,11 @@
 import "dotenv/config";
-import { db } from "@/server/db";
 import { fetchUWFlowData, insertUWFlowCourses } from "@/scripts/fetchUWFlowCourses";
-import {
-  courses,
-  templates,
-  templateItems,
-  courseItems,
-} from "@/server/db/schema";
-import { eq } from "drizzle-orm";
 import { createTemplate } from "./queries";
 
 
 
 
 async function main() {
-  // Clear existing data
-  console.log("Clearing existing data...");
-  await db.delete(courseItems);
-  await db.delete(templateItems);
-  await db.delete(templates);
-  await db.delete(courses);
-
   // Fetch and populate courses from UWFlow
   console.log("Fetching and inserting UWFlow courses...");
   const courseData = await fetchUWFlowData();
@@ -259,7 +244,111 @@ async function main() {
       },
     ]
   })
-
+  await createTemplate({
+    name: "Computer Science (BMath) - 2024",
+    description: "Computer Science (BMath) - 2024",
+    items: [
+      {
+        type: "instruction",
+        description: "Complete all of the following",
+        orderIndex: 0
+      },
+      {
+        type: "requirement",
+        description: "Complete all the following:",
+        orderIndex: 1,
+        courseType: "fixed",
+        courses: ["CS136L", "CS341", "CS350"]
+      },
+      {
+        type: "requirement",
+        description: "Complete 1 the following:",
+        orderIndex: 2,
+        courseType: "fixed",
+        courses: ["AMATH242", "CS370", "CS371"]
+      },
+      {
+        type: "requirement",
+        description: "Complete 1 the following:",
+        orderIndex: 3,
+        courseType: "fixed",
+        courses: ["CS240", "CS240E"]
+      },
+      {
+        type: "requirement",
+        description: "Complete 1 the following:",
+        orderIndex: 4,
+        courseType: "fixed",
+        courses: ["CS241", "CS241E"]
+      },
+      {
+        type: "requirement",
+        description: "Complete 1 the following:",
+        orderIndex: 5,
+        courseType: "fixed",
+        courses: ["CS246", "CS246E"]
+      },
+      {
+        type: "requirement",
+        description: "Complete 1 the following:",
+        orderIndex: 6,
+        courseType: "fixed",
+        courses: ["CS251", "CS251E"]
+      },
+      {
+        type: "requirement",
+        description: "Complete 1 the following:",
+        orderIndex: 7,
+        courseType: "fixed",
+        courses: ["CS360", "CS365"]
+      },
+      {
+        type: "requirement",
+        description: "Complete 1 the following:",
+        orderIndex: 8,
+        courseType: "fixed",
+        courses: ["MATH237", "MATH247"]
+      },
+      {
+        type: "requirement",
+        description: "Complete 1 the following:",
+        orderIndex: 9,
+        courseType: "fixed",
+        courses: ["MATH239", "MATH249"]
+      },
+      {
+        type: "requirement",
+        description: "Complete 1 Complete 1 additional CS course chosen from CS340-CS398, CS440-CS489:",
+        orderIndex: 10,
+        courseType: "free",
+        courses: [],
+        courseCount: 1
+      },
+      {
+        type: "requirement",
+        description: "Complete 2 additional CS courses chosen from CS440-CS489.:",
+        orderIndex: 11,
+        courseType: "free",
+        courses: [],
+        courseCount: 2
+      },
+      {
+        type: "requirement",
+        description: "Complete 3 additional courses from: ACTSC, AMATH, CO, PMATH, STAT. The following courses are excluded: \n 1. Courses with requisites normally excluding Honours Computer Science students. \n 2. Courses cross-listed with a CS course. \n 3. Courses explicitly listed in Computer Science major academic plans as alternative to CS courses. \n 4. Readings and topics courses.",
+        orderIndex: 12,
+        courseType: "free",
+        courses: [],
+        courseCount: 3
+      },
+      {
+        type: "requirement",
+        description: "Complete 1 additional course from the following",
+        orderIndex: 13,
+        courseType: "fixed",
+        courses: ["CO487", "CS499T", "STAT440"],
+      }
+    ]
+  })
 
   console.log("Database seeded successfully!");
 }

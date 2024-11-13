@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 export default function HomePage() {
-  return <div>Hello world!</div>;
+  return <div>Hello world! Sign in and click on the select tab above.</div>;
 }

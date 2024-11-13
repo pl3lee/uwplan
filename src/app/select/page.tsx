@@ -14,7 +14,7 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { FixedCourse } from "@/types/course";
+import { type FixedCourse } from "@/types/course";
 
 export default async function SelectPage() {
   const session = await auth();

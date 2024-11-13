@@ -1,7 +1,7 @@
 import { type InferSelectModel } from "drizzle-orm";
 import {
-  courses,
-  courseItems
+  type courses,
+  type courseItems
 } from "@/server/db/schema";
 
 

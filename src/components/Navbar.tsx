@@ -8,25 +8,10 @@ import { Button } from "./ui/button";
 import {
   DropdownMenu,
   DropdownMenuItem,
-  DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import Link from "next/link";
 import { TemplateSelector } from "./TemplateSelector";
-import { headers } from "next/headers";
 import { TabSelector } from "./TabSelector";
 
 export default async function Navbar() {
@@ -45,7 +30,6 @@ export default async function Navbar() {
           <TemplateSelector
             templates={templates}
             selectedTemplates={selectedTemplates}
-            userPlan={userPlan}
           />
         )}
 

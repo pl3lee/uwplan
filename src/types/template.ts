@@ -1,7 +1,7 @@
 import { type InferSelectModel } from "drizzle-orm";
 import {
-  templates,
-  templateItems,
+  type templates,
+  type templateItems,
 } from "@/server/db/schema";
 
 export type Template = InferSelectModel<typeof templates>;

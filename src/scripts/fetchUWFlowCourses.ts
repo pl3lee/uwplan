@@ -37,7 +37,7 @@ export async function fetchUWFlowData() {
     throw new Error(`Failed to fetch from UWFlow: ${res.statusText}`);
   }
 
-  const { data }: UWFlowCourseResponse = await res.json();
+  const { data }: UWFlowCourseResponse = (await res.json()) as UWFlowCourseResponse;
   console.log(`Fetched ${data.course_search_index.length} courses`);
   return data.course_search_index;
 }
@@ -54,19 +54,19 @@ export async function insertUWFlowCourses(courseData: UWFlowCourseResponse["data
           .values({
             code: course.code.toUpperCase(),
             name: course.name,
-            usefulRating: course.useful,
-            likedRating: course.liked,
-            easyRating: course.easy,
+            usefulRating: course.useful?.toString() ?? null,
+            likedRating: course.liked?.toString() ?? null,
+            easyRating: course.easy?.toString() ?? null,
             numRatings: course.ratings,
           })
           .onConflictDoUpdate({
             target: [courses.code],
             set: {
               name: course.name,
-              usefulRating: course.useful,
-              likedRating: course.liked,
-              easyRating: course.easy,
-              numRatings: course.ratings,
+              usefulRating: course.useful?.toString() ?? null,
+              likedRating: course.liked?.toString() ?? null,
+              easyRating: course.easy?.toString() ?? null,
+              numRatings: course.ratings
             },
           })
       )

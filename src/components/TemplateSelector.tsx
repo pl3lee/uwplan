@@ -9,11 +9,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toggleTemplate } from "@/server/actions";
-import {
-  addTemplateToPlan,
-  removeTemplateFromPlan,
-  toggleUserTemplate,
-} from "@/server/db/queries";
 
 type Template = {
   id: string;
@@ -21,22 +16,12 @@ type Template = {
   description: string | null;
 };
 
-type Plan = {
-  id: string;
-  userId: string;
-};
-
 type Props = {
   templates: Template[];
   selectedTemplates: Template[];
-  userPlan: Plan;
 };
 
-export function TemplateSelector({
-  templates,
-  selectedTemplates,
-  userPlan,
-}: Props) {
+export function TemplateSelector({ templates, selectedTemplates }: Props) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -48,9 +33,7 @@ export function TemplateSelector({
           <DropdownMenuCheckboxItem
             key={template.id}
             checked={selectedTemplates.some((item) => item.id === template.id)}
-            onCheckedChange={async (checked) =>
-              await toggleTemplate(template.id)
-            }
+            onCheckedChange={async () => await toggleTemplate(template.id)}
           >
             {template.name}
           </DropdownMenuCheckboxItem>

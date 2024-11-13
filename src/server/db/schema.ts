@@ -9,7 +9,6 @@ import {
   varchar,
   boolean,
   pgEnum,
-  serial,
   uniqueIndex,
   decimal,
   uuid,

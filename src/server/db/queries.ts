@@ -8,11 +8,10 @@ import {
   courses,
   planTemplates,
   freeCourses,
-  users, // Add import
+  users,
 } from "@/server/db/schema";
-import { InstructionItem, RequirementItem, SeparatorItem } from "@/types/template";
-import { desc, eq, and, not, inArray } from "drizzle-orm";
-import { type InferSelectModel } from 'drizzle-orm';
+import { type InstructionItem, type RequirementItem, type SeparatorItem } from "@/types/template";
+import { eq, and, inArray } from "drizzle-orm";
 
 
 // Update type definitions

@@ -10,15 +10,13 @@ import {
 } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { auth } from "@/server/auth";
-import { getSelectedCourses, toggleCourseSelection } from "@/server/db/queries";
 import { toggleCourse, updateFreeCourse } from "@/server/actions";
-import { FixedCourse, FreeCourse, Course } from "@/types/course";
+import { type FixedCourse, type FreeCourse, type Course } from "@/types/course";
 import { useState } from "react";
 import Link from "next/link";
 import { Button } from "./ui/button";
 import { normalizeCourseCode } from "@/lib/utils";
-import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"; // Add these imports
+import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 
 type SortDirection = "asc" | "desc" | null;
 type SortColumn =
