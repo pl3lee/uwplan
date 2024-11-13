@@ -8,22 +8,8 @@ import {
   courseItems,
 } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
-import { type InferSelectModel } from 'drizzle-orm';
+import { createTemplate } from "./queries";
 
-// Add type definitions
-type Template = InferSelectModel<typeof templates>;
-type TemplateItem = InferSelectModel<typeof templateItems>;
-
-// Helper function to find course ID with better type safety
-const findCourse = async (code: string) => {
-  const found = await db
-    .select()
-    .from(courses)
-    .where(eq(courses.code, code))
-    .limit(1);
-  if (!found[0]) throw new Error(`Course ${code} not found`);
-  return found[0].id;
-};
 
 
 
@@ -41,284 +27,239 @@ async function main() {
   await insertUWFlowCourses(courseData);
 
   console.log("Creating templates and requirements...");
-  // Create templates with proper typing
-  const createdTemplates = await db
-    .insert(templates)
-    .values([
-      { name: "Computational Mathematics Major", description: "A major combining mathematics and computational methods" },
-      { name: "Combinatorics & Optimization Major", description: "A major focusing on discrete mathematics and optimization" },
-    ])
-    .returning();
-
-  // Type assertion with runtime check
-  if (createdTemplates.length !== 2) {
-    throw new Error("Failed to create both templates");
-  }
-
-  const [compMathTemplate, coTemplate] = createdTemplates as [Template, Template];
-
-  // Create Computational Mathematics template items
-  const compMathItems = await db
-    .insert(templateItems)
-    .values([
-      // First year section
+  await createTemplate({
+    name: "Bachelor of Mathematics Degree - 2024",
+    description: "2024 degree requirements for Bachelor of Mathematics",
+    items: [
       {
-        templateId: compMathTemplate.id,
-        type: "requirement",
-        description: "Complete all of the following:",
-        orderIndex: 0,
-        // cs230, cs234
+        type: "instruction",
+        description: "Complete all of the following",
+        orderIndex: 0
       },
       {
-        templateId: compMathTemplate.id,
         type: "requirement",
         description: "Complete 1 of the following:",
         orderIndex: 1,
-        // amath242, cs371
+        courseType: "fixed",
+        courses: ["CS115", "CS135", "CS145"]
       },
       {
-        templateId: compMathTemplate.id,
         type: "requirement",
-        description: "Complete 1 of the following",
+        description: "Complete 1 of the following:",
         orderIndex: 2,
-        // math237, math247
+        courseType: "fixed",
+        courses: ["CS116", "CS136", "CS146"]
       },
       {
-        templateId: compMathTemplate.id,
         type: "requirement",
-        description: "Complete 1 of the following",
+        description: "Complete 1 of the following:",
         orderIndex: 3,
-        // math239, math249
+        courseType: "fixed",
+        courses: ["MATH106", "MATH136", "MATH146"]
       },
       {
-        templateId: compMathTemplate.id,
+        type: "requirement",
+        description: "Complete 1 of the following:",
+        orderIndex: 4,
+        courseType: "fixed",
+        courses: ["MATH127", "MATH137", "MATH147"]
+      },
+      {
+        type: "requirement",
+        description: "Complete 1 of the following:",
+        orderIndex: 5,
+        courseType: "fixed",
+        courses: ["MATH128", "MATH138", "MATH148"]
+      },
+      {
+        type: "requirement",
+        description: "Complete 1 of the following:",
+        orderIndex: 6,
+        courseType: "fixed",
+        courses: ["MATH135", "MATH145"]
+      },
+      {
+        type: "requirement",
+        description: "Complete 1 of the following:",
+        orderIndex: 7,
+        courseType: "fixed",
+        courses: ["MATH235", "MATH245"]
+      },
+      {
+        type: "requirement",
+        description: "Complete 1 of the following:",
+        orderIndex: 8,
+        courseType: "fixed",
+        courses: ["MATH237", "MATH239", "MATH247", "MATH249"]
+      },
+      {
+        type: "requirement",
+        description: "Complete 1 of the following:",
+        orderIndex: 9,
+        courseType: "fixed",
+        courses: ["STAT230", "STAT240"]
+      },
+      {
+        type: "requirement",
+        description: "Complete 1 of the following:",
+        orderIndex: 10,
+        courseType: "fixed",
+        courses: ["STAT231", "STAT241"]
+      },
+      {
+        type: "separator",
+        orderIndex: 11,
+      },
+      {
+        type: "instruction",
+        description: "The following List 1 and List 2 describe the Undergraduate Communication Requirement.",
+        orderIndex: 12
+      },
+      {
+        type: "instruction",
+        description: "List 1",
+        orderIndex: 13
+      },
+      {
+        type: "requirement",
+        description: "Complete 1 of the following:",
+        orderIndex: 14,
+        courseType: "fixed",
+        courses: ["COMMST100", "COMMST223", "EMLS101R", "EMLS102R", "EMLS129R", "ENGL109", "ENGL129R"]
+      },
+      {
+        type: "instruction",
+        description: "List 2",
+        orderIndex: 15
+      },
+      {
+        type: "requirement",
+        description: "Complete 1 of the following:",
+        orderIndex: 16,
+        courseType: "fixed",
+        courses: ["COMMST225", "COMMST227", "COMMST228", "EMLS103R", "EMLS104R", "EMLS110R", "ENGL101B", "ENGL108B", "ENGL108D", "ENGL119", "ENGL208B", "ENGL209", "ENGL210E", "ENGL210F", "ENGL378", "MTHEL300"]
+      },
+      {
+        type: "requirement",
+        description: "Complete 1 additional course from List 1 or List 2.",
+        orderIndex: 17,
+        courseType: "fixed",
+        courses: ["COMMST100", "COMMST223", "EMLS101R", "EMLS102R", "EMLS129R", "ENGL109", "ENGL129R", "COMMST225", "COMMST227", "COMMST228", "EMLS103R", "EMLS104R", "EMLS110R", "ENGL101B", "ENGL108B", "ENGL108D", "ENGL119", "ENGL208B", "ENGL209", "ENGL210E", "ENGL210F", "ENGL378", "MTHEL300"]
+      }
+
+    ]
+  })
+
+  await createTemplate({
+    name: "Computational Mathematics Major - 2024",
+    description: "2024 academic requirements for Computational Mathematics major",
+    items: [
+      {
+        type: "instruction",
+        description: "Complete all of the following",
+        orderIndex: 0
+      },
+      {
+        type: "requirement",
+        description: "Complete all the following:",
+        orderIndex: 1,
+        courseType: "fixed",
+        courses: ["CS230", "CS234"]
+      },
+      {
+        type: "requirement",
+        description: "Complete 1 of the following:",
+        orderIndex: 2,
+        courseType: "fixed",
+        courses: ["AMATH242", "CS371"]
+      },
+      {
+        type: "requirement",
+        description: "Complete 1 of the following:",
+        orderIndex: 3,
+        courseType: "fixed",
+        courses: ["MATH239", "MATH249"]
+      },
+      {
         type: "requirement",
         description: "Complete 3 non-math courses, at least one of which is at the 200-, 300-, or 400-level, all from the same subject code, from the following choices: AE, BIOL, BME, CHE, CHEM, CIVE, EARTH, ECE, ECON, ENVE, GEOE, ME, MNS, MSE, MTE, NE, PHYS, SYDE",
         orderIndex: 4,
+        courseType: "free",
+        courses: [],
+        courseCount: 3
       },
       {
-        templateId: compMathTemplate.id,
-        type: "requirement",
-        description: "Complete 4 additional courses, taken from List 2 or List 3; choices must be in at least two different subject codes (AMATH, CO, CS, PMATH, STAT), and 2 courses must be at the 400-level",
+        type: "separator",
         orderIndex: 5,
       },
       {
-        templateId: compMathTemplate.id,
-        type: "separator",
-        description: "",
-        orderIndex: 6,
-      },
-      {
-        templateId: compMathTemplate.id,
         type: "instruction",
-        description: "Complete 2 of the following",
-        orderIndex: 7,
+        description: "List 1: Complete 2 of the following",
+        orderIndex: 6
       },
       {
-        templateId: compMathTemplate.id,
+        type: "requirement",
+        description: "Complete 1 of the following",
+        orderIndex: 7,
+        courseType: "fixed",
+        courses: ["AMATH250", "AMATH251", "AMATH350"]
+      },
+      {
         type: "requirement",
         description: "Complete 1 of the following",
         orderIndex: 8,
-        // amath250, amath251, amath350
+        courseType: "fixed",
+        courses: ["CO250", "CO255"]
       },
       {
-        templateId: compMathTemplate.id,
         type: "requirement",
         description: "Complete 1 of the following",
         orderIndex: 9,
-        // co250, co255
+        courseType: "fixed",
+        courses: ["CS245", "CS245E", "PMATH330", "PMATH432"]
       },
-    ])
-    .returning();
-
-  // Create C&O template items
-  const coItems = await db
-    .insert(templateItems)
-    .values([
-      // Core requirements section
       {
-        templateId: coTemplate.id,
+        type: "requirement",
+        description: "Complete 1 of the following",
+        orderIndex: 10,
+        courseType: "fixed",
+        courses: ["CS246", "CS246E"]
+      },
+      {
         type: "separator",
-        description: "Core Mathematics Requirements",
-        orderIndex: 0,
+        orderIndex: 11,
       },
       {
-        templateId: coTemplate.id,
         type: "instruction",
-        description: "These courses form the foundation of your major:",
-        orderIndex: 1,
+        description: "List 2: Complete all of the following",
+        orderIndex: 12
       },
       {
-        templateId: coTemplate.id,
         type: "requirement",
-        description: "Required Mathematics Courses",
-        orderIndex: 2,
+        description: "Complete 2 courses from the following. Note that CO353 and CO367 cannot be chosen together, and STAT340 and STAT341 cannot be chosen together.",
+        orderIndex: 13,
+        courseType: "fixed",
+        courses: ["AMATH342", "CS475", "PMATH370", "CO353", "CO367", "STAT340", "STAT341"]
       },
-      // Advanced requirements section
       {
-        templateId: coTemplate.id,
         type: "separator",
-        description: "Advanced Requirements",
-        orderIndex: 3,
+        orderIndex: 14,
       },
       {
-        templateId: coTemplate.id,
         type: "instruction",
-        description: "Select advanced courses to specialize in combinatorics or optimization:",
-        orderIndex: 4,
+        description: "List 3",
+        orderIndex: 15
       },
       {
-        templateId: coTemplate.id,
         type: "requirement",
-        description: "Choose one combinatorics course",
-        orderIndex: 5,
+        description: "Choose 4 additional courses. Choices must be in at least two different subject codes (AMATH, CO, CS, PMATH, STAT), and 2 courses must be at the 400-level",
+        orderIndex: 16,
+        courseType: "fixed",
+        courses: ["AMATH342", "AMATH343", "AMATH382", "AMATH383", "AMATH391", "AMATH442", "AMATH455", "AMATH477", "BIOL382", "CO351", "CO353", "CO367", "CO370", "CO372", "CO450", "CO452", "CO454", "CO456", "CO463", "CO466", "CO471", "CO485", "CO487", "CS341", "CS431", "CS451", "CS466", "CS475", "CS476", "CS479", "CS480", "CS482", "CS485", "CS487", "PMATH370", "STAT340", "STAT341", "STAT440", "STAT441", "STAT442", "STAT444"]
       },
-      {
-        templateId: coTemplate.id,
-        type: "requirement",
-        description: "Choose one optimization course",
-        orderIndex: 6,
-      },
-    ])
-    .returning();
+    ]
+  })
 
-  // Type assertion helper for array index access
-  const getItemId = (items: typeof compMathItems, index: number) => {
-    const item = items[index];
-    if (!item) throw new Error(`Template item at index ${index} not found`);
-    return item.id;
-  };
-
-  // Link courses to templates steps:
-  console.log("Linking courses to templates...");
-
-  // Core courses - Computational Mathematics
-  console.log("Processing Computational Mathematics requirements...");
-  const compMathPromises = [
-    Promise.all(
-      ['CS230', 'CS234'].map(async (code) => {
-        const courseId = await findCourse(code);
-        return db.insert(courseItems).values({
-          requirementId: getItemId(compMathItems, 0),
-          courseId,
-          type: "fixed",
-        });
-      })
-    ),
-    Promise.all(
-      ['AMATH242', 'CS371'].map(async (code) => {
-        const courseId = await findCourse(code);
-        return db.insert(courseItems).values({
-          requirementId: getItemId(compMathItems, 1),
-          courseId,
-          type: "fixed",
-        });
-      })
-    ),
-    Promise.all(
-      ['MATH237', 'MATH247'].map(async (code) => {
-        const courseId = await findCourse(code);
-        return db.insert(courseItems).values({
-          requirementId: getItemId(compMathItems, 2),
-          courseId,
-          type: "fixed",
-        });
-      })
-    ),
-    Promise.all(
-      ['MATH239', 'MATH249'].map(async (code) => {
-        const courseId = await findCourse(code);
-        return db.insert(courseItems).values({
-          requirementId: getItemId(compMathItems, 3),
-          courseId,
-          type: "fixed",
-        });
-      })
-    ),
-    Promise.all(
-      ['AMATH250', 'AMATH251', 'AMATH350'].map(async (code) => {
-        const courseId = await findCourse(code);
-        return db.insert(courseItems).values({
-          requirementId: getItemId(compMathItems, 8),
-          courseId,
-          type: "fixed",
-        });
-      })
-    ),
-    Promise.all(
-      ['CO250', 'CO255'].map(async (code) => {
-        const courseId = await findCourse(code);
-        return db.insert(courseItems).values({
-          requirementId: getItemId(compMathItems, 9),
-          courseId,
-          type: "fixed",
-        });
-      })
-    ),
-    // Add 3 free course slots for non-math courses (orderIndex 4)
-    Promise.all(
-      Array(3).fill(null).map(() => {
-        return db.insert(courseItems).values({
-          requirementId: getItemId(compMathItems, 4),
-          type: "free",
-        });
-      })
-    ),
-
-    // Add 4 free course slots for additional courses from List 2 or List 3 (orderIndex 5)
-    Promise.all(
-      Array(4).fill(null).map(() => {
-        return db.insert(courseItems).values({
-          requirementId: getItemId(compMathItems, 5),
-          type: "free",
-        });
-      })
-    ),
-  ];
-
-  // C&O courses
-  console.log("Processing C&O requirements...");
-  const coPromises = [
-    // Core courses
-    Promise.all(
-      ['MATH137', 'MATH138', 'MATH239'].map(async (code) => {
-        const courseId = await findCourse(code);
-        return db.insert(courseItems).values({
-          requirementId: getItemId(coItems, 2),
-          courseId,
-          type: "fixed",
-        });
-      })
-    ),
-    // Combinatorics options
-    Promise.all(
-      ['CO342', 'MATH239'].map(async (code) => {
-        const courseId = await findCourse(code);
-        return db.insert(courseItems).values({
-          requirementId: getItemId(coItems, 5),
-          courseId,
-          type: "fixed",
-        });
-      })
-    ),
-    // Optimization options
-    Promise.all(
-      ['CO250', 'CO351'].map(async (code) => {
-        const courseId = await findCourse(code);
-        return db.insert(courseItems).values({
-          requirementId: getItemId(coItems, 6),
-          courseId,
-          type: "fixed",
-        });
-      })
-    ),
-  ];
-
-  // Wait for all promises to complete
-  await Promise.all([
-    ...compMathPromises,
-    ...coPromises,
-  ]);
 
   console.log("Database seeded successfully!");
 }

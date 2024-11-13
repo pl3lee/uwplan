@@ -10,36 +10,15 @@ import {
   freeCourses,
   users, // Add import
 } from "@/server/db/schema";
+import { InstructionItem, RequirementItem, SeparatorItem } from "@/types/template";
 import { desc, eq, and, not, inArray } from "drizzle-orm";
 import { type InferSelectModel } from 'drizzle-orm';
 
-// Type definitions
-type Course = InferSelectModel<typeof courses>;
-type TemplateItem = InferSelectModel<typeof templateItems>;
-type Template = InferSelectModel<typeof templates>;
 
 // Update type definitions
-type RequirementItem = {
-  type: "requirement";
-  description: string;
-  orderIndex: number;
-  courseType: "fixed" | "free";
-  courses: string[]; // Array of course codes
-  courseCount?: number; // Only for free courses
-};
-
-type InstructionItem = {
-  type: "instruction";
-  description: string;
-  orderIndex: number;
-};
-
-type SeparatorItem = {
-  type: "separator";
-  orderIndex: number;
-};
 
 type CreateTemplateItemInput = RequirementItem | InstructionItem | SeparatorItem;
+
 
 type CreateTemplateInput = {
   name: string;

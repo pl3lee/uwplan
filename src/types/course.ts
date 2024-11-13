@@ -1,12 +1,15 @@
-export type Course = {
-  id: string;
-  code: string;
-  name: string;
-  usefulRating: string | null;
-  likedRating: string | null;
-  easyRating: string | null;
-  numRatings: number | null;
-};
+import { type InferSelectModel } from "drizzle-orm";
+import {
+  courses,
+  courseItems
+} from "@/server/db/schema";
+
+
+
+
+export type Course = InferSelectModel<typeof courses>;
+
+export type CourseItems = InferSelectModel<typeof courseItems>;
 
 export type FixedCourse = {
   course: Course;
