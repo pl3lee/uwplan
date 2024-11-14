@@ -11,8 +11,7 @@ export default async function CreateTemplatePage() {
 
   const courses = await getCoursesWithRatings();
   const courseOptions = courses.map((course) => ({
-    value: course.id,
-    label: `${course.code} - ${course.name}`,
+    id: course.id,
     code: course.code,
   }));
 

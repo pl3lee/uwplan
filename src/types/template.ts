@@ -28,3 +28,11 @@ export type SeparatorItem = {
   orderIndex: number;
 };
 
+export type CreateTemplateItemInput = RequirementItem | InstructionItem | SeparatorItem;
+
+
+export type CreateTemplateInput = {
+  name: string;
+  description?: string;
+  items: CreateTemplateItemInput[];
+};

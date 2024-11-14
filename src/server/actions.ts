@@ -1,9 +1,10 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { toggleCourseSelection, toggleUserTemplate } from '@/server/db/queries';
+import { createTemplate, toggleCourseSelection, toggleUserTemplate } from '@/server/db/queries';
 import { updateFreeCourse as dbUpdateFreeCourse } from "@/server/db/queries";
 import { auth } from './auth';
+import { CreateTemplateInput } from '@/types/template';
 
 
 export async function toggleTemplate(templateId: string) {
@@ -70,11 +71,12 @@ export async function toggleCourse(courseId: string, take: boolean) {
 //   revalidatePath('/create/template');
 // }
 
-export async function createTemplateAction() {
+export async function createTemplateAction(template: CreateTemplateInput) {
   const session = await auth();
   if (!session?.user) {
     throw new Error('Not authenticated');
   }
+  await createTemplate(template);
 
 
   revalidatePath('/select');

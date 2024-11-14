@@ -10,20 +10,10 @@ import {
   freeCourses,
   users,
 } from "@/server/db/schema";
-import { type InstructionItem, type RequirementItem, type SeparatorItem } from "@/types/template";
+import { type InstructionItem, type RequirementItem, type SeparatorItem, type CreateTemplateInput } from "@/types/template";
 import { eq, and, inArray } from "drizzle-orm";
 
 
-// Update type definitions
-
-type CreateTemplateItemInput = RequirementItem | InstructionItem | SeparatorItem;
-
-
-type CreateTemplateInput = {
-  name: string;
-  description?: string;
-  items: CreateTemplateItemInput[];
-};
 
 // Add type guard helper
 function isValidCourse(course: { code: string | null; name: string | null; }): course is { code: string; name: string; } {
@@ -363,7 +353,7 @@ export async function createTemplate(input: CreateTemplateInput) {
 
     if (!template) {
       tx.rollback();
-      throw new Error("Failed to create template");
+      // throw new Error("Failed to create template");
     }
 
     // Insert all template items
@@ -382,7 +372,7 @@ export async function createTemplate(input: CreateTemplateInput) {
         });
       if ((insertedTemplateItem.length !== 1) || !insertedTemplateItem[0]) {
         tx.rollback();
-        throw new Error("Failed to create template item");
+        // throw new Error("Failed to create template item");
       }
       const templateItemId = insertedTemplateItem[0].id;
       if (item.type === "requirement") {
@@ -392,7 +382,7 @@ export async function createTemplate(input: CreateTemplateInput) {
             const courseId = course?.id;
             if (!courseId) {
               tx.rollback();
-              throw new Error(`Course with code ${courseCode} not found`);
+              // throw new Error(`Course with code ${courseCode} not found`);
             }
             const insertedCourse = await tx
               .insert(courseItems)
@@ -404,7 +394,7 @@ export async function createTemplate(input: CreateTemplateInput) {
               .returning();
             if (insertedCourse.length !== 1) {
               tx.rollback()
-              throw new Error("Failed to create course item");
+              // throw new Error("Failed to create course item");
             }
           }
         } else if (item.courseType == "free" && item.courseCount) {
@@ -419,7 +409,7 @@ export async function createTemplate(input: CreateTemplateInput) {
               .returning();
             if (insertedCourse.length !== 1) {
               tx.rollback()
-              throw new Error("Failed to create course item");
+              // throw new Error("Failed to create course item");
             }
           }
         }

@@ -14,10 +14,11 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import { createTemplateAction } from "@/server/actions";
+import { toast } from "sonner";
+import { normalizeCourseCode } from "@/lib/utils";
 
 type CourseOption = {
-  value: string;
-  label: string;
+  id: string;
   code: string;
 };
 
@@ -31,24 +32,103 @@ type FormItem = {
   type: ItemType;
   description?: string;
   courseType?: "fixed" | "free";
-  courses: string[];
+  courses?: string;
   count?: number;
 };
+
+function RequiredLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <Label>
+      {children}
+      <span className="ml-1 text-red-500">*</span>
+    </Label>
+  );
+}
 
 export function TemplateForm({ courseOptions }: TemplateFormProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [items, setItems] = useState<FormItem[]>([]);
 
-  const addItem = (type: ItemType) => {
-    setItems([
-      ...items,
-      { type, courses: [], description: type === "separator" ? undefined : "" },
-    ]);
-  };
+  const handleSubmit = async () => {
+    // Validate template name
+    if (!name.trim()) {
+      toast.error("Template name is required");
+      return;
+    }
 
-  const removeItem = (index: number) => {
-    setItems(items.filter((_, i) => i !== index));
+    // Validate items
+    for (const item of items) {
+      if (item.type !== "separator" && !item.description?.trim()) {
+        toast.error("Description is required for all items except separators");
+        return;
+      }
+
+      if (item.type === "requirement") {
+        if (!item.courseType) {
+          toast.error("Course type must be selected for requirements");
+          return;
+        }
+
+        if (item.courseType === "fixed") {
+          if (!item.courses?.trim()) {
+            toast.error("Course list is required for fixed requirements");
+            return;
+          }
+
+          const courseList = item.courses
+            .split(",")
+            .map((c) => normalizeCourseCode(c.trim()));
+          const invalidCourses = courseList.filter(
+            (code) => !courseOptions.find((option) => option.code === code),
+          );
+
+          if (invalidCourses.length > 0) {
+            toast.error(`Invalid course codes: ${invalidCourses.join(", ")}`);
+            return;
+          }
+        }
+
+        if (item.courseType === "free") {
+          if (!item.count || item.count < 1) {
+            toast.error(
+              "Course count must be at least 1 for free requirements",
+            );
+            return;
+          }
+        }
+      }
+    }
+
+    try {
+      await createTemplateAction({
+        name,
+        description,
+        items: items.map((item, index) => ({
+          type: item.type,
+          description: item.type === "separator" ? undefined : item.description,
+          orderIndex: index,
+          ...(item.type === "requirement" && {
+            courseType: item.courseType,
+            courses:
+              item.courseType === "fixed"
+                ? item.courses
+                    ?.split(",")
+                    .map((c) => normalizeCourseCode(c.trim()))
+                : undefined,
+            courseCount: item.courseType === "free" ? item.count : undefined,
+          }),
+        })),
+      });
+      toast.success("Template created successfully");
+      // Optional: Reset form
+      setName("");
+      setDescription("");
+      setItems([]);
+    } catch (error) {
+      toast.error("Failed to create template");
+      console.error(error);
+    }
   };
 
   const updateItem = (index: number, updates: Partial<FormItem>) => {
@@ -57,35 +137,52 @@ export function TemplateForm({ courseOptions }: TemplateFormProps) {
     );
   };
 
-  // const handleSubmit = async (e: React.FormEvent) => {
-  //   e.preventDefault();
-  //   try {
-  //     await createTemplateAction({
-  //       name,
-  //       description: description || undefined,
-  //       items: items.map((item, index) => ({
-  //         ...item,
-  //         orderIndex: index,
-  //         description: item.type !== "separator" ? item.description : undefined,
-  //       })),
-  //     });
-  //   } catch (error) {
-  //     console.error(error);
-  //   }
-  // };
-  const handleSubmit = async () => {
-    await createTemplateAction();
+  const removeItem = (index: number) => {
+    setItems(items.filter((_, i) => i !== index));
+  };
+
+  const addFixedRequirement = () => {
+    setItems([
+      ...items,
+      {
+        type: "requirement",
+        courseType: "fixed",
+        courses: "",
+        description: "",
+      },
+    ]);
+  };
+
+  const addFreeRequirement = () => {
+    setItems([
+      ...items,
+      {
+        type: "requirement",
+        courseType: "free",
+        courses: "",
+        description: "",
+        count: 1,
+      },
+    ]);
+  };
+
+  const addSeparator = () => {
+    setItems([...items, { type: "separator" }]);
+  };
+
+  const addInstruction = () => {
+    setItems([...items, { type: "instruction", description: "" }]);
   };
 
   return (
-    <form>
+    <form action={handleSubmit}>
       <Card className="mt-6">
         <CardHeader>
           <CardTitle>Template Details</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <Label htmlFor="name">Template Name</Label>
+            <RequiredLabel>Template Name</RequiredLabel>
             <Input
               id="name"
               value={name}
@@ -106,23 +203,35 @@ export function TemplateForm({ courseOptions }: TemplateFormProps) {
 
       <div className="mt-6 space-y-4">
         <div className="flex gap-2">
-          <Button type="button" onClick={() => addItem("instruction")}>
+          <Button type="button" onClick={addInstruction}>
             Add Instruction
           </Button>
-          <Button type="button" onClick={() => addItem("requirement")}>
-            Add Requirement
+          <Button type="button" onClick={addFixedRequirement}>
+            Add Fixed Requirement
           </Button>
-          <Button type="button" onClick={() => addItem("separator")}>
+          <Button type="button" onClick={addFreeRequirement}>
+            Add Free Requirement
+          </Button>
+          <Button type="button" onClick={addSeparator}>
             Add Separator
           </Button>
         </div>
 
         {items.map((item, index) => (
           <Card key={index}>
-            <CardContent className="space-y-4 pt-6">
+            <CardHeader>
+              <CardTitle>
+                {item.type === "instruction"
+                  ? "Instruction"
+                  : item.type === "requirement"
+                    ? "Requirement"
+                    : "Separator"}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-5">
               {item.type !== "separator" && (
                 <div>
-                  <Label>Description</Label>
+                  <RequiredLabel>Description</RequiredLabel>
                   <Input
                     value={item.description}
                     onChange={(e) =>
@@ -136,7 +245,7 @@ export function TemplateForm({ courseOptions }: TemplateFormProps) {
               {item.type === "requirement" && (
                 <>
                   <div>
-                    <Label>Requirement Type</Label>
+                    <RequiredLabel>Requirement Type</RequiredLabel>
                     <Select
                       value={item.courseType}
                       onValueChange={(value: "fixed" | "free") =>
@@ -155,24 +264,28 @@ export function TemplateForm({ courseOptions }: TemplateFormProps) {
 
                   {item.courseType === "fixed" && (
                     <div>
-                      <Label>Select Courses</Label>
-                      <Select
-                        value={item.courses[0]}
-                        onValueChange={(value) =>
-                          updateItem(index, { courses: [value] })
+                      <RequiredLabel>Select Courses</RequiredLabel>
+                      <Input
+                        value={item.courses}
+                        onChange={(e) =>
+                          updateItem(index, { courses: e.target.value })
                         }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select course" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {courseOptions.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        required
+                      />
+                    </div>
+                  )}
+
+                  {item.courseType === "free" && (
+                    <div>
+                      <RequiredLabel>How many courses?</RequiredLabel>
+                      <Input
+                        value={item.count}
+                        type="number"
+                        onChange={(e) =>
+                          updateItem(index, { count: parseInt(e.target.value) })
+                        }
+                        required
+                      />
                     </div>
                   )}
                 </>
@@ -190,7 +303,7 @@ export function TemplateForm({ courseOptions }: TemplateFormProps) {
         ))}
       </div>
 
-      <Button className="mt-6" onClick={handleSubmit}>
+      <Button className="mt-6" type="submit">
         Create Template
       </Button>
     </form>
