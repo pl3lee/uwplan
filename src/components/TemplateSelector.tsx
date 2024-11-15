@@ -5,10 +5,13 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuPortal,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toggleTemplate } from "@/server/actions";
+import Link from "next/link";
 
 type Template = {
   id: string;
@@ -27,8 +30,7 @@ export function TemplateSelector({ templates, selectedTemplates }: Props) {
       <DropdownMenuTrigger asChild>
         <Button variant="outline">Select Academic Plans</Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56">
-        <DropdownMenuLabel>Templates</DropdownMenuLabel>
+      <DropdownMenuContent className="max-h-[50dvh] w-56 overflow-y-scroll">
         {templates.map((template) => (
           <DropdownMenuCheckboxItem
             key={template.id}
@@ -38,6 +40,9 @@ export function TemplateSelector({ templates, selectedTemplates }: Props) {
             {template.name}
           </DropdownMenuCheckboxItem>
         ))}
+        <DropdownMenuItem>
+          <Link href="/create/template">Create an Academic plan</Link>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

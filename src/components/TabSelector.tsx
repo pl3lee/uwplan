@@ -6,8 +6,13 @@ import { usePathname } from "next/navigation";
 
 export function TabSelector() {
   const pathname = usePathname();
+  const tabValue =
+    pathname === "/select" || pathname === "/schedule"
+      ? pathname.substring(1)
+      : "";
+
   return (
-    <Tabs defaultValue={pathname.substring(1)} className="">
+    <Tabs value={tabValue} defaultValue={pathname.substring(1)} className="">
       <TabsList>
         <TabsTrigger value="select" asChild>
           <Link href="/select">Select</Link>

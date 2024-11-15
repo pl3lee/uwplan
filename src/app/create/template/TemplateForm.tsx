@@ -254,20 +254,29 @@ export function TemplateForm({ courseOptions }: TemplateFormProps) {
           </CardContent>
         </Card>
 
-        <div className="mt-6 space-y-4">
-          <div className="flex gap-2">
-            <Button type="button" onClick={addInstruction}>
+        <div className="relative mt-6 space-y-4">
+          <div className="sticky top-0 flex flex-wrap justify-center gap-2 bg-white bg-opacity-100 p-2">
+            <Button type="button" onClick={addInstruction} variant="secondary">
               Add Instruction
             </Button>
-            <Button type="button" onClick={addFixedRequirement}>
+            <Button
+              type="button"
+              onClick={addFixedRequirement}
+              variant="secondary"
+            >
               Add Fixed Requirement
             </Button>
-            <Button type="button" onClick={addFreeRequirement}>
+            <Button
+              type="button"
+              onClick={addFreeRequirement}
+              variant="secondary"
+            >
               Add Free Requirement
             </Button>
-            <Button type="button" onClick={addSeparator}>
+            <Button type="button" onClick={addSeparator} variant="secondary">
               Add Separator
             </Button>
+            <Button type="submit">Create Template</Button>
           </div>
 
           {items.map((item, index) => (
@@ -363,10 +372,29 @@ export function TemplateForm({ courseOptions }: TemplateFormProps) {
             </Card>
           ))}
         </div>
-
-        <Button className="mt-6" type="submit">
-          Create Template
-        </Button>
+        {/* <div className="mt-4 flex flex-wrap gap-2">
+          <Button type="button" onClick={addInstruction} variant="secondary">
+            Add Instruction
+          </Button>
+          <Button
+            type="button"
+            onClick={addFixedRequirement}
+            variant="secondary"
+          >
+            Add Fixed Requirement
+          </Button>
+          <Button
+            type="button"
+            onClick={addFreeRequirement}
+            variant="secondary"
+          >
+            Add Free Requirement
+          </Button>
+          <Button type="button" onClick={addSeparator} variant="secondary">
+            Add Separator
+          </Button>
+          <Button type="submit">Create Template</Button>
+        </div> */}
       </form>
     </Form>
   );
