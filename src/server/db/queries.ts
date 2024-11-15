@@ -353,7 +353,7 @@ export async function createTemplate(input: CreateTemplateInput) {
 
     if (!template) {
       tx.rollback();
-      // throw new Error("Failed to create template");
+      throw new Error("Failed to create template");
     }
 
     // Insert all template items
@@ -372,7 +372,7 @@ export async function createTemplate(input: CreateTemplateInput) {
         });
       if ((insertedTemplateItem.length !== 1) || !insertedTemplateItem[0]) {
         tx.rollback();
-        // throw new Error("Failed to create template item");
+        throw new Error("Failed to create template item");
       }
       const templateItemId = insertedTemplateItem[0].id;
       if (item.type === "requirement") {
@@ -382,7 +382,7 @@ export async function createTemplate(input: CreateTemplateInput) {
             const courseId = course?.id;
             if (!courseId) {
               tx.rollback();
-              // throw new Error(`Course with code ${courseCode} not found`);
+              throw new Error(`Course with code ${courseCode} not found`);
             }
             const insertedCourse = await tx
               .insert(courseItems)
@@ -394,7 +394,7 @@ export async function createTemplate(input: CreateTemplateInput) {
               .returning();
             if (insertedCourse.length !== 1) {
               tx.rollback()
-              // throw new Error("Failed to create course item");
+              throw new Error("Failed to create course item");
             }
           }
         } else if (item.courseType == "free" && item.courseCount) {
@@ -409,7 +409,7 @@ export async function createTemplate(input: CreateTemplateInput) {
               .returning();
             if (insertedCourse.length !== 1) {
               tx.rollback()
-              // throw new Error("Failed to create course item");
+              throw new Error("Failed to create course item");
             }
           }
         }

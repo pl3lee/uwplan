@@ -11,11 +11,55 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import { createTemplateAction } from "@/server/actions";
 import { toast } from "sonner";
 import { normalizeCourseCode } from "@/lib/utils";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+
+const formSchema = z.object({
+  name: z.string().min(1),
+  description: z.string().optional(),
+  items: z.array(
+    z.union([
+      z.object({
+        type: z.literal("instruction"),
+        description: z.string().min(1, { message: "Instruction is required" }),
+        // orderIndex: z.number(),
+      }),
+      z.object({
+        type: z.literal("separator"),
+        // orderIndex: z.number(),
+      }),
+      z.object({
+        type: z.literal("requirement"),
+        courseType: z.literal("fixed"),
+        description: z.string().min(1),
+        courses: z.string().min(1),
+        // orderIndex: z.number(),
+      }),
+      z.object({
+        type: z.literal("requirement"),
+        courseType: z.enum(["free"]),
+        description: z.string().min(1),
+        count: z.number().min(1),
+        // orderIndex: z.number(),
+      }),
+    ]),
+  ),
+});
 
 type CourseOption = {
   id: string;
@@ -26,140 +70,129 @@ type TemplateFormProps = {
   courseOptions: CourseOption[];
 };
 
-type ItemType = "instruction" | "requirement" | "separator";
-
-type FormItem = {
-  type: ItemType;
-  description?: string;
-  courseType?: "fixed" | "free";
-  courses?: string;
-  count?: number;
-};
-
-function RequiredLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <Label>
-      {children}
-      <span className="ml-1 text-red-500">*</span>
-    </Label>
-  );
-}
+type FormItem = z.infer<typeof formSchema>["items"][number];
 
 export function TemplateForm({ courseOptions }: TemplateFormProps) {
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [items, setItems] = useState<FormItem[]>([]);
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      items: [],
+    },
+  });
 
-  const handleSubmit = async () => {
-    // Validate template name
-    if (!name.trim()) {
-      toast.error("Template name is required");
-      return;
-    }
+  const items = form.watch("items");
 
-    // Validate items
-    for (const item of items) {
-      if (item.type !== "separator" && !item.description?.trim()) {
-        toast.error("Description is required for all items except separators");
-        return;
-      }
-
-      if (item.type === "requirement") {
-        if (!item.courseType) {
-          toast.error("Course type must be selected for requirements");
-          return;
-        }
-
-        if (item.courseType === "fixed") {
-          if (!item.courses?.trim()) {
-            toast.error("Course list is required for fixed requirements");
-            return;
-          }
-
-          const courseList = item.courses
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    try {
+      // Validate course codes for fixed requirements
+      for (const item of values.items) {
+        if (item.type === "requirement" && item.courseType === "fixed") {
+          const courseCodes = item.courses
             .split(",")
-            .map((c) => normalizeCourseCode(c.trim()));
-          const invalidCourses = courseList.filter(
-            (code) => !courseOptions.find((option) => option.code === code),
+            .map((code) => normalizeCourseCode(code.trim()));
+
+          const invalidCodes = courseCodes.filter(
+            (code) => !courseOptions.find((opt) => opt.code === code),
           );
 
-          if (invalidCourses.length > 0) {
-            toast.error(`Invalid course codes: ${invalidCourses.join(", ")}`);
-            return;
-          }
-        }
-
-        if (item.courseType === "free") {
-          if (!item.count || item.count < 1) {
+          if (invalidCodes.length > 0) {
             toast.error(
-              "Course count must be at least 1 for free requirements",
+              `Invalid course codes in requirement "${item.description}": ${invalidCodes.join(
+                ", ",
+              )}`,
             );
             return;
           }
         }
       }
-    }
 
-    try {
+      // Transform data for createTemplateAction
       await createTemplateAction({
-        name,
-        description,
-        items: items.map((item, index) => ({
-          type: item.type,
-          description: item.type === "separator" ? undefined : item.description,
-          orderIndex: index,
-          ...(item.type === "requirement" && {
-            courseType: item.courseType,
-            courses:
-              item.courseType === "fixed"
-                ? item.courses
-                    ?.split(",")
-                    .map((c) => normalizeCourseCode(c.trim()))
-                : undefined,
-            courseCount: item.courseType === "free" ? item.count : undefined,
-          }),
-        })),
+        name: values.name,
+        description: values.description,
+        items: values.items.map((item, index) => {
+          if (item.type === "instruction") {
+            return {
+              type: "instruction",
+              description: item.description,
+              orderIndex: index,
+            };
+          } else if (item.type === "separator") {
+            return {
+              type: "separator",
+              orderIndex: index,
+            };
+          } else if (
+            item.type === "requirement" &&
+            item.courseType === "fixed"
+          ) {
+            return {
+              type: "requirement",
+              courseType: "fixed",
+              description: item.description,
+              courses: item.courses
+                .split(",")
+                .map((c) => normalizeCourseCode(c.trim())),
+              orderIndex: index,
+            };
+          } else if (
+            item.type === "requirement" &&
+            item.courseType === "free"
+          ) {
+            return {
+              type: "requirement",
+              courseType: "free",
+              description: item.description,
+              courses: [],
+              courseCount: item.count,
+              orderIndex: index,
+            };
+          }
+          return item;
+        }),
       });
+
       toast.success("Template created successfully");
-      // Optional: Reset form
-      setName("");
-      setDescription("");
-      setItems([]);
+      form.reset();
     } catch (error) {
       toast.error("Failed to create template");
       console.error(error);
     }
   };
 
-  const updateItem = (index: number, updates: Partial<FormItem>) => {
-    setItems(
-      items.map((item, i) => (i === index ? { ...item, ...updates } : item)),
-    );
-  };
-
-  const removeItem = (index: number) => {
-    setItems(items.filter((_, i) => i !== index));
-  };
-
-  const addFixedRequirement = () => {
-    setItems([
-      ...items,
+  const addInstruction = () => {
+    const currentItems = form.getValues("items");
+    form.setValue("items", [
+      ...currentItems,
       {
-        type: "requirement",
-        courseType: "fixed",
-        courses: "",
+        type: "instruction",
         description: "",
       },
     ]);
   };
 
+  const addFixedRequirement = () => {
+    const currentItems = form.getValues("items");
+    form.setValue("items", [
+      ...currentItems,
+      {
+        type: "requirement",
+        courseType: "fixed",
+        description: "",
+        courses: "",
+      },
+    ]);
+  };
+
   const addFreeRequirement = () => {
-    setItems([
-      ...items,
+    const currentItems = form.getValues("items");
+    form.setValue("items", [
+      ...currentItems,
       {
         type: "requirement",
         courseType: "free",
-        courses: "",
         description: "",
         count: 1,
       },
@@ -167,145 +200,174 @@ export function TemplateForm({ courseOptions }: TemplateFormProps) {
   };
 
   const addSeparator = () => {
-    setItems([...items, { type: "separator" }]);
+    const currentItems = form.getValues("items");
+    form.setValue("items", [
+      ...currentItems,
+      {
+        type: "separator",
+      },
+    ]);
   };
 
-  const addInstruction = () => {
-    setItems([...items, { type: "instruction", description: "" }]);
+  const removeItem = (index: number) => {
+    const currentItems = form.getValues("items");
+    form.setValue(
+      "items",
+      currentItems.filter((_, i) => i !== index),
+    );
   };
 
   return (
-    <form action={handleSubmit}>
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Template Details</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <RequiredLabel>Template Name</RequiredLabel>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)}>
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>Template Details</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Name</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="Template Name" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          <div>
-            <Label htmlFor="description">Description (Optional)</Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="Template Description" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      <div className="mt-6 space-y-4">
-        <div className="flex gap-2">
-          <Button type="button" onClick={addInstruction}>
-            Add Instruction
-          </Button>
-          <Button type="button" onClick={addFixedRequirement}>
-            Add Fixed Requirement
-          </Button>
-          <Button type="button" onClick={addFreeRequirement}>
-            Add Free Requirement
-          </Button>
-          <Button type="button" onClick={addSeparator}>
-            Add Separator
-          </Button>
+        <div className="mt-6 space-y-4">
+          <div className="flex gap-2">
+            <Button type="button" onClick={addInstruction}>
+              Add Instruction
+            </Button>
+            <Button type="button" onClick={addFixedRequirement}>
+              Add Fixed Requirement
+            </Button>
+            <Button type="button" onClick={addFreeRequirement}>
+              Add Free Requirement
+            </Button>
+            <Button type="button" onClick={addSeparator}>
+              Add Separator
+            </Button>
+          </div>
+
+          {items.map((item, index) => (
+            <Card key={index}>
+              <CardHeader>
+                <CardTitle>
+                  {String(item.type[0]).toUpperCase() +
+                    String(item.type).slice(1)}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {item.type === "instruction" && (
+                  <FormField
+                    control={form.control}
+                    name={`items.${index}.description`}
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col gap-2">
+                        <FormControl>
+                          <Input
+                            {...field}
+                            placeholder="e.g. Complete all of the following"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+                {item.type === "requirement" && (
+                  <>
+                    <FormField
+                      control={form.control}
+                      name={`items.${index}.description`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Description</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              placeholder="e.g. Complete all of the following"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={
+                        item.courseType === "fixed"
+                          ? `items.${index}.courses`
+                          : `items.${index}.count`
+                      }
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            {item.courseType === "fixed"
+                              ? "Select Courses"
+                              : "How many courses?"}
+                          </FormLabel>
+                          <FormControl>
+                            {item.courseType === "fixed" ? (
+                              <Input
+                                type="text"
+                                {...field}
+                                placeholder="CS135, CS136"
+                              />
+                            ) : (
+                              <Input
+                                type="number"
+                                min={1}
+                                {...field}
+                                onChange={(e) =>
+                                  field.onChange(parseInt(e.target.value, 10))
+                                }
+                              />
+                            )}
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </>
+                )}
+                <Button
+                  type="button"
+                  onClick={() => removeItem(index)}
+                  variant="destructive"
+                >
+                  Remove
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
-        {items.map((item, index) => (
-          <Card key={index}>
-            <CardHeader>
-              <CardTitle>
-                {item.type === "instruction"
-                  ? "Instruction"
-                  : item.type === "requirement"
-                    ? "Requirement"
-                    : "Separator"}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              {item.type !== "separator" && (
-                <div>
-                  <RequiredLabel>Description</RequiredLabel>
-                  <Input
-                    value={item.description}
-                    onChange={(e) =>
-                      updateItem(index, { description: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-              )}
-
-              {item.type === "requirement" && (
-                <>
-                  <div>
-                    <RequiredLabel>Requirement Type</RequiredLabel>
-                    <Select
-                      value={item.courseType}
-                      onValueChange={(value: "fixed" | "free") =>
-                        updateItem(index, { courseType: value })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="fixed">Fixed Courses</SelectItem>
-                        <SelectItem value="free">Free Choice</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {item.courseType === "fixed" && (
-                    <div>
-                      <RequiredLabel>Select Courses</RequiredLabel>
-                      <Input
-                        value={item.courses}
-                        onChange={(e) =>
-                          updateItem(index, { courses: e.target.value })
-                        }
-                        required
-                      />
-                    </div>
-                  )}
-
-                  {item.courseType === "free" && (
-                    <div>
-                      <RequiredLabel>How many courses?</RequiredLabel>
-                      <Input
-                        value={item.count}
-                        type="number"
-                        onChange={(e) =>
-                          updateItem(index, { count: parseInt(e.target.value) })
-                        }
-                        required
-                      />
-                    </div>
-                  )}
-                </>
-              )}
-
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={() => removeItem(index)}
-              >
-                Remove
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <Button className="mt-6" type="submit">
-        Create Template
-      </Button>
-    </form>
+        <Button className="mt-6" type="submit">
+          Create Template
+        </Button>
+      </form>
+    </Form>
   );
 }
