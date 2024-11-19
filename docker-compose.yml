@@ -9,8 +9,26 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - ./db-data:/var/lib/postgresql/data
-    env_file: ".env.production"
+      - ./data:/var/lib/postgresql/data
+    env_file: ".env"
+    networks:
+      - proxynet
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  migration:
+    build:
+      context: .
+      dockerfile: Dockerfile.migration
+    env_file: ".env"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - proxynet
   app:
     platform: "linux/amd64"
     build:
@@ -22,4 +40,14 @@ services:
     ports:
       - "3000:3000"
     image: uw-course-planner
-    env_file: ".env.production"
+    env_file: ".env"
+    networks:
+      - proxynet
+    depends_on:
+      migration:
+        condition: service_completed_successfully
+
+networks:
+  proxynet:
+    name: proxynet
+    external: true
