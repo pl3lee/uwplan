@@ -1,6 +1,6 @@
-import "dotenv/config";
 import { fetchUWFlowData, insertUWFlowCourses } from "@/scripts/fetchUWFlowCourses";
 import { createTemplate } from "./queries";
+
 
 
 

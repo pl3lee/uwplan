@@ -18,8 +18,7 @@
     "typecheck": "tsc --noEmit",
     "format:write": "prettier --write \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
-    "db:seed": "tsx src/server/db/seed.ts",
-    "fetch-courses": "tsx src/scripts/fetchUWFlowCourses.ts",
+    "db:seed": "tsx -r dotenv/config src/server/db/seed.ts",
     "test": "jest"
   },
   "dependencies": {
