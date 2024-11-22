@@ -50,8 +50,8 @@ export function CourseTable({
   });
   const [freeCourseInputs, setFreeCourseInputs] =
     useState<Map<string, string>>(initFreeCourseMap);
-  const [sortColumn, setSortColumn] = useState<SortColumn>(null);
-  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+  const [sortColumn, setSortColumn] = useState<SortColumn>("code");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
   const handleSort = (column: SortColumn) => {
     if (sortColumn === column) {
