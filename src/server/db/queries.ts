@@ -196,16 +196,22 @@ export async function getSelectedCourses(userId: string) {
     .select({
       courseItemId: selectedCourses.courseItemId,
       courseId: courseItems.courseId, // We still need courseId for display purposes
+      courseCode: courses.code,
+      courseName: courses.name
     })
     .from(selectedCourses)
     .innerJoin(plans, eq(plans.id, selectedCourses.planId))
     .innerJoin(courseItems, eq(courseItems.id, selectedCourses.courseItemId))
     .innerJoin(users, eq(users.id, plans.userId))
+    .innerJoin(courses, eq(courses.id, courseItems.courseId))
     .where(and(
       eq(users.id, userId),
       eq(selectedCourses.selected, true)
     ));
 }
+
+// Add this type export
+export type SelectedCourses = Awaited<ReturnType<typeof getSelectedCourses>>;
 
 /**
  * Toggles a course item selection for a user

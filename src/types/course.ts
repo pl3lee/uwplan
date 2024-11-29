@@ -19,3 +19,8 @@ export type FreeCourse = {
   courseItemId: string;
   course: Course | null;
 };
+
+export type CourseInstance = {
+  instanceId: string;
+  courseItemId: string;
+};
