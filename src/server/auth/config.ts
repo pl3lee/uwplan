@@ -89,7 +89,7 @@ export const authConfig = {
           planId
         })
       } catch (error) {
-        console.error("Failed to create plan for new user:", error);
+        console.error("Failed to create plan or schedule for new user:", error);
         throw error;
       }
     },

@@ -10,6 +10,7 @@ import {
   freeCourses,
   users,
   schedules,
+  scheduleCourses,
 } from "@/server/db/schema";
 import { type InstructionItem, type RequirementItem, type SeparatorItem, type CreateTemplateInput } from "@/types/template";
 import { eq, and, inArray } from "drizzle-orm";
@@ -487,4 +488,38 @@ export async function getSchedules(userId: string) {
     .orderBy(schedules.name);
 
   return userSchedules;
-} 
+}
+
+export async function getScheduleCourses(scheduleId: string) {
+  return await db
+    .select({
+      courseId: scheduleCourses.courseId,
+      term: scheduleCourses.term,
+    })
+    .from(scheduleCourses)
+    .where(eq(scheduleCourses.scheduleId, scheduleId));
+}
+
+export async function createSchedule(userId: string, name: string) {
+  const userPlan = await getUserPlan(userId);
+  if (!userPlan) {
+    throw new Error(`Failed to get plan for user ${userId}`);
+  }
+
+  await db
+    .insert(schedules)
+    .values({
+      planId: userPlan.id,
+      name,
+    });
+}
+
+export async function addCourseToSchedule(scheduleId: string, courseId: string, term: string) {
+  await db
+    .insert(scheduleCourses)
+    .values({
+      scheduleId,
+      courseId,
+      term,
+    })
+}

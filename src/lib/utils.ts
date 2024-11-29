@@ -17,7 +17,7 @@ const SEASONS = ["Winter", "Spring", "Fall"] as const;
 export function generateTerms(
   startTerm: { season: string; year: number },
   endTerm: { season: string; year: number },
-) {
+): Term[] {
   const terms: Term[] = [];
 
   // Handle invalid range
@@ -54,5 +54,9 @@ export function generateTerms(
     }
   }
 
-  return terms;
+  return terms.map((term) => ({
+    name: term.name,
+    id: `term-${term.name.replace(" ", "-")}`,
+    courses: term.courses,
+  }));
 }

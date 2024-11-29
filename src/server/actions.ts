@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { createTemplate, removeCourseSelection, toggleCourseSelection, toggleUserTemplate } from '@/server/db/queries';
+import { createSchedule, createTemplate, removeCourseSelection, toggleCourseSelection, toggleUserTemplate } from '@/server/db/queries';
 import { updateFreeCourse as dbUpdateFreeCourse } from "@/server/db/queries";
 import { auth } from './auth';
 import { CreateTemplateInput } from '@/types/template';
@@ -54,3 +54,24 @@ export async function createTemplateAction(template: CreateTemplateInput) {
 
   revalidatePath('/select');
 }
+
+export async function addSchedule(name: string) {
+  const session = await auth();
+  if (!session?.user) {
+    throw new Error('Not authenticated');
+  }
+  await createSchedule(session.user.id, name);
+
+
+  revalidatePath('/schedule');
+}
+
+export async function addCourseToTerm(scheduleId: string, courseId: string, term: string) {
+  const session = await auth();
+  if (!session?.user) {
+    throw new Error('Not authenticated');
+  }
+  await addCourseToTerm(scheduleId, courseId, term);
+  revalidatePath('/schedule');
+}
+

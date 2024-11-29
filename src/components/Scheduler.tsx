@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { type SelectedCourses } from "@/server/db/queries";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
@@ -9,20 +10,26 @@ import { DndContext, DragEndEvent, useDroppable } from "@dnd-kit/core";
 import { TermRangeSelector } from "./TermRangeSelector";
 import { DraggableCourseCard } from "./DraggableCourseCard";
 import { cn, generateTerms } from "@/lib/utils";
-import { Schedule, Term } from "@/types/schedule";
+import { Schedule, Term, TermCourseInstance } from "@/types/schedule";
+import { addSchedule } from "@/server/actions";
 
 type Props = {
   selectedCourses: SelectedCourses;
   schedules: Schedule[];
+  activeScheduleId: string;
 };
 
-export function Scheduler({ selectedCourses, schedules }: Props) {
+export function Scheduler({
+  selectedCourses,
+  schedules,
+  activeScheduleId,
+}: Props) {
+  const router = useRouter();
+  const pathname = usePathname();
   const [startTerm, setStartTerm] = useState({ season: "Fall", year: 2023 });
   const [endTerm, setEndTerm] = useState({ season: "Spring", year: 2025 });
 
-  const [activeSchedule, setActiveSchedule] = useState<string>(
-    schedules.length > 0 && schedules[0] ? schedules[0].id : "",
-  );
+  const terms = generateTerms(startTerm, endTerm);
 
   const handleTermRangeChange = (
     newStart: typeof startTerm,
@@ -32,16 +39,38 @@ export function Scheduler({ selectedCourses, schedules }: Props) {
     setEndTerm(newEnd);
   };
 
-  const currentSchedule = schedules.find((s) => s.id === activeSchedule);
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
 
-  const addNewSchedule = () => {
-    const newSchedule: Schedule = {
-      id: `schedule-${schedules.length + 1}`,
-      name: `Schedule ${schedules.length + 1}`,
-      terms: generateTerms(startTerm, endTerm),
-    };
-    setSchedules([...schedules, newSchedule]);
-    setActiveSchedule(newSchedule.id);
+    if (!over) return;
+
+    const courseItemId = (active.data.current as { courseItemId: string })
+      ?.courseItemId;
+    const termId = over.id as string;
+
+    // Remove from all terms first
+    const newTermInstances = { ...termInstances };
+    Object.keys(newTermInstances).forEach((key) => {
+      newTermInstances[key] = newTermInstances[key].filter(
+        (instance) => instance.courseItemId !== courseItemId,
+      );
+    });
+
+    // Add to new term
+    if (!newTermInstances[termId]) {
+      newTermInstances[termId] = [];
+    }
+
+    newTermInstances[termId].push({
+      instanceId: `${courseItemId}-${termId}`,
+      courseItemId,
+    });
+
+    setTermInstances(newTermInstances);
+  };
+
+  const handleScheduleChange = (scheduleId: string) => {
+    router.push(`${pathname}?schedule=${scheduleId}`);
   };
 
   return (
@@ -53,59 +82,66 @@ export function Scheduler({ selectedCourses, schedules }: Props) {
         onEndTermChange={(term) => handleTermRangeChange(startTerm, term)}
       />
 
-      <div className="grid grid-cols-[300px,1fr] gap-6">
-        {/* Left side - Course list */}
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Available Courses</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {selectedCourses.map((course) => (
-                <DraggableCourseCard
-                  key={course.courseItemId}
-                  course={course}
+      <DndContext onDragEnd={handleDragEnd}>
+        <div className="grid grid-cols-[300px,1fr] gap-6">
+          {/* Left side - Course list */}
+          <div className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Available Courses</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {selectedCourses.map((course) => (
+                  <DraggableCourseCard
+                    key={course.courseItemId}
+                    course={course}
+                  />
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Right side - Term boards */}
+          <div className="w-full space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex gap-2">
+                {schedules.map((schedule) => (
+                  <Button
+                    key={schedule.id}
+                    variant={
+                      schedule.id === activeScheduleId ? "default" : "outline"
+                    }
+                    onClick={() => handleScheduleChange(schedule.id)}
+                  >
+                    {schedule.name}
+                  </Button>
+                ))}
+              </div>
+              <Button
+                onClick={async () =>
+                  addSchedule(`Schedule ${schedules.length + 1}`)
+                }
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add Schedule
+              </Button>
+            </div>
+
+            <div className="grid h-full max-w-full grid-cols-3 gap-4 p-2">
+              {terms.map((term) => (
+                <TermBoard
+                  key={term.id}
+                  term={{
+                    ...term,
+                    courses: termInstances[term.id] || [],
+                  }}
+                  courses={selectedCourses}
                 />
               ))}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Right side - Term boards */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex gap-2">
-              {schedules.map((schedule) => (
-                <Button
-                  key={schedule.id}
-                  variant={
-                    schedule.id === activeSchedule ? "default" : "outline"
-                  }
-                  onClick={() => setActiveSchedule(schedule.id)}
-                >
-                  {schedule.name}
-                </Button>
-              ))}
             </div>
-            <Button onClick={addNewSchedule}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Schedule
-            </Button>
-          </div>
-
-          <div className="grid max-h-[600px] grid-cols-3 gap-4 overflow-auto p-2">
-            {currentSchedule?.terms.map((term) => (
-              <TermBoard
-                key={term.id}
-                term={term}
-                courses={selectedCourses.filter((c) =>
-                  term.courses.includes(c.courseItemId),
-                )}
-              />
-            ))}
           </div>
         </div>
-      </div>
+      </DndContext>
     </div>
   );
 }
@@ -129,6 +165,7 @@ function TermBoard({
       className={cn(
         "transition-colors",
         isOver && "ring-2 ring-primary ring-offset-2",
+        // "min-w-[300px]",
       )}
     >
       <CardHeader>

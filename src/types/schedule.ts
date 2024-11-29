@@ -1,9 +1,14 @@
 import { CourseInstance } from "./course";
 
 export type Term = {
-  id: string;
   name: string; // e.g. "Fall 2024"
-  courses: CourseInstance[]; // courseIds
+  id: string; // Unique identifier for the term
+  courses: TermCourseInstance[];
+};
+
+export type TermCourseInstance = {
+  instanceId: string; // Unique ID for this instance in the term
+  courseItemId: string; // Reference to the original course
 };
 
 export type Schedule = {
