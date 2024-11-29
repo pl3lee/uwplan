@@ -9,5 +9,4 @@ export type Term = {
 export type Schedule = {
   id: string;
   name: string;
-  terms: Term[];
 };

@@ -8,6 +8,7 @@ import {
   users,
   verificationTokens,
   plans,
+  schedules,
 } from "@/server/db/schema";
 import Google from "next-auth/providers/google";
 import GitHub from "next-auth/providers/github";
@@ -74,9 +75,19 @@ export const authConfig = {
       }
 
       try {
-        await db.insert(plans).values({
+        const result = await db.insert(plans).values({
           userId: user.id,
-        });
+        }).returning({
+          id: plans.id,
+        })
+        const planId = result?.[0]?.id;
+        if (!planId) {
+          throw new Error("Failed to create plan for new user");
+        }
+        await db.insert(schedules).values({
+          name: "Schedule 1",
+          planId
+        })
       } catch (error) {
         console.error("Failed to create plan for new user:", error);
         throw error;

@@ -13,20 +13,16 @@ import { Schedule, Term } from "@/types/schedule";
 
 type Props = {
   selectedCourses: SelectedCourses;
+  schedules: Schedule[];
 };
 
-export function Scheduler({ selectedCourses }: Props) {
+export function Scheduler({ selectedCourses, schedules }: Props) {
   const [startTerm, setStartTerm] = useState({ season: "Fall", year: 2023 });
   const [endTerm, setEndTerm] = useState({ season: "Spring", year: 2025 });
 
-  const [schedules, setSchedules] = useState<Schedule[]>([
-    {
-      id: "default",
-      name: "Default Schedule",
-      terms: generateTerms(startTerm, endTerm),
-    },
-  ]);
-  const [activeSchedule, setActiveSchedule] = useState<string>("default");
+  const [activeSchedule, setActiveSchedule] = useState<string>(
+    schedules.length > 0 && schedules[0] ? schedules[0].id : "",
+  );
 
   const handleTermRangeChange = (
     newStart: typeof startTerm,
@@ -34,12 +30,6 @@ export function Scheduler({ selectedCourses }: Props) {
   ) => {
     setStartTerm(newStart);
     setEndTerm(newEnd);
-    setSchedules(
-      schedules.map((schedule) => ({
-        ...schedule,
-        terms: generateTerms(newStart, newEnd),
-      })),
-    );
   };
 
   const currentSchedule = schedules.find((s) => s.id === activeSchedule);
@@ -63,7 +53,7 @@ export function Scheduler({ selectedCourses }: Props) {
         onEndTermChange={(term) => handleTermRangeChange(startTerm, term)}
       />
 
-      <div className="grid grid-cols-[350px,1fr] gap-6">
+      <div className="grid grid-cols-[300px,1fr] gap-6">
         {/* Left side - Course list */}
         <div className="space-y-4">
           <Card>

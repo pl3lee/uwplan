@@ -9,6 +9,7 @@ import {
   planTemplates,
   freeCourses,
   users,
+  schedules,
 } from "@/server/db/schema";
 import { type InstructionItem, type RequirementItem, type SeparatorItem, type CreateTemplateInput } from "@/types/template";
 import { eq, and, inArray } from "drizzle-orm";
@@ -472,3 +473,18 @@ export async function createTemplate(input: CreateTemplateInput) {
   });
 }
 
+export async function getSchedules(userId: string) {
+  const userPlan = await getUserPlan(userId);
+  if (!userPlan) return [];
+
+  const userSchedules = await db
+    .select({
+      id: schedules.id,
+      name: schedules.name,
+    })
+    .from(schedules)
+    .where(eq(schedules.planId, userPlan.id))
+    .orderBy(schedules.name);
+
+  return userSchedules;
+} 
