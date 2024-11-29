@@ -34,27 +34,14 @@ type FixedCourseWithItem = {
 };
 
 type CourseTableProps = {
-  fixedCourses?: FixedCourseWithItem[];
-  freeCourses?: FreeCourse[];
+  fixedCourses: FixedCourseWithItem[];
   allCourses: Course[];
-  selectedCourseItems: Set<string>;
 };
 
-export function CourseTable({
-  fixedCourses = [],
-  freeCourses = [],
+export function SelectedCoursesTable({
   allCourses,
-  selectedCourseItems,
+  fixedCourses,
 }: CourseTableProps) {
-  const initFreeCourseMap = new Map();
-  freeCourses.forEach((freeCourse) => {
-    initFreeCourseMap.set(
-      freeCourse.courseItemId,
-      freeCourse.course?.code ?? "",
-    );
-  });
-  const [freeCourseInputs, setFreeCourseInputs] =
-    useState<Map<string, string>>(initFreeCourseMap);
   const [sortColumn, setSortColumn] = useState<SortColumn>("code");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
@@ -126,15 +113,13 @@ export function CourseTable({
   };
 
   const sortedFixedCourses = sortCourses(fixedCourses);
-  // Remove sorting for free courses
-  const sortedFreeCourses = freeCourses;
 
   return (
     <div className="rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-1/12">Take?</TableHead>
+            <TableHead className="w-1/12">Remove</TableHead>
             <TableHead className="w-2/12">
               <Button
                 variant="ghost"
@@ -195,12 +180,7 @@ export function CourseTable({
           {sortedFixedCourses.map(({ courseItemId, course }) => (
             <TableRow key={courseItemId}>
               <TableCell>
-                <Checkbox
-                  checked={selectedCourseItems.has(courseItemId)}
-                  onCheckedChange={(checked) =>
-                    toggleCourse(courseItemId, checked as boolean)
-                  }
-                />
+                <Button variant="destructive">Remove</Button>
               </TableCell>
               <TableCell>
                 <Button asChild variant="link">
@@ -224,83 +204,6 @@ export function CourseTable({
               </TableCell>
               <TableCell className="text-right">
                 {course.numRatings ?? "N/A"}
-              </TableCell>
-            </TableRow>
-          ))}
-          {sortedFreeCourses.map((freeCourse) => (
-            <TableRow key={freeCourse.courseItemId}>
-              <TableCell>
-                <Checkbox
-                  checked={selectedCourseItems.has(freeCourse.courseItemId)}
-                  onCheckedChange={(checked) =>
-                    freeCourse.course &&
-                    toggleCourse(freeCourse.courseItemId, checked as boolean)
-                  }
-                  disabled={!freeCourse.course}
-                />
-              </TableCell>
-              <TableCell>
-                <div className="space-y-1">
-                  <Input
-                    value={freeCourseInputs.get(freeCourse.courseItemId)}
-                    onChange={async (event) => {
-                      const normalizedCourseCode = normalizeCourseCode(
-                        event.target.value,
-                      );
-                      setFreeCourseInputs((prev) => {
-                        const newMap = new Map(prev);
-                        newMap.set(
-                          freeCourse.courseItemId,
-                          normalizedCourseCode,
-                        );
-                        return newMap;
-                      });
-                      const filledCourseId = allCourses.find(
-                        (c) => c.code === normalizedCourseCode,
-                      )?.id;
-                      if (!filledCourseId) {
-                        return;
-                      }
-                      await updateFreeCourse(
-                        freeCourse.courseItemId,
-                        filledCourseId,
-                      );
-                    }}
-                    placeholder="Course code"
-                    className="w-full"
-                  />
-                  {freeCourse.course && (
-                    <div className="text-xs text-muted-foreground">
-                      Current:
-                      <Button asChild variant="link">
-                        <Link
-                          href={`https://uwflow.com/course/${freeCourse.course.code}`}
-                          target="_blank"
-                          className="text-xs"
-                        >
-                          <span className="text-muted-foreground">
-                            {freeCourse.course.code}
-                          </span>
-                        </Link>
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </TableCell>
-              <TableCell>
-                {freeCourse.course?.name ?? "No course selected"}
-              </TableCell>
-              <TableCell className="text-right">
-                {freeCourse.course?.usefulRating ?? "N/A"}
-              </TableCell>
-              <TableCell className="text-right">
-                {freeCourse.course?.likedRating ?? "N/A"}
-              </TableCell>
-              <TableCell className="text-right">
-                {freeCourse.course?.easyRating ?? "N/A"}
-              </TableCell>
-              <TableCell className="text-right">
-                {freeCourse.course?.numRatings ?? "N/A"}
               </TableCell>
             </TableRow>
           ))}

@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { type FixedCourse } from "@/types/course";
+import { SelectedCoursesTable } from "@/components/SelectedCoursesTable";
 
 export default async function SelectPage() {
   const session = await auth();
@@ -28,12 +29,26 @@ export default async function SelectPage() {
     getSelectedCourses(session.user.id),
   ]);
 
+  // Map courses to their details for the selected courses section
   const selectedCoursesWithDetails = selectedCourses
-    .map(({ courseId }) => {
+    .map(({ courseId, courseItemId }) => {
+      if (!courseId) return undefined;
       const course = allCourses.find((course) => course.id === courseId);
-      return course ? { course } : undefined;
+      return course ? { courseItemId, course } : undefined;
     })
-    .filter((course): course is FixedCourse => course !== undefined);
+    .filter(
+      (
+        course,
+      ): course is {
+        courseItemId: string;
+        course: (typeof allCourses)[number];
+      } => course !== undefined,
+    );
+
+  // Create a set of selected courseItemIds
+  const selectedCourseItems = new Set(
+    selectedCourses.map((course) => course.courseItemId),
+  );
 
   return (
     <div className="container mx-auto py-10">
@@ -45,12 +60,9 @@ export default async function SelectPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <CourseTable
+          <SelectedCoursesTable
             fixedCourses={selectedCoursesWithDetails}
             allCourses={allCourses}
-            selectedCourses={
-              new Set(selectedCourses.map((course) => course.courseId))
-            }
           />
         </CardContent>
       </Card>
@@ -63,6 +75,7 @@ export default async function SelectPage() {
             <CardDescription>{template.description}</CardDescription>
           </CardHeader>
           <CardContent>
+            {/* {console.log("item", template.items[1])} */}
             {template.items.map((item) => (
               <div key={item.id} className="mt-6">
                 {item.type === "requirement" && (
@@ -71,14 +84,13 @@ export default async function SelectPage() {
                       {item.description}
                     </h3>
                     <CourseTable
-                      fixedCourses={item.fixedCourses}
+                      fixedCourses={item.fixedCourses.map((fc) => ({
+                        courseItemId: fc.courseItemId,
+                        course: fc.course,
+                      }))}
                       freeCourses={item.freeCourses}
                       allCourses={allCourses}
-                      selectedCourses={
-                        new Set(
-                          selectedCourses.map((course) => course.courseId),
-                        )
-                      }
+                      selectedCourseItems={selectedCourseItems}
                     />
                   </>
                 )}

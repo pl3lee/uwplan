@@ -112,7 +112,8 @@ export async function getTemplateDetails(templateId: string) {
   // Get fixed courses for requirements
   const fixedCoursesForItems = await db
     .select({
-      itemId: courseItems.requirementId,
+      courseItemId: courseItems.id,
+      templateItemId: courseItems.requirementId,
       courseId: courses.id,
       code: courses.code,
       name: courses.name,
@@ -132,8 +133,8 @@ export async function getTemplateDetails(templateId: string) {
   // Get free course items and their filled courses if any
   const freeCourseItems = await db
     .select({
-      itemId: courseItems.requirementId,
       courseItemId: courseItems.id,
+      templateItemId: courseItems.requirementId,
       filledCourseId: freeCourses.filledCourseId,
       code: courses.code,
       name: courses.name,
@@ -156,8 +157,9 @@ export async function getTemplateDetails(templateId: string) {
     items: items.map(item => ({
       ...item,
       fixedCourses: fixedCoursesForItems
-        .filter(c => c.itemId === item.id && isValidCourse(c))
+        .filter(c => c.templateItemId === item.id && isValidCourse(c))
         .map(c => ({
+          courseItemId: c.courseItemId,
           course: {
             id: c.courseId,
             code: c.code,
@@ -169,7 +171,7 @@ export async function getTemplateDetails(templateId: string) {
           }
         })),
       freeCourses: freeCourseItems
-        .filter(c => c.itemId === item.id)
+        .filter(c => c.templateItemId === item.id)
         .map(c => ({
           courseItemId: c.courseItemId,
           course: c.filledCourseId && isValidCourse(c) ? {
@@ -187,37 +189,43 @@ export async function getTemplateDetails(templateId: string) {
 }
 
 /**
- * Gets all selected courses for a user
+ * Gets all selected course items for a user
  */
 export async function getSelectedCourses(userId: string) {
   return await db
     .select({
-      courseId: selectedCourses.courseId
+      courseItemId: selectedCourses.courseItemId,
+      courseId: courseItems.courseId, // We still need courseId for display purposes
     })
     .from(selectedCourses)
     .innerJoin(plans, eq(plans.id, selectedCourses.planId))
+    .innerJoin(courseItems, eq(courseItems.id, selectedCourses.courseItemId))
     .innerJoin(users, eq(users.id, plans.userId))
-    .where(and(eq(users.id, userId), eq(selectedCourses.selected, true)));
+    .where(and(
+      eq(users.id, userId),
+      eq(selectedCourses.selected, true)
+    ));
 }
 
 /**
- * Toggles a course selection for a user
+ * Toggles a course item selection for a user
  */
-export async function toggleCourseSelection(userId: string, courseId: string, selected: boolean) {
+export async function toggleCourseSelection(userId: string, courseItemId: string, selected: boolean) {
   const userPlan = await getOrCreateUserPlan(userId);
   if (!userPlan) {
     throw new Error(`Failed to get or create plan for user ${userId}`);
   }
-  console.log("Toggling course selection", userId, courseId, selected);
+
+  console.log("Toggling course selection", userId, courseItemId, selected);
   await db
     .insert(selectedCourses)
     .values({
       planId: userPlan.id,
-      courseId,
+      courseItemId,
       selected,
     })
     .onConflictDoUpdate({
-      target: [selectedCourses.planId, selectedCourses.courseId],
+      target: [selectedCourses.planId, selectedCourses.courseItemId],
       set: { selected },
     });
 }

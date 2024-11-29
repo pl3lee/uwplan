@@ -1,5 +1,5 @@
 {
-  "id": "d5c37dab-7b3e-4dc2-82fb-f4ead596fe15",
+  "id": "ea813423-e7e1-4f72-8f95-5d954a2c0f0c",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -581,8 +581,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "course_id": {
-          "name": "course_id",
+        "course_item_id": {
+          "name": "course_item_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
@@ -610,12 +610,12 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "selected_course_course_id_course_id_fk": {
-          "name": "selected_course_course_id_course_id_fk",
+        "selected_course_course_item_id_course_item_id_fk": {
+          "name": "selected_course_course_item_id_course_item_id_fk",
           "tableFrom": "selected_course",
-          "tableTo": "course",
+          "tableTo": "course_item",
           "columnsFrom": [
-            "course_id"
+            "course_item_id"
           ],
           "columnsTo": [
             "id"
@@ -625,11 +625,11 @@
         }
       },
       "compositePrimaryKeys": {
-        "selected_course_plan_id_course_id_pk": {
-          "name": "selected_course_plan_id_course_id_pk",
+        "selected_course_plan_id_course_item_id_pk": {
+          "name": "selected_course_plan_id_course_item_id_pk",
           "columns": [
             "plan_id",
-            "course_id"
+            "course_item_id"
           ]
         }
       },

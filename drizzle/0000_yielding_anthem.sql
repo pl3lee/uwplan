@@ -76,9 +76,9 @@ CREATE TABLE IF NOT EXISTS "schedule" (
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "selected_course" (
 	"plan_id" uuid NOT NULL,
-	"course_id" uuid NOT NULL,
+	"course_item_id" uuid NOT NULL,
 	"selected" boolean DEFAULT false NOT NULL,
-	CONSTRAINT "selected_course_plan_id_course_id_pk" PRIMARY KEY("plan_id","course_id")
+	CONSTRAINT "selected_course_plan_id_course_item_id_pk" PRIMARY KEY("plan_id","course_item_id")
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "session" (
@@ -195,7 +195,7 @@ EXCEPTION
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
- ALTER TABLE "selected_course" ADD CONSTRAINT "selected_course_course_id_course_id_fk" FOREIGN KEY ("course_id") REFERENCES "public"."course"("id") ON DELETE no action ON UPDATE no action;
+ ALTER TABLE "selected_course" ADD CONSTRAINT "selected_course_course_item_id_course_item_id_fk" FOREIGN KEY ("course_item_id") REFERENCES "public"."course_item"("id") ON DELETE no action ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;

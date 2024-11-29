@@ -204,14 +204,14 @@ export const scheduleCourses = createTable("schedule_course", {
   pk: primaryKey({ columns: [t.scheduleId, t.courseId] }),
 }));
 
-// Junction table between plans and courses
-// Tracks which courses a user has selected in their plan
+// Junction table between plans and courses (MODIFIED)
+// Now links to course items instead of courses directly
 export const selectedCourses = createTable("selected_course", {
   planId: uuid("plan_id").notNull().references(() => plans.id),
-  courseId: uuid("course_id").notNull().references(() => courses.id),
+  courseItemId: uuid("course_item_id").notNull().references(() => courseItems.id), // Changed from courseId
   selected: boolean("selected").notNull().default(false),
 }, (t) => ({
-  pk: primaryKey({ columns: [t.planId, t.courseId] }),
+  pk: primaryKey({ columns: [t.planId, t.courseItemId] }), // Updated primary key
 }));
 
 // When a user fills in a free course
