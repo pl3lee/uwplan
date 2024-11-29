@@ -230,6 +230,7 @@ export async function toggleCourseSelection(userId: string, courseItemId: string
     });
 }
 
+
 /**
  * Links a template to a plan
  */

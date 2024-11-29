@@ -28,7 +28,7 @@ export default async function SelectPage() {
     getCoursesWithRatings(),
     getSelectedCourses(session.user.id),
   ]);
-
+  console.log("selected courses", selectedCourses);
   // Map courses to their details for the selected courses section
   const selectedCoursesWithDetails = selectedCourses
     .map(({ courseId, courseItemId }) => {

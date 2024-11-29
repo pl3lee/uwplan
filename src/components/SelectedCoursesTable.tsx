@@ -180,7 +180,14 @@ export function SelectedCoursesTable({
           {sortedFixedCourses.map(({ courseItemId, course }) => (
             <TableRow key={courseItemId}>
               <TableCell>
-                <Button variant="destructive">Remove</Button>
+                <Button
+                  variant="destructive"
+                  onClick={async () => {
+                    await toggleCourse(courseItemId, false);
+                  }}
+                >
+                  Remove
+                </Button>
               </TableCell>
               <TableCell>
                 <Button asChild variant="link">
