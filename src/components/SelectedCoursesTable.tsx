@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { toggleCourse, updateFreeCourse } from "@/server/actions";
+import { removeCourse, toggleCourse, updateFreeCourse } from "@/server/actions";
 import { type FixedCourse, type FreeCourse, type Course } from "@/types/course";
 import { useState } from "react";
 import Link from "next/link";
@@ -183,7 +183,7 @@ export function SelectedCoursesTable({
                 <Button
                   variant="destructive"
                   onClick={async () => {
-                    await toggleCourse(courseItemId, false);
+                    await removeCourse(course.id);
                   }}
                 >
                   Remove

@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { createTemplate, toggleCourseSelection, toggleUserTemplate } from '@/server/db/queries';
+import { createTemplate, removeCourseSelection, toggleCourseSelection, toggleUserTemplate } from '@/server/db/queries';
 import { updateFreeCourse as dbUpdateFreeCourse } from "@/server/db/queries";
 import { auth } from './auth';
 import { CreateTemplateInput } from '@/types/template';
@@ -35,41 +35,14 @@ export async function toggleCourse(courseItemId: string, take: boolean) {
   revalidatePath('/select');
 }
 
-// const templateItemSchema = z.discriminatedUnion('type', [
-//   z.object({
-//     type: z.literal('instruction'),
-//     description: z.string().min(1),
-//     orderIndex: z.number(),
-//   }),
-//   z.object({
-//     type: z.literal('separator'),
-//     orderIndex: z.number(),
-//   }),
-//   z.object({
-//     type: z.literal('requirement'),
-//     description: z.string().min(1),
-//     orderIndex: z.number(),
-//     courseType: z.enum(['fixed', 'free']),
-//     courses: z.array(z.string()),
-//   }),
-// ]);
-
-// const createTemplateSchema = z.object({
-//   name: z.string().min(1),
-//   description: z.string().optional(),
-//   items: z.array(templateItemSchema),
-// });
-
-// export async function createTemplateAction(input: z.infer<typeof createTemplateSchema>) {
-//   const session = await auth();
-//   if (!session?.user) {
-//     throw new Error('Not authenticated');
-//   }
-
-//   const validatedInput = createTemplateSchema.parse(input);
-//   await createTemplate(validatedInput);
-//   revalidatePath('/create/template');
-// }
+export async function removeCourse(courseId: string) {
+  const session = await auth();
+  if (!session?.user) {
+    throw new Error('Not authenticated');
+  }
+  await removeCourseSelection(session.user.id, courseId);
+  revalidatePath('/select');
+}
 
 export async function createTemplateAction(template: CreateTemplateInput) {
   const session = await auth();

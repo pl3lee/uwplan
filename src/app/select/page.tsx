@@ -29,21 +29,21 @@ export default async function SelectPage() {
     getSelectedCourses(session.user.id),
   ]);
   console.log("selected courses", selectedCourses);
-  // Map courses to their details for the selected courses section
-  const selectedCoursesWithDetails = selectedCourses
-    .map(({ courseId, courseItemId }) => {
-      if (!courseId) return undefined;
-      const course = allCourses.find((course) => course.id === courseId);
-      return course ? { courseItemId, course } : undefined;
-    })
-    .filter(
-      (
-        course,
-      ): course is {
-        courseItemId: string;
-        course: (typeof allCourses)[number];
-      } => course !== undefined,
-    );
+  // Map courses to their details for the selected courses section and deduplicate
+  const selectedCoursesWithDetails = Array.from(
+    selectedCourses
+      .reduce((map, { courseId, courseItemId }) => {
+        if (!courseId) return map;
+        const course = allCourses.find((course) => course.id === courseId);
+        if (!course) return map;
+        // Only keep the first occurrence of each course.id
+        if (!map.has(course.id)) {
+          map.set(course.id, { courseItemId, course });
+        }
+        return map;
+      }, new Map<string, { courseItemId: string; course: (typeof allCourses)[number] }>())
+      .values(),
+  );
 
   // Create a set of selected courseItemIds
   const selectedCourseItems = new Set(

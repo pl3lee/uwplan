@@ -217,6 +217,12 @@ export async function toggleCourseSelection(userId: string, courseItemId: string
   }
 
   console.log("Toggling course selection", userId, courseItemId, selected);
+  // const courseItem = await db
+  //   .select()
+  //   .from(courseItems)
+  //   .where(eq(courseItems.id, courseItemId))
+
+  // console.log("courseItem", courseItem)
   await db
     .insert(selectedCourses)
     .values({
@@ -230,6 +236,34 @@ export async function toggleCourseSelection(userId: string, courseItemId: string
     });
 }
 
+/**
+ * Removes all instances of courseId from a user's selected courses
+ */
+export async function removeCourseSelection(userId: string, courseId: string) {
+  const userPlan = await getUserPlan(userId);
+  if (!userPlan) {
+    throw new Error(`Failed to get plan for user ${userId}`);
+  }
+
+  // Find all course items that contain this course
+  const courseItemsToUnselect = await db
+    .select({
+      courseItemId: courseItems.id,
+    })
+    .from(courseItems)
+    .where(eq(courseItems.courseId, courseId));
+
+  // Remove selections for all instances of this course
+  await db
+    .delete(selectedCourses)
+    .where(and(
+      eq(selectedCourses.planId, userPlan.id),
+      inArray(
+        selectedCourses.courseItemId,
+        courseItemsToUnselect.map(item => item.courseItemId)
+      )
+    ));
+}
 
 /**
  * Links a template to a plan
@@ -345,6 +379,10 @@ export async function updateFreeCourse(userId: string, courseItemId: string, fil
         target: [freeCourses.userId, freeCourses.courseItemId],
         set: { filledCourseId },
       });
+    await db
+      .update(courseItems)
+      .set({ courseId: filledCourseId })
+      .where(eq(courseItems.id, courseItemId));
   }
 }
 
