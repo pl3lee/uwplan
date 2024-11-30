@@ -11,7 +11,9 @@ import {
   users,
   schedules,
   scheduleCourses,
+  userTermRanges,
 } from "@/server/db/schema";
+import { Season } from "@/types/schedule";
 import { type InstructionItem, type RequirementItem, type SeparatorItem, type CreateTemplateInput } from "@/types/template";
 import { eq, and, inArray, isNotNull } from "drizzle-orm";
 
@@ -578,3 +580,29 @@ export async function deleteSchedule(scheduleId: string) {
     .delete(schedules)
     .where(eq(schedules.id, scheduleId));
 }
+
+export async function changeTermRange(userId: string, startTerm: Season, startYear: number, endTerm: Season, endYear: number) {
+  await db
+    .update(userTermRanges)
+    .set({
+      startTerm,
+      startYear,
+      endTerm,
+      endYear,
+    })
+    .where(eq(userTermRanges.userId, userId));
+}
+
+export async function getTermRange(userId: string) {
+  const [termRange] = await db
+    .select()
+    .from(userTermRanges)
+    .where(eq(userTermRanges.userId, userId))
+    .limit(1);
+  if (!termRange) {
+    throw new Error(`Failed to get term range for user ${userId}`);
+  }
+  return termRange
+}
+
+export type TermRange = Awaited<ReturnType<typeof getTermRange>>;

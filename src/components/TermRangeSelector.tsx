@@ -1,5 +1,6 @@
 "use client";
 
+import { Season } from "@/types/schedule";
 import {
   Select,
   SelectContent,
@@ -15,10 +16,10 @@ const YEARS = Array.from(
 );
 
 type Props = {
-  startTerm: { season: string; year: number };
-  endTerm: { season: string; year: number };
-  onStartTermChange: (term: { season: string; year: number }) => void;
-  onEndTermChange: (term: { season: string; year: number }) => void;
+  startTerm: { season: Season; year: number };
+  endTerm: { season: Season; year: number };
+  onStartTermChange: (term: { season: Season; year: number }) => void;
+  onEndTermChange: (term: { season: Season; year: number }) => void;
 };
 
 export function TermRangeSelector({
@@ -33,7 +34,7 @@ export function TermRangeSelector({
         <span className="text-sm font-medium">From:</span>
         <Select
           value={startTerm.season}
-          onValueChange={(season) =>
+          onValueChange={(season: Season) =>
             onStartTermChange({ ...startTerm, season })
           }
         >
@@ -70,7 +71,9 @@ export function TermRangeSelector({
         <span className="text-sm font-medium">To:</span>
         <Select
           value={endTerm.season}
-          onValueChange={(season) => onEndTermChange({ ...endTerm, season })}
+          onValueChange={(season: Season) =>
+            onEndTermChange({ ...endTerm, season })
+          }
         >
           <SelectTrigger className="w-[100px]">
             <SelectValue />

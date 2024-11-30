@@ -1,10 +1,11 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { addCourseToSchedule, changeScheduleName, createSchedule, createTemplate, deleteSchedule, getSchedules, removeCourseFromSchedule, removeCourseSelection, toggleCourseSelection, toggleUserTemplate, validateScheduleId } from '@/server/db/queries';
+import { addCourseToSchedule, changeScheduleName, changeTermRange, createSchedule, createTemplate, deleteSchedule, getSchedules, removeCourseFromSchedule, removeCourseSelection, toggleCourseSelection, toggleUserTemplate, validateScheduleId } from '@/server/db/queries';
 import { updateFreeCourse as dbUpdateFreeCourse } from "@/server/db/queries";
 import { auth } from './auth';
 import { CreateTemplateInput } from '@/types/template';
+import { Season } from '@/types/schedule';
 
 
 export async function toggleTemplate(templateId: string) {
@@ -120,5 +121,14 @@ export async function deleteScheduleAction(scheduleId: string) {
     throw new Error('Cannot delete the only schedule for a plan');
   }
   await deleteSchedule(scheduleId);
+  revalidatePath('/schedule');
+}
+
+export async function changeTermRangeAction(startTerm: Season, startYear: number, endTerm: Season, endYear: number) {
+  const session = await auth();
+  if (!session?.user) {
+    throw new Error('Not authenticated');
+  }
+  await changeTermRange(session.user.id, startTerm, startYear, endTerm, endYear);
   revalidatePath('/schedule');
 }

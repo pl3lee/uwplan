@@ -5,6 +5,8 @@ import {
   getScheduleCourses,
   getSchedules,
   getSelectedCourses,
+  getTermRange,
+  TermRange,
   validateScheduleId,
 } from "@/server/db/queries";
 import * as z from "zod";
@@ -82,6 +84,8 @@ export default async function SchedulePage({ searchParams }: Props) {
         ]),
     ).values(),
   );
+
+  const termRange: TermRange = await getTermRange(session.user.id);
   return (
     <div className="container mx-auto py-10">
       <h1 className={styles.pageTitleText}>Schedule Your Courses</h1>
@@ -90,6 +94,7 @@ export default async function SchedulePage({ searchParams }: Props) {
         schedules={schedules}
         activeScheduleId={activeScheduleId}
         coursesInSchedule={scheduleCourses}
+        termRange={termRange}
       />
     </div>
   );

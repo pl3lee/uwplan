@@ -119,6 +119,9 @@ export const itemTypeEnum = pgEnum("item_type", ["requirement", "instruction", "
 // Enum for course item types (fixed or free)
 export const courseItemTypeEnum = pgEnum("course_item_type", ["fixed", "free"]);
 
+// Add this with other enums
+export const seasonEnum = pgEnum("season", ["Fall", "Winter", "Spring"]);
+
 // Courses that students can take
 // Contains course information and pre-populated ratings from external sources
 export const courses = createTable("course", {
@@ -232,3 +235,16 @@ export const freeCourses = createTable("free_course", {
   // Add unique constraint to ensure one user can only fill a course item once
   uniqueCourseItemUser: uniqueIndex("free_course_item_user_idx").on(t.courseItemId, t.userId),
 }));
+
+// Add this new table
+export const userTermRanges = createTable("user_term_range", {
+  userId: varchar("user_id", { length: 255 })
+    .notNull()
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  startTerm: seasonEnum("start_term").notNull(),
+  startYear: integer("start_year").notNull(),
+  endTerm: seasonEnum("end_term").notNull(),
+  endYear: integer("end_year").notNull(),
+});
+

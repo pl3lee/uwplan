@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { type SelectedCourses } from "@/server/db/queries";
+import { type TermRange, type SelectedCourses } from "@/server/db/queries";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { DndContext, DragEndEvent, useDroppable } from "@dnd-kit/core";
@@ -16,6 +16,7 @@ import {
   removeCourseFromTerm,
   changeScheduleNameAction,
   deleteScheduleAction,
+  changeTermRangeAction,
 } from "@/server/actions";
 import Link from "next/link";
 import {
@@ -33,6 +34,7 @@ type Props = {
   schedules: Schedule[];
   activeScheduleId: string;
   coursesInSchedule: TermCourseInstance[];
+  termRange: TermRange;
 };
 
 function AddScheduleDialog() {
@@ -125,18 +127,31 @@ export function Scheduler({
   schedules,
   activeScheduleId,
   coursesInSchedule,
+  termRange,
 }: Props) {
-  const [startTerm, setStartTerm] = useState({ season: "Fall", year: 2020 });
-  const [endTerm, setEndTerm] = useState({ season: "Spring", year: 2025 });
+  const [startTerm, setStartTerm] = useState({
+    season: termRange.startTerm,
+    year: termRange.startYear,
+  });
+  const [endTerm, setEndTerm] = useState({
+    season: termRange.endTerm,
+    year: termRange.endYear,
+  });
 
   const terms = generateTerms(startTerm, endTerm);
 
-  const handleTermRangeChange = (
+  const handleTermRangeChange = async (
     newStart: typeof startTerm,
     newEnd: typeof endTerm,
   ) => {
     setStartTerm(newStart);
     setEndTerm(newEnd);
+    await changeTermRangeAction(
+      newStart.season,
+      newStart.year,
+      newEnd.season,
+      newEnd.year,
+    );
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {

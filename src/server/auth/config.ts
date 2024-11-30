@@ -9,6 +9,7 @@ import {
   verificationTokens,
   plans,
   schedules,
+  userTermRanges,
 } from "@/server/db/schema";
 import Google from "next-auth/providers/google";
 import GitHub from "next-auth/providers/github";
@@ -85,8 +86,15 @@ export const authConfig = {
           throw new Error("Failed to create plan for new user");
         }
         await db.insert(schedules).values({
-          name: "Schedule 1",
+          name: "Default",
           planId
+        })
+        await db.insert(userTermRanges).values({
+          userId: user.id,
+          startTerm: "Fall",
+          startYear: new Date().getFullYear(),
+          endTerm: "Fall",
+          endYear: new Date().getFullYear() + 5,
         })
       } catch (error) {
         console.error("Failed to create plan or schedule for new user:", error);
