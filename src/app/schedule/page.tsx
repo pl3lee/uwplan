@@ -5,6 +5,7 @@ import {
   getScheduleCourses,
   getSchedules,
   getSelectedCourses,
+  validateScheduleId,
 } from "@/server/db/queries";
 import * as z from "zod";
 
@@ -49,6 +50,17 @@ export default async function SchedulePage({ searchParams }: Props) {
 
   const activeScheduleId = scheduleId ? String(scheduleId) : schedules[0].id;
   console.log("scheduleId", activeScheduleId);
+  const scheduleIsValid = await validateScheduleId(
+    session.user.id,
+    activeScheduleId,
+  );
+  if (!scheduleIsValid) {
+    return (
+      <div>
+        You do not have access to this schedule, or the schedule is invalid.
+      </div>
+    );
+  }
   const scheduleCourses = await getScheduleCourses(activeScheduleId);
   console.log("scheduleCourses", scheduleCourses);
   const coursesToSchedule = Array.from(

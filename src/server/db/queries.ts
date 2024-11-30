@@ -542,3 +542,26 @@ export async function removeCourseFromSchedule(scheduleId: string, courseId: str
       eq(scheduleCourses.courseId, courseId)
     ));
 }
+
+// validates that user has access to the schedule
+export async function validateScheduleId(userId: string, scheduleId: string) {
+  const userPlan = await getUserPlan(userId);
+  if (!userPlan) {
+    throw new Error(`Failed to get plan for user ${userId}`);
+  }
+
+  const [schedule] = await db
+    .select()
+    .from(schedules)
+    .where(and(
+      eq(schedules.id, scheduleId),
+      eq(schedules.planId, userPlan.id)
+    ))
+    .limit(1);
+
+  if (!schedule) {
+    return false;
+  } else {
+    return true;
+  }
+}

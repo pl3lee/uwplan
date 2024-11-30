@@ -138,8 +138,13 @@ function AvailableCourses({ courses }: { courses: TermCourseInstance[] }) {
   });
 
   return (
-    <div className="space-y-4" ref={setNodeRef}>
-      <Card>
+    <div ref={setNodeRef} className="h-full">
+      <Card
+        className={cn(
+          "h-full transition-shadow",
+          isOver && "ring-2 ring-primary ring-offset-2",
+        )}
+      >
         <CardHeader>
           <CardTitle>Available Courses</CardTitle>
         </CardHeader>
@@ -153,7 +158,6 @@ function AvailableCourses({ courses }: { courses: TermCourseInstance[] }) {
   );
 }
 
-// Update TermBoard to use CourseInstance
 function TermBoard({
   name,
   courses,
@@ -166,29 +170,26 @@ function TermBoard({
   });
 
   return (
-    <Card
-      ref={setNodeRef}
-      className={cn(
-        "transition-colors",
-        isOver && "ring-2 ring-primary ring-offset-2",
-      )}
-    >
-      <CardHeader>
-        <CardTitle>{name}</CardTitle>
-      </CardHeader>
-      <CardContent
-        className={cn("min-h-[100px] space-y-2", isOver && "bg-muted/50")}
+    <div ref={setNodeRef} className="h-full">
+      <Card
+        className={cn(
+          "h-full transition-shadow",
+          isOver && "ring-2 ring-primary ring-offset-2",
+        )}
       >
-        {courses.map((instance) => {
-          return (
+        <CardHeader>
+          <CardTitle>{name}</CardTitle>
+        </CardHeader>
+        <CardContent className={cn("min-h-[100px] space-y-2")}>
+          {courses.map((instance) => (
             <DraggableCourseCard
               key={instance.courseId}
               id={instance.courseId}
               course={instance}
             />
-          );
-        })}
-      </CardContent>
-    </Card>
+          ))}
+        </CardContent>
+      </Card>
+    </div>
   );
 }
