@@ -12,6 +12,7 @@ async function main() {
   await insertUWFlowCourses(courseData);
 
   console.log("Creating templates and requirements...");
+
   await createTemplate({
     name: "Bachelor of Mathematics Degree - 2024",
     description: "2024 degree requirements for Bachelor of Mathematics",
@@ -349,6 +350,50 @@ async function main() {
       }
     ]
   })
+
+  await createTemplate({
+    name: "Free Electives - 10 Courses",
+    description: "Add courses of your choice to your schedule",
+    items: [
+      {
+        type: "requirement",
+        description: "Add any courses that you want to take",
+        orderIndex: 0,
+        courseType: "free",
+        courses: [],
+        courseCount: 10
+      }
+    ]
+  });
+  await createTemplate({
+    name: "Free Electives - 5 Courses",
+    description: "Add courses of your choice to your schedule",
+    items: [
+      {
+        type: "requirement",
+        description: "Add any courses that you want to take",
+        orderIndex: 0,
+        courseType: "free",
+        courses: [],
+        courseCount: 5
+      }
+    ]
+  });
+  await createTemplate({
+    name: "Free Electives - 15 Courses",
+    description: "Add courses of your choice to your schedule",
+    items: [
+      {
+        type: "requirement",
+        description: "Add any courses that you want to take",
+        orderIndex: 0,
+        courseType: "free",
+        courses: [],
+        courseCount: 15
+      }
+    ]
+  });
+
 
   console.log("Database seeded successfully!");
 }

@@ -10,8 +10,8 @@ import {
 
 const SEASONS = ["Winter", "Spring", "Fall"] as const;
 const YEARS = Array.from(
-  { length: 10 },
-  (_, i) => new Date().getFullYear() - 2 + i,
+  { length: 30 },
+  (_, i) => new Date().getFullYear() - 15 + i,
 );
 
 type Props = {

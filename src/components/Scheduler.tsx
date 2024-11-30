@@ -126,7 +126,7 @@ export function Scheduler({
   activeScheduleId,
   coursesInSchedule,
 }: Props) {
-  const [startTerm, setStartTerm] = useState({ season: "Fall", year: 2023 });
+  const [startTerm, setStartTerm] = useState({ season: "Fall", year: 2020 });
   const [endTerm, setEndTerm] = useState({ season: "Spring", year: 2025 });
 
   const terms = generateTerms(startTerm, endTerm);
@@ -213,7 +213,7 @@ export function Scheduler({
       </div>
 
       <DndContext onDragEnd={handleDragEnd}>
-        <div className="grid grid-cols-[300px,1fr] gap-6">
+        <div className="grid grid-cols-[0.25fr,0.75fr] gap-6">
           {/* Left side - Course list */}
           <AvailableCourses courses={coursesToSchedule} />
 
