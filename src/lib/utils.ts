@@ -1,4 +1,4 @@
-import { Term } from "@/types/schedule";
+import { type Term } from "@/types/schedule";
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 

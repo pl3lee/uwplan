@@ -6,7 +6,7 @@ import {
   getSchedules,
   getSelectedCourses,
   getTermRange,
-  TermRange,
+  type TermRange,
   validateScheduleId,
 } from "@/server/db/queries";
 import * as z from "zod";

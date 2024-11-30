@@ -13,7 +13,7 @@ import {
   scheduleCourses,
   userTermRanges,
 } from "@/server/db/schema";
-import { Season } from "@/types/schedule";
+import { type Season } from "@/types/schedule";
 import { type InstructionItem, type RequirementItem, type SeparatorItem, type CreateTemplateInput } from "@/types/template";
 import { eq, and, inArray, isNotNull } from "drizzle-orm";
 

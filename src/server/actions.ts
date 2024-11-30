@@ -4,8 +4,8 @@ import { revalidatePath } from 'next/cache';
 import { addCourseToSchedule, changeScheduleName, changeTermRange, createSchedule, createTemplate, deleteSchedule, getSchedules, removeCourseFromSchedule, removeCourseSelection, toggleCourseSelection, toggleUserTemplate, validateScheduleId } from '@/server/db/queries';
 import { updateFreeCourse as dbUpdateFreeCourse } from "@/server/db/queries";
 import { auth } from './auth';
-import { CreateTemplateInput } from '@/types/template';
-import { Season } from '@/types/schedule';
+import { type CreateTemplateInput } from '@/types/template';
+import { type Season } from '@/types/schedule';
 
 
 export async function toggleTemplate(templateId: string) {

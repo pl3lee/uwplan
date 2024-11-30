@@ -1,6 +1,6 @@
 "use client";
 
-import { Season } from "@/types/schedule";
+import { type Season } from "@/types/schedule";
 import {
   Select,
   SelectContent,

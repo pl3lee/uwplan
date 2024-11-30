@@ -5,11 +5,11 @@ import { useRouter, usePathname } from "next/navigation";
 import { type TermRange, type SelectedCourses } from "@/server/db/queries";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
-import { DndContext, DragEndEvent, useDroppable } from "@dnd-kit/core";
+import { DndContext, type DragEndEvent, useDroppable } from "@dnd-kit/core";
 import { TermRangeSelector } from "./TermRangeSelector";
 import { DraggableCourseCard } from "./DraggableCourseCard";
 import { cn, generateTerms } from "@/lib/utils";
-import { Schedule, Term, TermCourseInstance } from "@/types/schedule";
+import { type Schedule, Term, type TermCourseInstance } from "@/types/schedule";
 import {
   addCourseToTerm,
   addSchedule,
