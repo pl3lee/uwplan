@@ -5,7 +5,6 @@ import { useRouter, usePathname } from "next/navigation";
 import { type SelectedCourses } from "@/server/db/queries";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
-import { Plus } from "lucide-react";
 import { DndContext, DragEndEvent, useDroppable } from "@dnd-kit/core";
 import { TermRangeSelector } from "./TermRangeSelector";
 import { DraggableCourseCard } from "./DraggableCourseCard";
@@ -15,8 +14,19 @@ import {
   addCourseToTerm,
   addSchedule,
   removeCourseFromTerm,
+  changeScheduleNameAction,
+  deleteScheduleAction,
 } from "@/server/actions";
 import Link from "next/link";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "./ui/dialog";
+import { Input } from "./ui/input";
+import { Edit2, Plus, Trash2 } from "lucide-react";
 
 type Props = {
   coursesToSchedule: TermCourseInstance[];
@@ -24,6 +34,91 @@ type Props = {
   activeScheduleId: string;
   coursesInSchedule: TermCourseInstance[];
 };
+
+function AddScheduleDialog() {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button>
+          <Plus className="mr-2 h-4 w-4" />
+          Add Schedule
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>New Schedule</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <Input
+            placeholder="Schedule name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            maxLength={20}
+          />
+          <Button
+            onClick={async () => {
+              if (name) {
+                await addSchedule(name);
+                setName("");
+                setOpen(false);
+              }
+            }}
+          >
+            Create
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function RenameScheduleDialog({
+  scheduleId,
+  currentName,
+}: {
+  scheduleId: string;
+  currentName: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState(currentName);
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline">
+          <Edit2 className="mr-2 h-4 w-4" />
+          Rename Schedule
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Rename Schedule</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <Input
+            placeholder="Schedule name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            maxLength={20}
+          />
+          <Button
+            onClick={async () => {
+              if (name) {
+                await changeScheduleNameAction(scheduleId, name);
+                setOpen(false);
+              }
+            }}
+          >
+            Rename
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export function Scheduler({
   coursesToSchedule,
@@ -72,6 +167,9 @@ export function Scheduler({
     }
   };
 
+  const router = useRouter();
+  const activeSchedule = schedules.find((s) => s.id === activeScheduleId);
+
   return (
     <div className="space-y-6">
       <TermRangeSelector
@@ -81,6 +179,39 @@ export function Scheduler({
         onEndTermChange={(term) => handleTermRangeChange(startTerm, term)}
       />
 
+      {/* Schedule Management */}
+
+      <div className="flex gap-2">
+        <AddScheduleDialog />
+        {activeSchedule && (
+          <>
+            <RenameScheduleDialog
+              scheduleId={activeScheduleId}
+              currentName={activeSchedule.name}
+            />
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                if (confirm("Are you sure you want to delete this schedule?")) {
+                  await deleteScheduleAction(activeScheduleId);
+                  const nextSchedule = schedules.find(
+                    (s) => s.id !== activeScheduleId,
+                  );
+                  router.push(
+                    nextSchedule
+                      ? `/schedule?scheduleId=${nextSchedule.id}`
+                      : "/schedule",
+                  );
+                }
+              }}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete Schedule
+            </Button>
+          </>
+        )}
+      </div>
+
       <DndContext onDragEnd={handleDragEnd}>
         <div className="grid grid-cols-[300px,1fr] gap-6">
           {/* Left side - Course list */}
@@ -89,7 +220,7 @@ export function Scheduler({
           {/* Right side - Term boards */}
           <div className="w-full space-y-4">
             <div className="flex items-center justify-between">
-              <div className="flex gap-2">
+              <div className="flex w-full flex-wrap gap-2">
                 {schedules.map((schedule) => (
                   <Button
                     key={schedule.id}
@@ -104,14 +235,6 @@ export function Scheduler({
                   </Button>
                 ))}
               </div>
-              <Button
-                onClick={async () =>
-                  addSchedule(`Schedule ${schedules.length + 1}`)
-                }
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Add Schedule
-              </Button>
             </div>
 
             <div className="grid h-min max-w-full grid-cols-3 gap-4 p-2">

@@ -197,7 +197,9 @@ export const schedules = createTable("schedule", {
 // Tracks which courses are scheduled in which terms
 // A course can only appear once in a schedule
 export const scheduleCourses = createTable("schedule_course", {
-  scheduleId: uuid("schedule_id").notNull().references(() => schedules.id),
+  scheduleId: uuid("schedule_id").notNull().references(() => schedules.id, {
+    onDelete: "cascade",
+  }),
   courseId: uuid("course_id").notNull().references(() => courses.id),
   term: varchar("term", { length: 20 }).notNull(), // e.g., "Fall 2023"
 }, (t) => ({

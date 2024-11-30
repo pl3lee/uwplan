@@ -565,3 +565,16 @@ export async function validateScheduleId(userId: string, scheduleId: string) {
     return true;
   }
 }
+
+export async function changeScheduleName(scheduleId: string, name: string) {
+  await db
+    .update(schedules)
+    .set({ name })
+    .where(eq(schedules.id, scheduleId));
+}
+
+export async function deleteSchedule(scheduleId: string) {
+  await db
+    .delete(schedules)
+    .where(eq(schedules.id, scheduleId));
+}

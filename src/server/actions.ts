@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { addCourseToSchedule, createSchedule, createTemplate, removeCourseFromSchedule, removeCourseSelection, toggleCourseSelection, toggleUserTemplate } from '@/server/db/queries';
+import { addCourseToSchedule, changeScheduleName, createSchedule, createTemplate, deleteSchedule, getSchedules, removeCourseFromSchedule, removeCourseSelection, toggleCourseSelection, toggleUserTemplate, validateScheduleId } from '@/server/db/queries';
 import { updateFreeCourse as dbUpdateFreeCourse } from "@/server/db/queries";
 import { auth } from './auth';
 import { CreateTemplateInput } from '@/types/template';
@@ -92,3 +92,33 @@ export async function removeCourseFromTerm(scheduleId: string, courseId: string)
   revalidatePath('/schedule');
 }
 
+export async function changeScheduleNameAction(scheduleId: string, name: string) {
+  const session = await auth();
+  if (!session?.user) {
+    throw new Error('Not authenticated');
+  }
+  const hasAccess = await validateScheduleId(session.user.id, scheduleId);
+  if (!hasAccess) {
+    throw new Error('You do not have access to this schedule');
+  }
+  await changeScheduleName(scheduleId, name);
+  revalidatePath('/schedule');
+}
+
+export async function deleteScheduleAction(scheduleId: string) {
+  const session = await auth();
+  if (!session?.user) {
+    throw new Error('Not authenticated');
+  }
+  const hasAccess = await validateScheduleId(session.user.id, scheduleId);
+  if (!hasAccess) {
+    throw new Error('You do not have access to this schedule');
+  }
+  // there must be at least one schedule for a plan
+  const schedules = await getSchedules(session.user.id);
+  if (schedules.length === 1) {
+    throw new Error('Cannot delete the only schedule for a plan');
+  }
+  await deleteSchedule(scheduleId);
+  revalidatePath('/schedule');
+}
