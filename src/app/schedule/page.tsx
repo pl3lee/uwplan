@@ -14,24 +14,32 @@ type Props = {
   searchParams: SearchParams;
 };
 
+const selectedCoursesSchema = z.array(
+  z.object({
+    courseItemId: z.string(),
+    courseId: z.string().nonempty(), // Ensure courseId is not null or empty
+    courseCode: z.string(),
+    courseName: z.string(),
+  }),
+);
+const schedulesSchema = z
+  .array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      // Add other fields as necessary
+    }),
+  )
+  .nonempty();
+
 export default async function SchedulePage({ searchParams }: Props) {
   const session = await auth();
   if (!session?.user) {
     return <div>Please sign in to view your requirements</div>;
   }
 
-  const schedulesSchema = z
-    .array(
-      z.object({
-        id: z.string(),
-        name: z.string(),
-        // Add other fields as necessary
-      }),
-    )
-    .nonempty();
-
   const [selectedCourses, schedules] = await Promise.all([
-    getSelectedCourses(session.user.id),
+    selectedCoursesSchema.parse(await getSelectedCourses(session.user.id)),
     schedulesSchema.parse(await getSchedules(session.user.id)),
   ]);
 
@@ -43,11 +51,25 @@ export default async function SchedulePage({ searchParams }: Props) {
   console.log("scheduleId", activeScheduleId);
   const scheduleCourses = await getScheduleCourses(activeScheduleId);
   console.log("scheduleCourses", scheduleCourses);
-  const coursesToSchedule = selectedCourses.filter((course) => {
-    return !scheduleCourses.some(
-      (scheduleCourse) => scheduleCourse.courseId === course.courseId,
-    );
-  });
+  const coursesToSchedule = Array.from(
+    new Map(
+      selectedCourses
+        .filter((course) => {
+          return !scheduleCourses.some(
+            (scheduleCourse) => scheduleCourse.courseId === course.courseId,
+          );
+        })
+        .map((course) => [
+          course.courseId,
+          {
+            courseId: course.courseId,
+            courseCode: course.courseCode,
+            courseName: course.courseName,
+            term: "",
+          },
+        ]),
+    ).values(),
+  );
   return (
     <div className="container mx-auto py-10">
       <h1 className={styles.pageTitleText}>Schedule Your Courses</h1>

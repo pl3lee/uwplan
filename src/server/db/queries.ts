@@ -13,7 +13,7 @@ import {
   scheduleCourses,
 } from "@/server/db/schema";
 import { type InstructionItem, type RequirementItem, type SeparatorItem, type CreateTemplateInput } from "@/types/template";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, isNotNull } from "drizzle-orm";
 
 
 
@@ -208,7 +208,7 @@ export async function getSelectedCourses(userId: string) {
     .innerJoin(courses, eq(courses.id, courseItems.courseId))
     .where(and(
       eq(users.id, userId),
-      eq(selectedCourses.selected, true)
+      eq(selectedCourses.selected, true),
     ));
 }
 
@@ -524,8 +524,21 @@ export async function addCourseToSchedule(scheduleId: string, courseId: string, 
   await db
     .insert(scheduleCourses)
     .values({
+      term,
       scheduleId,
       courseId,
-      term,
     })
+    .onConflictDoUpdate({
+      target: [scheduleCourses.scheduleId, scheduleCourses.courseId],
+      set: { term },
+    })
+}
+
+export async function removeCourseFromSchedule(scheduleId: string, courseId: string) {
+  await db
+    .delete(scheduleCourses)
+    .where(and(
+      eq(scheduleCourses.scheduleId, scheduleId),
+      eq(scheduleCourses.courseId, courseId)
+    ));
 }

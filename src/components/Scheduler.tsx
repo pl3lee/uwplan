@@ -11,11 +11,15 @@ import { TermRangeSelector } from "./TermRangeSelector";
 import { DraggableCourseCard } from "./DraggableCourseCard";
 import { cn, generateTerms } from "@/lib/utils";
 import { Schedule, Term, TermCourseInstance } from "@/types/schedule";
-import { addSchedule } from "@/server/actions";
+import {
+  addCourseToTerm,
+  addSchedule,
+  removeCourseFromTerm,
+} from "@/server/actions";
 import Link from "next/link";
 
 type Props = {
-  coursesToSchedule: SelectedCourses;
+  coursesToSchedule: TermCourseInstance[];
   schedules: Schedule[];
   activeScheduleId: string;
   coursesInSchedule: TermCourseInstance[];
@@ -40,10 +44,32 @@ export function Scheduler({
     setEndTerm(newEnd);
   };
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
+    // active contains the course id
+    // over contains the term name
     const { active, over } = event;
 
     if (!over) return;
+    console.log("active", active);
+    console.log("over", over);
+    if (over.id.toString() === "available") {
+      try {
+        await removeCourseFromTerm(activeScheduleId, active.id.toString());
+      } catch (error) {
+        console.error("Failed to remove course from term", error);
+      }
+    } else {
+      try {
+        await addCourseToTerm(
+          activeScheduleId,
+          active.id.toString(),
+          over.id.toString(),
+        );
+        console.log("Added course to term");
+      } catch (error) {
+        console.error("Failed to add course to term", error);
+      }
+    }
   };
 
   return (
@@ -58,21 +84,7 @@ export function Scheduler({
       <DndContext onDragEnd={handleDragEnd}>
         <div className="grid grid-cols-[300px,1fr] gap-6">
           {/* Left side - Course list */}
-          <div className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Available Courses</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {coursesToSchedule.map((course) => (
-                  <DraggableCourseCard
-                    key={course.courseItemId}
-                    course={course}
-                  />
-                ))}
-              </CardContent>
-            </Card>
-          </div>
+          <AvailableCourses courses={coursesToSchedule} />
 
           {/* Right side - Term boards */}
           <div className="w-full space-y-4">
@@ -120,6 +132,27 @@ export function Scheduler({
   );
 }
 
+function AvailableCourses({ courses }: { courses: TermCourseInstance[] }) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: "available",
+  });
+
+  return (
+    <div className="space-y-4" ref={setNodeRef}>
+      <Card>
+        <CardHeader>
+          <CardTitle>Available Courses</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {courses.map((course) => (
+            <DraggableCourseCard key={course.courseId} course={course} />
+          ))}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 // Update TermBoard to use CourseInstance
 function TermBoard({
   name,
@@ -130,16 +163,14 @@ function TermBoard({
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: name,
-    // data: term,
   });
 
   return (
     <Card
-      // ref={setNodeRef}
+      ref={setNodeRef}
       className={cn(
         "transition-colors",
         isOver && "ring-2 ring-primary ring-offset-2",
-        // "min-w-[300px]",
       )}
     >
       <CardHeader>

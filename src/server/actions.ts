@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { createSchedule, createTemplate, removeCourseSelection, toggleCourseSelection, toggleUserTemplate } from '@/server/db/queries';
+import { addCourseToSchedule, createSchedule, createTemplate, removeCourseFromSchedule, removeCourseSelection, toggleCourseSelection, toggleUserTemplate } from '@/server/db/queries';
 import { updateFreeCourse as dbUpdateFreeCourse } from "@/server/db/queries";
 import { auth } from './auth';
 import { CreateTemplateInput } from '@/types/template';
@@ -71,7 +71,24 @@ export async function addCourseToTerm(scheduleId: string, courseId: string, term
   if (!session?.user) {
     throw new Error('Not authenticated');
   }
-  await addCourseToTerm(scheduleId, courseId, term);
+  try {
+    await addCourseToSchedule(scheduleId, courseId, term);
+  } catch (error) {
+    console.error("Failed to add course to term", error);
+  }
+  revalidatePath('/schedule');
+}
+
+export async function removeCourseFromTerm(scheduleId: string, courseId: string) {
+  const session = await auth();
+  if (!session?.user) {
+    throw new Error('Not authenticated');
+  }
+  try {
+    await removeCourseFromSchedule(scheduleId, courseId);
+  } catch (error) {
+    console.error("Failed to remove course from term", error);
+  }
   revalidatePath('/schedule');
 }
 
