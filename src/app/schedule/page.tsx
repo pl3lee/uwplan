@@ -43,14 +43,20 @@ export default async function SchedulePage({ searchParams }: Props) {
   console.log("scheduleId", activeScheduleId);
   const scheduleCourses = await getScheduleCourses(activeScheduleId);
   console.log("scheduleCourses", scheduleCourses);
+  const coursesToSchedule = selectedCourses.filter((course) => {
+    return !scheduleCourses.some(
+      (scheduleCourse) => scheduleCourse.courseId === course.courseId,
+    );
+  });
   return (
     <div className="container mx-auto py-10">
       <h1 className={styles.pageTitleText}>Schedule Your Courses</h1>
-      {/* <Scheduler
-        selectedCourses={selectedCourses}
+      <Scheduler
+        coursesToSchedule={coursesToSchedule}
         schedules={schedules}
         activeScheduleId={activeScheduleId}
-      /> */}
+        coursesInSchedule={scheduleCourses}
+      />
     </div>
   );
 }

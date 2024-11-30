@@ -490,13 +490,19 @@ export async function getSchedules(userId: string) {
   return userSchedules;
 }
 
+/**
+ * Gets courses that are in a schedule
+ */
 export async function getScheduleCourses(scheduleId: string) {
   return await db
     .select({
       courseId: scheduleCourses.courseId,
       term: scheduleCourses.term,
+      courseCode: courses.code,
+      courseName: courses.name,
     })
     .from(scheduleCourses)
+    .innerJoin(courses, eq(courses.id, scheduleCourses.courseId))
     .where(eq(scheduleCourses.scheduleId, scheduleId));
 }
 

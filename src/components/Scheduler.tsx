@@ -12,20 +12,21 @@ import { DraggableCourseCard } from "./DraggableCourseCard";
 import { cn, generateTerms } from "@/lib/utils";
 import { Schedule, Term, TermCourseInstance } from "@/types/schedule";
 import { addSchedule } from "@/server/actions";
+import Link from "next/link";
 
 type Props = {
-  selectedCourses: SelectedCourses;
+  coursesToSchedule: SelectedCourses;
   schedules: Schedule[];
   activeScheduleId: string;
+  coursesInSchedule: TermCourseInstance[];
 };
 
 export function Scheduler({
-  selectedCourses,
+  coursesToSchedule,
   schedules,
   activeScheduleId,
+  coursesInSchedule,
 }: Props) {
-  const router = useRouter();
-  const pathname = usePathname();
   const [startTerm, setStartTerm] = useState({ season: "Fall", year: 2023 });
   const [endTerm, setEndTerm] = useState({ season: "Spring", year: 2025 });
 
@@ -43,34 +44,6 @@ export function Scheduler({
     const { active, over } = event;
 
     if (!over) return;
-
-    const courseItemId = (active.data.current as { courseItemId: string })
-      ?.courseItemId;
-    const termId = over.id as string;
-
-    // Remove from all terms first
-    const newTermInstances = { ...termInstances };
-    Object.keys(newTermInstances).forEach((key) => {
-      newTermInstances[key] = newTermInstances[key].filter(
-        (instance) => instance.courseItemId !== courseItemId,
-      );
-    });
-
-    // Add to new term
-    if (!newTermInstances[termId]) {
-      newTermInstances[termId] = [];
-    }
-
-    newTermInstances[termId].push({
-      instanceId: `${courseItemId}-${termId}`,
-      courseItemId,
-    });
-
-    setTermInstances(newTermInstances);
-  };
-
-  const handleScheduleChange = (scheduleId: string) => {
-    router.push(`${pathname}?schedule=${scheduleId}`);
   };
 
   return (
@@ -91,7 +64,7 @@ export function Scheduler({
                 <CardTitle>Available Courses</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                {selectedCourses.map((course) => (
+                {coursesToSchedule.map((course) => (
                   <DraggableCourseCard
                     key={course.courseItemId}
                     course={course}
@@ -111,9 +84,11 @@ export function Scheduler({
                     variant={
                       schedule.id === activeScheduleId ? "default" : "outline"
                     }
-                    onClick={() => handleScheduleChange(schedule.id)}
+                    asChild
                   >
-                    {schedule.name}
+                    <Link href={`/schedule?scheduleId=${schedule.id}`}>
+                      {schedule.name}
+                    </Link>
                   </Button>
                 ))}
               </div>
@@ -127,15 +102,14 @@ export function Scheduler({
               </Button>
             </div>
 
-            <div className="grid h-full max-w-full grid-cols-3 gap-4 p-2">
+            <div className="grid h-min max-w-full grid-cols-3 gap-4 p-2">
               {terms.map((term) => (
                 <TermBoard
-                  key={term.id}
-                  term={{
-                    ...term,
-                    courses: termInstances[term.id] || [],
-                  }}
-                  courses={selectedCourses}
+                  key={term.name}
+                  name={term.name}
+                  courses={coursesInSchedule.filter(
+                    (course) => course.term === term.name,
+                  )}
                 />
               ))}
             </div>
@@ -148,20 +122,20 @@ export function Scheduler({
 
 // Update TermBoard to use CourseInstance
 function TermBoard({
-  term,
+  name,
   courses,
 }: {
-  term: Term;
-  courses: SelectedCourses;
+  name: string;
+  courses: TermCourseInstance[];
 }) {
   const { setNodeRef, isOver } = useDroppable({
-    id: term.id,
-    data: term,
+    id: name,
+    // data: term,
   });
 
   return (
     <Card
-      ref={setNodeRef}
+      // ref={setNodeRef}
       className={cn(
         "transition-colors",
         isOver && "ring-2 ring-primary ring-offset-2",
@@ -169,21 +143,17 @@ function TermBoard({
       )}
     >
       <CardHeader>
-        <CardTitle>{term.name}</CardTitle>
+        <CardTitle>{name}</CardTitle>
       </CardHeader>
       <CardContent
         className={cn("min-h-[100px] space-y-2", isOver && "bg-muted/50")}
       >
-        {term.courses.map((instance) => {
-          const course = courses.find(
-            (c) => c.courseItemId === instance.courseItemId,
-          );
-          if (!course) return null;
+        {courses.map((instance) => {
           return (
             <DraggableCourseCard
-              key={instance.instanceId}
-              id={instance.instanceId}
-              course={course}
+              key={instance.courseId}
+              id={instance.courseId}
+              course={instance}
             />
           );
         })}

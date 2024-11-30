@@ -4,15 +4,16 @@ import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { Card, CardContent } from "./ui/card";
 import { type SelectedCourses } from "@/server/db/queries";
+import { TermCourseInstance } from "@/types/schedule";
 
 type Props = {
   id?: string; // Optional ID for term instances
-  course: SelectedCourses[number];
+  course: TermCourseInstance;
 };
 
 export function DraggableCourseCard({ id, course }: Props) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
-    id: id ?? course.courseItemId,
+    id: id ?? course.courseId,
     data: course,
   });
 

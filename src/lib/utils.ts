@@ -42,9 +42,7 @@ export function generateTerms(
       SEASONS.indexOf(endTerm.season as (typeof SEASONS)[number]))
   ) {
     terms.push({
-      id: `${SEASONS[currentSeasonIndex]}-${currentYear}`,
       name: `${SEASONS[currentSeasonIndex]} ${currentYear}`,
-      courses: [],
     });
 
     currentSeasonIndex++;
@@ -54,9 +52,5 @@ export function generateTerms(
     }
   }
 
-  return terms.map((term) => ({
-    name: term.name,
-    id: `term-${term.name.replace(" ", "-")}`,
-    courses: term.courses,
-  }));
+  return terms
 }
