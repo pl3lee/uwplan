@@ -58,6 +58,11 @@ export function CourseTable({
   const [sortColumn, setSortColumn] = useState<SortColumn>("code");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
+  const formatRating = (rating: string | null | undefined) => {
+    if (!rating) return "N/A";
+    return `${(Number(rating) * 100).toFixed(1)}%`;
+  };
+
   const handleSort = (column: SortColumn) => {
     if (sortColumn === column) {
       setSortDirection((curr) =>
@@ -214,16 +219,16 @@ export function CourseTable({
               </TableCell>
               <TableCell>{course.name}</TableCell>
               <TableCell className="text-right">
-                {course.usefulRating ?? "N/A"}
+                {formatRating(course.usefulRating)}
               </TableCell>
               <TableCell className="text-right">
-                {course.likedRating ?? "N/A"}
+                {formatRating(course.likedRating)}
               </TableCell>
               <TableCell className="text-right">
-                {course.easyRating ?? "N/A"}
+                {formatRating(course.easyRating)}
               </TableCell>
               <TableCell className="text-right">
-                {course.numRatings ?? "N/A"}
+                {course.numRatings ? Number(course.numRatings) : 0}
               </TableCell>
             </TableRow>
           ))}
@@ -291,16 +296,18 @@ export function CourseTable({
                 {freeCourse.course?.name ?? "No course selected"}
               </TableCell>
               <TableCell className="text-right">
-                {freeCourse.course?.usefulRating ?? "N/A"}
+                {formatRating(freeCourse.course?.usefulRating)}
               </TableCell>
               <TableCell className="text-right">
-                {freeCourse.course?.likedRating ?? "N/A"}
+                {formatRating(freeCourse.course?.likedRating)}
               </TableCell>
               <TableCell className="text-right">
-                {freeCourse.course?.easyRating ?? "N/A"}
+                {formatRating(freeCourse.course?.easyRating)}
               </TableCell>
               <TableCell className="text-right">
-                {freeCourse.course?.numRatings ?? "N/A"}
+                {freeCourse.course?.numRatings
+                  ? Number(freeCourse.course.numRatings)
+                  : 0}
               </TableCell>
             </TableRow>
           ))}
