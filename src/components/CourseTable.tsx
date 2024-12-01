@@ -16,7 +16,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button } from "./ui/button";
 import { normalizeCourseCode } from "@/lib/utils";
-import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { ArrowUpDown, ArrowUp, ArrowDown, Check, X } from "lucide-react";
 
 type SortDirection = "asc" | "desc" | null;
 type SortColumn =
@@ -38,6 +38,7 @@ type CourseTableProps = {
   freeCourses?: FreeCourse[];
   allCourses: Course[];
   selectedCourseItems: Set<string>;
+  otherSelectedCourses: string[];
 };
 
 export function CourseTable({
@@ -45,6 +46,7 @@ export function CourseTable({
   freeCourses = [],
   allCourses,
   selectedCourseItems,
+  otherSelectedCourses,
 }: CourseTableProps) {
   const initFreeCourseMap = new Map();
   freeCourses.forEach((freeCourse) => {
@@ -140,6 +142,7 @@ export function CourseTable({
         <TableHeader>
           <TableRow>
             <TableHead className="w-1/12">Take?</TableHead>
+            <TableHead className="w-1/12">Taken</TableHead>
             <TableHead className="w-2/12">
               <Button
                 variant="ghost"
@@ -149,7 +152,7 @@ export function CourseTable({
                 Code {fixedCourses.length > 0 && getSortIcon("code")}
               </Button>
             </TableHead>
-            <TableHead className="w-5/12">
+            <TableHead className="w-4/12">
               <Button
                 variant="ghost"
                 onClick={() => handleSort("name")}
@@ -208,6 +211,9 @@ export function CourseTable({
                 />
               </TableCell>
               <TableCell>
+                {otherSelectedCourses.includes(course.id) ? <Check /> : <X />}
+              </TableCell>
+              <TableCell>
                 <Button asChild variant="link">
                   <Link
                     href={`https://uwflow.com/course/${course.code}`}
@@ -243,6 +249,14 @@ export function CourseTable({
                   }
                   disabled={!freeCourse.course}
                 />
+              </TableCell>
+              <TableCell>
+                {freeCourse.course?.id &&
+                otherSelectedCourses.includes(freeCourse.course.id) ? (
+                  <Check />
+                ) : (
+                  <X />
+                )}
               </TableCell>
               <TableCell>
                 <div className="space-y-1">

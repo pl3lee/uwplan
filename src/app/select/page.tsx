@@ -92,6 +92,9 @@ export default async function SelectPage() {
                       freeCourses={item.freeCourses}
                       allCourses={allCourses}
                       selectedCourseItems={selectedCourseItems}
+                      otherSelectedCourses={selectedCoursesWithDetails.map(
+                        (course) => course.course.id,
+                      )}
                     />
                   </>
                 )}
