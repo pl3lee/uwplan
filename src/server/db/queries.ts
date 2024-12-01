@@ -52,7 +52,6 @@ export async function getUserSelectedTemplates(userId: string) {
     .innerJoin(plans, eq(plans.id, planTemplates.planId))
     .innerJoin(templates, eq(templates.id, planTemplates.templateId))
     .where(eq(plans.userId, userId))
-    .orderBy(templates.name);
 }
 
 /**
@@ -354,7 +353,6 @@ export async function getUserTemplatesWithCourses(userId: string) {
     .from(planTemplates)
     .innerJoin(templates, eq(templates.id, planTemplates.templateId))
     .where(eq(planTemplates.planId, userPlan.id))
-    .orderBy(templates.name);
 
   // Get details for each template
   const templateDetails = await Promise.all(
@@ -487,7 +485,6 @@ export async function getSchedules(userId: string) {
     })
     .from(schedules)
     .where(eq(schedules.planId, userPlan.id))
-    .orderBy(schedules.name);
 
   return userSchedules;
 }
