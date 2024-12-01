@@ -1,7 +1,4 @@
 import "@/styles/globals.css";
-import Container from "@/components/Container";
-import Navbar from "@/components/Navbar";
-import { Toaster } from "@/components/ui/sonner";
 
 import { GeistSans } from "geist/font/sans";
 import { type Metadata } from "next";
@@ -17,11 +14,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${GeistSans.variable}`}>
-      <body className="flex min-h-screen flex-col">
-        <Navbar />
-        <Container>{children}</Container>
-        <Toaster />
-      </body>
+      <body className="flex min-h-screen flex-col">{children}</body>
     </html>
   );
 }
