@@ -16,6 +16,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { type FixedCourse } from "@/types/course";
 import { SelectedCoursesTable } from "@/components/SelectedCoursesTable";
+import { ScrollToTopButton } from "@/components/ScrollToTopButton";
 
 export default async function SelectPage() {
   const session = await auth();
@@ -107,6 +108,7 @@ export default async function SelectPage() {
           </CardContent>
         </Card>
       ))}
+      <ScrollToTopButton />
     </div>
   );
 }
