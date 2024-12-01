@@ -10,6 +10,7 @@ import {
   validateScheduleId,
 } from "@/server/db/queries";
 import * as z from "zod";
+import { ScrollToTopButton } from "@/components/ScrollToTopButton";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -96,6 +97,7 @@ export default async function SchedulePage({ searchParams }: Props) {
         coursesInSchedule={scheduleCourses}
         termRange={termRange}
       />
+      <ScrollToTopButton />
     </div>
   );
 }
