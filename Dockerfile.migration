@@ -1,8 +1,0 @@
-FROM node:20-alpine
-WORKDIR /app
-COPY package.json package-lock.json ./
-COPY drizzle ./
-RUN npm ci
-COPY . .
-ENV NODE_ENV production
-CMD ["npm", "run", "db:migrate"]
