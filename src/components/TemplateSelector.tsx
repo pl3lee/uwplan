@@ -19,7 +19,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useState } from "react";
+import { useState, useOptimistic, startTransition } from "react";
 import { toggleTemplate } from "@/server/actions";
 
 type Template = {
@@ -35,6 +35,24 @@ type Props = {
 
 export function TemplateSelector({ templates, selectedTemplates }: Props) {
   const [open, setOpen] = useState(false);
+  const [optimisticTemplates, updateOptimisticTemplates] = useOptimistic(
+    selectedTemplates,
+    (state: Template[], templateId: string) => {
+      const isSelected = state.some((t) => t.id === templateId);
+      if (isSelected) {
+        return state.filter((t) => t.id !== templateId);
+      } else {
+        const template = templates.find((t) => t.id === templateId);
+        return template ? [...state, template] : state;
+      }
+    },
+  );
+  const handleToggleTemplate = async (templateId: string) => {
+    startTransition(() => {
+      updateOptimisticTemplates(templateId);
+    });
+    await toggleTemplate(templateId);
+  };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -45,8 +63,8 @@ export function TemplateSelector({ templates, selectedTemplates }: Props) {
           aria-expanded={open}
           className="w-60 justify-between"
         >
-          {selectedTemplates.length > 0
-            ? `${selectedTemplates.length} selected`
+          {optimisticTemplates.length > 0
+            ? `${optimisticTemplates.length} selected`
             : "Select Academic Plans..."}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -62,12 +80,14 @@ export function TemplateSelector({ templates, selectedTemplates }: Props) {
                   <CommandItem
                     key={template.id}
                     value={template.name}
-                    onSelect={async () => await toggleTemplate(template.id)}
+                    onSelect={async () =>
+                      await handleToggleTemplate(template.id)
+                    }
                   >
                     <Check
                       className={cn(
                         "mr-2 h-4 w-4",
-                        selectedTemplates.some(
+                        optimisticTemplates.some(
                           (item) => item.id === template.id,
                         )
                           ? "opacity-100"
