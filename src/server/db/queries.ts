@@ -226,12 +226,6 @@ export async function toggleCourseSelection(userId: string, courseItemId: string
   }
 
   console.log("Toggling course selection", userId, courseItemId, selected);
-  // const courseItem = await db
-  //   .select()
-  //   .from(courseItems)
-  //   .where(eq(courseItems.id, courseItemId))
-
-  // console.log("courseItem", courseItem)
   await db
     .insert(selectedCourses)
     .values({
@@ -254,24 +248,40 @@ export async function removeCourseSelection(userId: string, courseId: string) {
     throw new Error(`Failed to get plan for user ${userId}`);
   }
 
-  // Find all course items that contain this course
-  const courseItemsToUnselect = await db
-    .select({
-      courseItemId: courseItems.id,
-    })
-    .from(courseItems)
-    .where(eq(courseItems.courseId, courseId));
+  try {
+    // Find all course items that contain this course
+    const courseItemsToUnselect = await db
+      .select({
+        courseItemId: courseItems.id,
+      })
+      .from(courseItems)
+      .where(eq(courseItems.courseId, courseId));
 
-  // Remove selections for all instances of this course
-  await db
-    .delete(selectedCourses)
-    .where(and(
-      eq(selectedCourses.planId, userPlan.id),
-      inArray(
-        selectedCourses.courseItemId,
-        courseItemsToUnselect.map(item => item.courseItemId)
-      )
-    ));
+
+    // Remove selections for all instances of this course
+    await db
+      .delete(selectedCourses)
+      .where(and(
+        eq(selectedCourses.planId, userPlan.id),
+        inArray(
+          selectedCourses.courseItemId,
+          courseItemsToUnselect.map(item => item.courseItemId)
+        )
+      ));
+
+    // find all user schedules
+    const userSchedules = await getSchedules(userId)
+    const userSchedulesIds = userSchedules.map(schedule => schedule.id)
+    // Remove course from all user schedules
+    await db
+      .delete(scheduleCourses)
+      .where(and(
+        inArray(scheduleCourses.scheduleId, userSchedulesIds),
+        eq(scheduleCourses.courseId, courseId)
+      ))
+  } catch (e) {
+    console.error("Failed to remove course selection", e);
+  }
 }
 
 /**
@@ -288,7 +298,7 @@ export async function addTemplateToPlan(planId: string, templateId: string) {
 }
 
 /**
- * Removes a template from a plan and cleans up related course selections
+ * Removes a template from a plan
  */
 export async function removeTemplateFromPlan(planId: string, templateId: string) {
   await db
