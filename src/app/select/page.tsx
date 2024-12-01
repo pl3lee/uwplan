@@ -101,7 +101,7 @@ export default async function SelectPage() {
                   </h3>
                 )}
                 {item.type === "separator" && (
-                  <Separator className="mt-8 bg-red-600" />
+                  <Separator className="mt-8 h-2 bg-gradient-to-r from-primary/5 via-primary/30 to-primary/5" />
                 )}
               </div>
             ))}
