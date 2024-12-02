@@ -28,6 +28,14 @@ import {
 } from "./ui/dialog";
 import { Input } from "./ui/input";
 import { Edit2, Plus, Trash2 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
+import { MobileScheduler } from "./MobileScheduler";
 
 type Props = {
   coursesToSchedule: TermCourseInstance[];
@@ -189,86 +197,99 @@ export function Scheduler({
   const activeSchedule = schedules.find((s) => s.id === activeScheduleId);
 
   return (
-    <div className="space-y-6">
-      <TermRangeSelector
-        startTerm={startTerm}
-        endTerm={endTerm}
-        onStartTermChange={(term) => handleTermRangeChange(term, endTerm)}
-        onEndTermChange={(term) => handleTermRangeChange(startTerm, term)}
-      />
+    <div className="container mx-auto py-10">
+      <div className="space-y-6">
+        <TermRangeSelector
+          startTerm={startTerm}
+          endTerm={endTerm}
+          onStartTermChange={(term) => handleTermRangeChange(term, endTerm)}
+          onEndTermChange={(term) => handleTermRangeChange(startTerm, term)}
+        />
 
-      {/* Schedule Management */}
+        {/* Schedule Management */}
+        <div className="flex flex-col gap-2 md:flex-row">
+          <AddScheduleDialog />
+          {activeSchedule && (
+            <>
+              <RenameScheduleDialog
+                scheduleId={activeScheduleId}
+                currentName={activeSchedule.name}
+              />
+              <Button
+                variant="destructive"
+                onClick={async () => {
+                  if (
+                    confirm("Are you sure you want to delete this schedule?")
+                  ) {
+                    await deleteScheduleAction(activeScheduleId);
+                    const nextSchedule = schedules.find(
+                      (s) => s.id !== activeScheduleId,
+                    );
+                    router.push(
+                      nextSchedule
+                        ? `/schedule?scheduleId=${nextSchedule.id}`
+                        : "/schedule",
+                    );
+                  }
+                }}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Schedule
+              </Button>
+            </>
+          )}
+        </div>
 
-      <div className="flex gap-2">
-        <AddScheduleDialog />
-        {activeSchedule && (
-          <>
-            <RenameScheduleDialog
-              scheduleId={activeScheduleId}
-              currentName={activeSchedule.name}
-            />
-            <Button
-              variant="destructive"
-              onClick={async () => {
-                if (confirm("Are you sure you want to delete this schedule?")) {
-                  await deleteScheduleAction(activeScheduleId);
-                  const nextSchedule = schedules.find(
-                    (s) => s.id !== activeScheduleId,
-                  );
-                  router.push(
-                    nextSchedule
-                      ? `/schedule?scheduleId=${nextSchedule.id}`
-                      : "/schedule",
-                  );
+        <div className="flex items-center justify-between">
+          <div className="flex w-full flex-wrap gap-2">
+            {schedules.map((schedule) => (
+              <Button
+                key={schedule.id}
+                variant={
+                  schedule.id === activeScheduleId ? "default" : "outline"
                 }
-              }}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete Schedule
-            </Button>
-          </>
-        )}
-      </div>
-
-      <DndContext onDragEnd={handleDragEnd}>
-        <div className="grid grid-cols-[0.25fr,0.75fr] gap-6">
-          {/* Left side - Course list */}
-          <AvailableCourses courses={coursesToSchedule} />
-
-          {/* Right side - Term boards */}
-          <div className="w-full space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex w-full flex-wrap gap-2">
-                {schedules.map((schedule) => (
-                  <Button
-                    key={schedule.id}
-                    variant={
-                      schedule.id === activeScheduleId ? "default" : "outline"
-                    }
-                    asChild
-                  >
-                    <Link href={`/schedule?scheduleId=${schedule.id}`}>
-                      {schedule.name}
-                    </Link>
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid h-min max-w-full grid-cols-3 gap-4 p-2">
-              {terms.map((term) => (
-                <TermBoard
-                  key={term.name}
-                  name={term.name}
-                  courses={coursesInSchedule.filter(
-                    (course) => course.term === term.name,
-                  )}
-                />
-              ))}
-            </div>
+                asChild
+              >
+                <Link href={`/schedule?scheduleId=${schedule.id}`}>
+                  {schedule.name}
+                </Link>
+              </Button>
+            ))}
           </div>
         </div>
-      </DndContext>
+
+        {/* Mobile view */}
+        <div className="md:hidden">
+          <MobileScheduler
+            coursesToSchedule={coursesToSchedule}
+            coursesInSchedule={coursesInSchedule}
+            activeScheduleId={activeScheduleId}
+            terms={terms}
+          />
+        </div>
+
+        {/* Desktop view with DnD */}
+        <div className="hidden md:block">
+          <DndContext onDragEnd={handleDragEnd}>
+            <div className="grid grid-cols-[0.25fr,0.75fr] gap-6">
+              <AvailableCourses courses={coursesToSchedule} />
+              <div className="w-full space-y-4">
+                <div className="grid h-min max-w-full grid-cols-3 gap-4 p-2">
+                  {terms.map((term) => (
+                    <TermBoard
+                      key={term.name}
+                      name={term.name}
+                      courses={coursesInSchedule.filter(
+                        (course) => course.term === term.name,
+                      )}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </DndContext>
+        </div>
+      </div>
     </div>
   );
 }

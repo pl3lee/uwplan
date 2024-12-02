@@ -29,7 +29,7 @@ export function TermRangeSelector({
   onEndTermChange,
 }: Props) {
   return (
-    <div className="flex items-center gap-4">
+    <div className="flex flex-col items-start gap-4 md:flex-row md:items-center">
       <div className="flex items-center gap-2">
         <span className="text-sm font-medium">From:</span>
         <Select
