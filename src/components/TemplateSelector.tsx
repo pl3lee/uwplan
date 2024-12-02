@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useState, useOptimistic, startTransition } from "react";
-import { toggleTemplate } from "@/server/actions";
+import { toggleUserTemplateAction } from "@/server/actions";
 
 type Template = {
   id: string;
@@ -51,7 +51,7 @@ export function TemplateSelector({ templates, selectedTemplates }: Props) {
     startTransition(() => {
       updateOptimisticTemplates(templateId);
     });
-    await toggleTemplate(templateId);
+    await toggleUserTemplateAction(templateId);
   };
 
   return (

@@ -8,15 +8,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { removeCourse, toggleCourse, updateFreeCourse } from "@/server/actions";
-import { type FixedCourse, type FreeCourse, type Course } from "@/types/course";
-import { useState } from "react";
+import { removeCourseSelectionAction } from "@/server/actions";
+import { type Course } from "@/types/course";
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 import { Button } from "./ui/button";
-import { normalizeCourseCode } from "@/lib/utils";
-import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 
 type SortDirection = "asc" | "desc" | null;
 type SortColumn =
@@ -183,7 +180,7 @@ export function SelectedCoursesTable({
                 <Button
                   variant="destructive"
                   onClick={async () => {
-                    await removeCourse(course.id);
+                    await removeCourseSelectionAction(course.id);
                   }}
                 >
                   Remove

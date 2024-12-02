@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { toggleCourse, updateFreeCourse } from "@/server/actions";
+import { toggleCourseAction, updateFreeCourseAction } from "@/server/actions";
 import { type FixedCourse, type FreeCourse, type Course } from "@/types/course";
 import { useState } from "react";
 import Link from "next/link";
@@ -206,7 +206,7 @@ export function CourseTable({
                 <Checkbox
                   checked={selectedCourseItems.has(courseItemId)}
                   onCheckedChange={(checked) =>
-                    toggleCourse(courseItemId, checked as boolean)
+                    toggleCourseAction(courseItemId, checked as boolean)
                   }
                 />
               </TableCell>
@@ -245,7 +245,10 @@ export function CourseTable({
                   checked={selectedCourseItems.has(freeCourse.courseItemId)}
                   onCheckedChange={(checked) =>
                     freeCourse.course &&
-                    toggleCourse(freeCourse.courseItemId, checked as boolean)
+                    toggleCourseAction(
+                      freeCourse.courseItemId,
+                      checked as boolean,
+                    )
                   }
                   disabled={!freeCourse.course}
                 />
@@ -280,7 +283,7 @@ export function CourseTable({
                       if (!filledCourseId) {
                         return;
                       }
-                      await updateFreeCourse(
+                      await updateFreeCourseAction(
                         freeCourse.courseItemId,
                         filledCourseId,
                       );

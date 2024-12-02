@@ -1,14 +1,13 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { addCourseToSchedule, changeScheduleName, changeTermRange, createSchedule, createTemplate, deleteSchedule, getSchedules, removeCourseFromSchedule, removeCourseSelection, toggleCourseSelection, toggleUserTemplate, validateScheduleId } from '@/server/db/queries';
-import { updateFreeCourse as dbUpdateFreeCourse } from "@/server/db/queries";
+import { addCourseToSchedule, changeScheduleName, changeTermRange, createSchedule, createTemplate, deleteSchedule, getSchedules, removeCourseFromSchedule, removeCourseSelection, toggleCourse, toggleUserTemplate, validateScheduleId, updateFreeCourse } from '@/server/db/queries';
 import { auth } from './auth';
 import { type CreateTemplateInput } from '@/types/template';
 import { type Season } from '@/types/schedule';
 
 
-export async function toggleTemplate(templateId: string) {
+export async function toggleUserTemplateAction(templateId: string) {
   const session = await auth();
   if (!session?.user) {
     throw new Error('Not authenticated');
@@ -17,26 +16,26 @@ export async function toggleTemplate(templateId: string) {
   revalidatePath('/select');
 }
 
-export async function updateFreeCourse(courseItemId: string, filledCourseId: string) {
+export async function updateFreeCourseAction(courseItemId: string, filledCourseId: string) {
   const session = await auth();
   if (!session?.user) {
     throw new Error('Not authenticated');
   }
-  await dbUpdateFreeCourse(session?.user.id, courseItemId, filledCourseId);
+  await updateFreeCourse(session?.user.id, courseItemId, filledCourseId);
   revalidatePath('/select');
 }
 
-export async function toggleCourse(courseItemId: string, take: boolean) {
+export async function toggleCourseAction(courseItemId: string, take: boolean) {
   const session = await auth();
   if (!session?.user) {
     throw new Error('Not authenticated');
   }
   console.log("courseItemId", courseItemId);
-  await toggleCourseSelection(session.user.id, courseItemId, take);
+  await toggleCourse(session.user.id, courseItemId, take);
   revalidatePath('/select');
 }
 
-export async function removeCourse(courseId: string) {
+export async function removeCourseSelectionAction(courseId: string) {
   const session = await auth();
   if (!session?.user) {
     throw new Error('Not authenticated');
@@ -56,7 +55,7 @@ export async function createTemplateAction(template: CreateTemplateInput) {
   revalidatePath('/select');
 }
 
-export async function addSchedule(name: string) {
+export async function createScheduleAction(name: string) {
   const session = await auth();
   if (!session?.user) {
     throw new Error('Not authenticated');
@@ -67,7 +66,7 @@ export async function addSchedule(name: string) {
   revalidatePath('/schedule');
 }
 
-export async function addCourseToTerm(scheduleId: string, courseId: string, term: string) {
+export async function addCourseToScheduleAction(scheduleId: string, courseId: string, term: string) {
   const session = await auth();
   if (!session?.user) {
     throw new Error('Not authenticated');
@@ -80,7 +79,7 @@ export async function addCourseToTerm(scheduleId: string, courseId: string, term
   revalidatePath('/schedule');
 }
 
-export async function removeCourseFromTerm(scheduleId: string, courseId: string) {
+export async function removeCourseFromScheduleAction(scheduleId: string, courseId: string) {
   const session = await auth();
   if (!session?.user) {
     throw new Error('Not authenticated');

@@ -219,7 +219,7 @@ export type SelectedCourses = Awaited<ReturnType<typeof getSelectedCourses>>;
 /**
  * Toggles a course item selection for a user
  */
-export async function toggleCourseSelection(userId: string, courseItemId: string, selected: boolean) {
+export async function toggleCourse(userId: string, courseItemId: string, selected: boolean) {
   const userPlan = await getOrCreateUserPlan(userId);
   if (!userPlan) {
     throw new Error(`Failed to get or create plan for user ${userId}`);

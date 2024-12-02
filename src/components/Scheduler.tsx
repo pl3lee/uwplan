@@ -11,9 +11,9 @@ import { DraggableCourseCard } from "./DraggableCourseCard";
 import { cn, generateTerms } from "@/lib/utils";
 import { type Schedule, Term, type TermCourseInstance } from "@/types/schedule";
 import {
-  addCourseToTerm,
-  addSchedule,
-  removeCourseFromTerm,
+  addCourseToScheduleAction,
+  createScheduleAction,
+  removeCourseFromScheduleAction,
   changeScheduleNameAction,
   deleteScheduleAction,
   changeTermRangeAction,
@@ -63,7 +63,7 @@ function AddScheduleDialog() {
           <Button
             onClick={async () => {
               if (name) {
-                await addSchedule(name);
+                await createScheduleAction(name);
                 setName("");
                 setOpen(false);
               }
@@ -164,13 +164,16 @@ export function Scheduler({
     console.log("over", over);
     if (over.id.toString() === "available") {
       try {
-        await removeCourseFromTerm(activeScheduleId, active.id.toString());
+        await removeCourseFromScheduleAction(
+          activeScheduleId,
+          active.id.toString(),
+        );
       } catch (error) {
         console.error("Failed to remove course from term", error);
       }
     } else {
       try {
-        await addCourseToTerm(
+        await addCourseToScheduleAction(
           activeScheduleId,
           active.id.toString(),
           over.id.toString(),
