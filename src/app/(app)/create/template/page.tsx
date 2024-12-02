@@ -2,11 +2,12 @@ import styles from "@/styles/utils.module.css";
 import { auth } from "@/server/auth";
 import { getCoursesWithRatings } from "@/server/db/queries";
 import { TemplateForm } from "./TemplateForm";
+import { redirect } from "next/navigation";
 
 export default async function CreateTemplatePage() {
   const session = await auth();
   if (!session?.user) {
-    return <div>Please sign in to create templates</div>;
+    redirect("/signin");
   }
 
   const courses = await getCoursesWithRatings();

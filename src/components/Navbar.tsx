@@ -1,18 +1,13 @@
-import { auth, signIn, signOut } from "@/server/auth";
+import { auth, signOut } from "@/server/auth";
 import {
   getTemplates,
   getUserPlan,
   getUserSelectedTemplates,
 } from "@/server/db/queries";
-import { Button } from "./ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { TemplateSelector } from "./TemplateSelector";
+import Link from "next/link";
 import { TabSelector } from "./TabSelector";
+import { TemplateSelector } from "./TemplateSelector";
+import { Button } from "./ui/button";
 
 export default async function Navbar() {
   const session = await auth();
@@ -24,7 +19,7 @@ export default async function Navbar() {
   return (
     <nav className="p-4">
       <div className="container mx-auto flex items-center justify-end gap-4">
-        <TabSelector />
+        {session?.user && <TabSelector />}
 
         {session?.user && userPlan && (
           <TemplateSelector
@@ -34,38 +29,16 @@ export default async function Navbar() {
         )}
 
         {!session?.user ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="default">Sign in</Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem asChild>
-                <form
-                  action={async () => {
-                    "use server";
-                    await signIn("google");
-                  }}
-                >
-                  <button type="submit">with Google</button>
-                </form>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <form
-                  action={async () => {
-                    "use server";
-                    await signIn("github");
-                  }}
-                >
-                  <button type="submit">with GitHub</button>
-                </form>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button variant="default" asChild>
+            <Link href="/signin">Sign in</Link>
+          </Button>
         ) : (
           <form
             action={async () => {
               "use server";
-              await signOut();
+              await signOut({
+                redirectTo: "/",
+              });
             }}
           >
             <Button type="submit" variant="default">

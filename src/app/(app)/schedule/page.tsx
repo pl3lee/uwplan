@@ -11,6 +11,7 @@ import {
 } from "@/server/db/queries";
 import * as z from "zod";
 import { ScrollToTopButton } from "@/components/ScrollToTopButton";
+import { redirect } from "next/navigation";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -39,7 +40,7 @@ const schedulesSchema = z
 export default async function SchedulePage({ searchParams }: Props) {
   const session = await auth();
   if (!session?.user) {
-    return <div>Please sign in to view your requirements</div>;
+    redirect("/signin");
   }
 
   const [selectedCourses, schedules] = await Promise.all([

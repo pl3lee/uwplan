@@ -17,11 +17,12 @@ import { Separator } from "@/components/ui/separator";
 import { type FixedCourse } from "@/types/course";
 import { SelectedCoursesTable } from "@/components/SelectedCoursesTable";
 import { ScrollToTopButton } from "@/components/ScrollToTopButton";
+import { redirect } from "next/navigation";
 
 export default async function SelectPage() {
   const session = await auth();
   if (!session?.user) {
-    return <div>Please sign in to view your requirements</div>;
+    redirect("/signin");
   }
 
   const [templates, allCourses, selectedCourses] = await Promise.all([
