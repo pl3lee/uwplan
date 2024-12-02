@@ -48,6 +48,7 @@ type Props = {
 function AddScheduleDialog() {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -69,15 +70,21 @@ function AddScheduleDialog() {
             maxLength={20}
           />
           <Button
+            disabled={isLoading}
             onClick={async () => {
               if (name) {
-                await createScheduleAction(name);
-                setName("");
-                setOpen(false);
+                setIsLoading(true);
+                try {
+                  await createScheduleAction(name);
+                  setName("");
+                  setOpen(false);
+                } finally {
+                  setIsLoading(false);
+                }
               }
             }}
           >
-            Create
+            {isLoading ? "Creating..." : "Create"}
           </Button>
         </div>
       </DialogContent>
@@ -93,7 +100,8 @@ function RenameScheduleDialog({
   currentName: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [name, setName] = useState(currentName);
+  const [name, setName] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -109,20 +117,26 @@ function RenameScheduleDialog({
         </DialogHeader>
         <div className="space-y-4">
           <Input
-            placeholder="Schedule name"
+            placeholder={currentName}
             value={name}
             onChange={(e) => setName(e.target.value)}
             maxLength={20}
           />
           <Button
+            disabled={isLoading}
             onClick={async () => {
               if (name) {
-                await changeScheduleNameAction(scheduleId, name);
-                setOpen(false);
+                setIsLoading(true);
+                try {
+                  await changeScheduleNameAction(scheduleId, name);
+                  setOpen(false);
+                } finally {
+                  setIsLoading(false);
+                }
               }
             }}
           >
-            Rename
+            {isLoading ? "Renaming..." : "Rename"}
           </Button>
         </div>
       </DialogContent>

@@ -8,5 +8,5 @@ export default {
   dbCredentials: {
     url: env.DATABASE_URL,
   },
-  tablesFilter: ["uw-course-planner_*"],
+  tablesFilter: ["uwplan_*"],
 } satisfies Config;

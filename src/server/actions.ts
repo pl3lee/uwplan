@@ -101,6 +101,9 @@ export async function changeScheduleNameAction(scheduleId: string, name: string)
   if (!hasAccess) {
     throw new Error('You do not have access to this schedule');
   }
+  if (name.length === 0) {
+    throw new Error('Name cannot be empty');
+  }
   await changeScheduleName(scheduleId, name);
   revalidatePath('/schedule');
 }

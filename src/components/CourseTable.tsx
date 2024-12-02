@@ -59,6 +59,7 @@ export function CourseTable({
     useState<Map<string, string>>(initFreeCourseMap);
   const [sortColumn, setSortColumn] = useState<SortColumn>("code");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [toggleLoading, setToggleLoading] = useState<string | null>(null);
 
   const formatRating = (rating: string | null | undefined) => {
     if (!rating) return "N/A";
@@ -205,9 +206,18 @@ export function CourseTable({
               <TableCell>
                 <Checkbox
                   checked={selectedCourseItems.has(courseItemId)}
-                  onCheckedChange={(checked) =>
-                    toggleCourseAction(courseItemId, checked as boolean)
-                  }
+                  disabled={toggleLoading === courseItemId}
+                  onCheckedChange={async (checked) => {
+                    setToggleLoading(courseItemId);
+                    try {
+                      await toggleCourseAction(
+                        courseItemId,
+                        checked as boolean,
+                      );
+                    } finally {
+                      setToggleLoading(null);
+                    }
+                  }}
                 />
               </TableCell>
               <TableCell>
@@ -243,14 +253,22 @@ export function CourseTable({
               <TableCell>
                 <Checkbox
                   checked={selectedCourseItems.has(freeCourse.courseItemId)}
-                  onCheckedChange={(checked) =>
-                    freeCourse.course &&
-                    toggleCourseAction(
-                      freeCourse.courseItemId,
-                      checked as boolean,
-                    )
+                  disabled={
+                    !freeCourse.course ||
+                    toggleLoading === freeCourse.courseItemId
                   }
-                  disabled={!freeCourse.course}
+                  onCheckedChange={async (checked) => {
+                    if (!freeCourse.course) return;
+                    setToggleLoading(freeCourse.courseItemId);
+                    try {
+                      await toggleCourseAction(
+                        freeCourse.courseItemId,
+                        checked as boolean,
+                      );
+                    } finally {
+                      setToggleLoading(null);
+                    }
+                  }}
                 />
               </TableCell>
               <TableCell>

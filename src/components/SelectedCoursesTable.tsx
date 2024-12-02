@@ -32,15 +32,12 @@ type FixedCourseWithItem = {
 
 type CourseTableProps = {
   fixedCourses: FixedCourseWithItem[];
-  allCourses: Course[];
 };
 
-export function SelectedCoursesTable({
-  allCourses,
-  fixedCourses,
-}: CourseTableProps) {
+export function SelectedCoursesTable({ fixedCourses }: CourseTableProps) {
   const [sortColumn, setSortColumn] = useState<SortColumn>("code");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [removingCourseId, setRemovingCourseId] = useState<string | null>(null);
 
   const handleSort = (column: SortColumn) => {
     if (sortColumn === column) {
@@ -179,8 +176,14 @@ export function SelectedCoursesTable({
               <TableCell>
                 <Button
                   variant="destructive"
+                  disabled={removingCourseId === course.id}
                   onClick={async () => {
-                    await removeCourseSelectionAction(course.id);
+                    setRemovingCourseId(course.id);
+                    try {
+                      await removeCourseSelectionAction(course.id);
+                    } finally {
+                      setRemovingCourseId(null);
+                    }
                   }}
                 >
                   Remove

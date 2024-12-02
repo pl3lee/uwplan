@@ -62,10 +62,7 @@ export default async function SelectPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <SelectedCoursesTable
-            fixedCourses={selectedCoursesWithDetails}
-            allCourses={allCourses}
-          />
+          <SelectedCoursesTable fixedCourses={selectedCoursesWithDetails} />
         </CardContent>
       </Card>
       {templates.map((template) => (
