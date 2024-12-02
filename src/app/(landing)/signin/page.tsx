@@ -1,9 +1,15 @@
+import { auth } from "@/server/auth";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { PatternBackground } from "./PatternBackground";
 import { SignInOptions } from "./SignInOptions";
+import { redirect } from "next/navigation";
 
-export default function SignIn() {
+export default async function SignIn() {
+  const session = await auth();
+  if (session?.user) {
+    redirect("/select");
+  }
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
       <Button
