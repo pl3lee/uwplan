@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
 import Link from "next/link";
 
 export default function HomePage() {
@@ -111,10 +112,10 @@ export default function HomePage() {
                 journey.
               </p>
               <p className="text-lg text-muted-foreground">
-                By combining course information, student ratings, and an
-                intelligent planning system, we help students create optimal
-                degree plans that meet all their requirements while considering
-                their interests and goals.
+                By combining course information, student ratings, and a course
+                planning system, we help students create optimal degree plans
+                that meet all their requirements while considering their
+                interests and goals.
               </p>
             </section>
 
@@ -179,13 +180,11 @@ export default function HomePage() {
             {/* Feature 1: Course Planning */}
             <div className="grid items-center gap-8 md:grid-cols-2">
               <div>
-                <h2 className="mb-4 text-3xl font-bold">
-                  Smart Course Planning
-                </h2>
+                <h2 className="mb-4 text-3xl font-bold">Course Planning</h2>
                 <p className="mb-6 text-lg text-muted-foreground">
-                  Plan your entire degree with our intelligent course selection
-                  system. We help you track degree requirements and course
-                  availability.
+                  Plan your degree with our straightforward course selection
+                  system. Keep track of your courses and requirements all in one
+                  place.
                 </p>
                 <ul className="mb-6 space-y-2">
                   <li className="flex items-center">
@@ -222,15 +221,29 @@ export default function HomePage() {
                   </li>
                 </ul>
               </div>
-              <div className="flex h-[300px] items-center justify-center rounded-lg bg-muted p-6">
-                [Screenshot Placeholder]
+              <div className="flex h-[300px] items-center justify-center overflow-hidden rounded-lg p-6">
+                <div className="relative aspect-[16/9] w-full overflow-hidden rounded-lg">
+                  <Image
+                    src="/assets/schedule.png"
+                    alt="Course scheduling interface"
+                    fill
+                    className="object-contain"
+                  />
+                </div>
               </div>
             </div>
 
             {/* Feature 2: Course Ratings */}
             <div className="grid items-center gap-8 md:grid-cols-2">
-              <div className="order-2 flex h-[300px] items-center justify-center rounded-lg bg-muted p-6 md:order-1">
-                [Screenshot Placeholder]
+              <div className="order-2 flex h-[300px] items-center justify-center overflow-hidden rounded-lg p-6 md:order-1">
+                <div className="relative aspect-[16/9] w-full overflow-hidden rounded-lg">
+                  <Image
+                    src="/assets/select.png"
+                    alt="Course selection interface"
+                    fill
+                    className="object-contain"
+                  />
+                </div>
               </div>
               <div className="order-1 md:order-2">
                 <h2 className="mb-4 text-3xl font-bold">

@@ -1,6 +1,30 @@
+import Link from "next/link";
+
 export default function PrivacyPage() {
   return (
     <div className="container mx-auto max-w-3xl px-4 py-16">
+      <div className="mb-8">
+        <Link
+          href="/"
+          className="inline-flex items-center text-sm text-muted-foreground hover:text-primary"
+        >
+          <svg
+            className="mr-2 h-4 w-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 19l-7-7 7-7"
+            />
+          </svg>
+          Back to Home
+        </Link>
+      </div>
+
       <h1 className="mb-8 text-4xl font-bold tracking-tighter">
         Privacy Policy
       </h1>
@@ -15,8 +39,7 @@ export default function PrivacyPage() {
             UWPlan:
           </p>
           <ul className="mb-4 list-disc pl-6 text-muted-foreground">
-            <li>Your University of Waterloo email address</li>
-            <li>Your program and academic information</li>
+            <li>Your email address</li>
             <li>Course selections and schedules you create</li>
           </ul>
         </section>
@@ -31,7 +54,6 @@ export default function PrivacyPage() {
           <ul className="mb-4 list-disc pl-6 text-muted-foreground">
             <li>Provide and improve UWPlan services</li>
             <li>Save your course selections and degree progress</li>
-            <li>Send important updates about UWPlan</li>
           </ul>
         </section>
 
@@ -52,7 +74,6 @@ export default function PrivacyPage() {
           <ul className="mb-4 list-disc pl-6 text-muted-foreground">
             <li>Access your personal information</li>
             <li>Request deletion of your data</li>
-            <li>Opt out of communications</li>
           </ul>
         </section>
 
