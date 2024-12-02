@@ -147,206 +147,138 @@ async function main() {
       },
       {
         type: "requirement",
-        description: "Complete all the following:",
+        description: "Complete all the following courses:",
         orderIndex: 1,
         courseType: "fixed",
         courses: ["CS230", "CS234"]
       },
       {
         type: "requirement",
-        description: "Complete 1 of the following:",
+        description: "Complete 1 of the following courses:",
         orderIndex: 2,
         courseType: "fixed",
         courses: ["AMATH242", "CS371"]
       },
       {
         type: "requirement",
-        description: "Complete 1 of the following:",
+        description: "Complete 1 of the following courses:",
         orderIndex: 3,
+        courseType: "fixed",
+        courses: ["MATH237", "MATH247"]
+      },
+      {
+        type: "requirement",
+        description: "Complete 1 of the following courses:",
+        orderIndex: 4,
         courseType: "fixed",
         courses: ["MATH239", "MATH249"]
       },
       {
         type: "requirement",
         description: "Complete 3 non-math courses, at least one of which is at the 200-, 300-, or 400-level, all from the same subject code, from the following choices: AE, BIOL, BME, CHE, CHEM, CIVE, EARTH, ECE, ECON, ENVE, GEOE, ME, MNS, MSE, MTE, NE, PHYS, SYDE",
-        orderIndex: 4,
+        orderIndex: 5,
         courseType: "free",
         courses: [],
         courseCount: 3
       },
       {
         type: "separator",
-        orderIndex: 5,
-      },
-      {
-        type: "instruction",
-        description: "List 1: Complete 2 of the following",
         orderIndex: 6
       },
       {
+        type: "instruction",
+        description: "List 1: Complete 2 of the following requirements:",
+        orderIndex: 7
+      },
+      {
         type: "requirement",
-        description: "Complete 1 of the following",
-        orderIndex: 7,
+        description: "Complete 1 of the following courses:",
+        orderIndex: 8,
         courseType: "fixed",
         courses: ["AMATH250", "AMATH251", "AMATH350"]
       },
       {
         type: "requirement",
-        description: "Complete 1 of the following",
-        orderIndex: 8,
+        description: "Complete 1 of the following courses:",
+        orderIndex: 9,
         courseType: "fixed",
         courses: ["CO250", "CO255"]
       },
       {
         type: "requirement",
-        description: "Complete 1 of the following",
-        orderIndex: 9,
+        description: "Complete 1 of the following courses:",
+        orderIndex: 10,
         courseType: "fixed",
         courses: ["CS245", "CS245E", "PMATH330", "PMATH432"]
       },
       {
         type: "requirement",
-        description: "Complete 1 of the following",
-        orderIndex: 10,
+        description: "Complete 1 of the following courses:",
+        orderIndex: 11,
         courseType: "fixed",
         courses: ["CS246", "CS246E"]
       },
       {
         type: "separator",
-        orderIndex: 11,
-      },
-      {
-        type: "instruction",
-        description: "List 2: Complete all of the following",
         orderIndex: 12
       },
       {
+        type: "instruction",
+        description: "List 2: Complete 2 courses total from the following groups:",
+        orderIndex: 13
+      },
+      {
         type: "requirement",
-        description: "Complete 2 courses from the following. Note that CO353 and CO367 cannot be chosen together, and STAT340 and STAT341 cannot be chosen together.",
-        orderIndex: 13,
+        description: "Choose from these courses:",
+        orderIndex: 14,
+        courseType: "fixed",
+        courses: ["AMATH342", "CS475", "PMATH370"]
+      },
+      {
+        type: "requirement",
+        description: "Complete no more than 1 from:",
+        orderIndex: 15,
+        courseType: "fixed",
+        courses: ["CO353", "CO367"]
+      },
+      {
+        type: "requirement",
+        description: "Complete no more than 1 from:",
+        orderIndex: 16,
+        courseType: "fixed",
+        courses: ["STAT340", "STAT341"]
+      },
+      {
+        type: "separator",
+        orderIndex: 17
+      },
+      {
+        type: "instruction",
+        description: "Complete 4 additional courses from List 2 or List 3; choices must be in at least two different subject codes (AMATH, CO, CS, PMATH, STAT), and 2 courses must be at the 400-level",
+        orderIndex: 18
+      },
+      {
+        type: "requirement",
+        description: "Choose from List 2 courses:",
+        orderIndex: 19,
         courseType: "fixed",
         courses: ["AMATH342", "CS475", "PMATH370", "CO353", "CO367", "STAT340", "STAT341"]
       },
       {
-        type: "separator",
-        orderIndex: 14,
-      },
-      {
         type: "instruction",
         description: "List 3",
-        orderIndex: 15
+        orderIndex: 20
       },
       {
         type: "requirement",
-        description: "Choose 4 additional courses. Choices must be in at least two different subject codes (AMATH, CO, CS, PMATH, STAT), and 2 courses must be at the 400-level",
-        orderIndex: 16,
+        description: "Choose from List 3 courses:",
+        orderIndex: 21,
         courseType: "fixed",
-        courses: ["AMATH342", "AMATH343", "AMATH382", "AMATH383", "AMATH391", "AMATH442", "AMATH455", "AMATH477", "BIOL382", "CO351", "CO353", "CO367", "CO370", "CO372", "CO450", "CO452", "CO454", "CO456", "CO463", "CO466", "CO471", "CO485", "CO487", "CS341", "CS431", "CS451", "CS466", "CS475", "CS476", "CS479", "CS480", "CS482", "CS485", "CS487", "PMATH370", "STAT340", "STAT341", "STAT440", "STAT441", "STAT442", "STAT444"]
-      },
-    ]
-  })
-  await createTemplate({
-    name: "Computer Science (BMath) - 2024",
-    description: "Computer Science (BMath) - 2024",
-    items: [
-      {
-        type: "instruction",
-        description: "Complete all of the following",
-        orderIndex: 0
-      },
-      {
-        type: "requirement",
-        description: "Complete all the following:",
-        orderIndex: 1,
-        courseType: "fixed",
-        courses: ["CS136L", "CS341", "CS350"]
-      },
-      {
-        type: "requirement",
-        description: "Complete 1 the following:",
-        orderIndex: 2,
-        courseType: "fixed",
-        courses: ["AMATH242", "CS370", "CS371"]
-      },
-      {
-        type: "requirement",
-        description: "Complete 1 the following:",
-        orderIndex: 3,
-        courseType: "fixed",
-        courses: ["CS240", "CS240E"]
-      },
-      {
-        type: "requirement",
-        description: "Complete 1 the following:",
-        orderIndex: 4,
-        courseType: "fixed",
-        courses: ["CS241", "CS241E"]
-      },
-      {
-        type: "requirement",
-        description: "Complete 1 the following:",
-        orderIndex: 5,
-        courseType: "fixed",
-        courses: ["CS246", "CS246E"]
-      },
-      {
-        type: "requirement",
-        description: "Complete 1 the following:",
-        orderIndex: 6,
-        courseType: "fixed",
-        courses: ["CS251", "CS251E"]
-      },
-      {
-        type: "requirement",
-        description: "Complete 1 the following:",
-        orderIndex: 7,
-        courseType: "fixed",
-        courses: ["CS360", "CS365"]
-      },
-      {
-        type: "requirement",
-        description: "Complete 1 the following:",
-        orderIndex: 8,
-        courseType: "fixed",
-        courses: ["MATH237", "MATH247"]
-      },
-      {
-        type: "requirement",
-        description: "Complete 1 the following:",
-        orderIndex: 9,
-        courseType: "fixed",
-        courses: ["MATH239", "MATH249"]
-      },
-      {
-        type: "requirement",
-        description: "Complete 1 Complete 1 additional CS course chosen from CS340-CS398, CS440-CS489:",
-        orderIndex: 10,
-        courseType: "free",
-        courses: [],
-        courseCount: 1
-      },
-      {
-        type: "requirement",
-        description: "Complete 2 additional CS courses chosen from CS440-CS489.:",
-        orderIndex: 11,
-        courseType: "free",
-        courses: [],
-        courseCount: 2
-      },
-      {
-        type: "requirement",
-        description: "Complete 3 additional courses from: ACTSC, AMATH, CO, PMATH, STAT. The following courses are excluded: \n 1. Courses with requisites normally excluding Honours Computer Science students. \n 2. Courses cross-listed with a CS course. \n 3. Courses explicitly listed in Computer Science major academic plans as alternative to CS courses. \n 4. Readings and topics courses.",
-        orderIndex: 12,
-        courseType: "free",
-        courses: [],
-        courseCount: 3
-      },
-      {
-        type: "requirement",
-        description: "Complete 1 additional course from the following",
-        orderIndex: 13,
-        courseType: "fixed",
-        courses: ["CO487", "CS499T", "STAT440"],
+        courses: ["AMATH343", "AMATH382", "AMATH383", "AMATH391", "AMATH442", "AMATH455", "AMATH477",
+          "BIOL382", "CO351", "CO370", "CO372", "CO450", "CO452", "CO454", "CO456",
+          "CO463", "CO466", "CO471", "CO485", "CO487", "CS341", "CS431", "CS451",
+          "CS466", "CS476", "CS479", "CS480", "CS482", "CS485", "CS487", "STAT440",
+          "STAT441", "STAT442", "STAT444"]
       }
     ]
   })

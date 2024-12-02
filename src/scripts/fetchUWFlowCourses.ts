@@ -70,7 +70,6 @@ export async function insertUWFlowCourses(courseData: UWFlowCourseResponse["data
           })
       )
     );
-    console.log(`Processed ${Math.min(i + BATCH_SIZE, courseData.length)} courses`);
   }
   console.log("Successfully updated course database!");
 }
