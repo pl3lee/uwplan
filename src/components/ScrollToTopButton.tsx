@@ -29,7 +29,7 @@ export function ScrollToTopButton() {
 
   return (
     <Button
-      className={`fixed bottom-12 right-12 transition-opacity duration-200 ${
+      className={`fixed bottom-20 right-10 transition-opacity duration-200 md:bottom-12 md:right-12 ${
         isVisible ? "opacity-100" : "pointer-events-none opacity-0"
       }`}
       size="icon"
