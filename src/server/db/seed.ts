@@ -1,4 +1,4 @@
-import { fetchUWFlowData, insertUWFlowCourses } from "@/scripts/fetchUWFlowCourses";
+import { fetchCourses, fetchUWFlowData, insertUWFlowCourses } from "@/lib/uwflow";
 import { createTemplate } from "./queries";
 
 
@@ -8,8 +8,7 @@ import { createTemplate } from "./queries";
 async function main() {
   // Fetch and populate courses from UWFlow
   console.log("Fetching and inserting UWFlow courses...");
-  const courseData = await fetchUWFlowData();
-  await insertUWFlowCourses(courseData);
+  await fetchCourses()
 
   console.log("Creating templates and requirements...");
 

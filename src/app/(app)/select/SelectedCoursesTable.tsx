@@ -15,6 +15,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Button } from "../../../components/ui/button";
 import { toast } from "sonner";
+import { CourseHoverLink } from "./CourseHoverLink";
 
 type SortDirection = "asc" | "desc" | null;
 type SortColumn =
@@ -195,26 +196,19 @@ export function SelectedCoursesTable({ fixedCourses }: CourseTableProps) {
                 </Button>
               </TableCell>
               <TableCell>
-                <Button asChild variant="link">
-                  <Link
-                    href={`https://uwflow.com/course/${course.code}`}
-                    target="_blank"
-                  >
-                    {course.code}
-                  </Link>
-                </Button>
+                <CourseHoverLink course={course} />
               </TableCell>
-              <TableCell>{course.name}</TableCell>
-              <TableCell className="text-right">
+              <TableCell className="px-6">{course.name}</TableCell>
+              <TableCell className="px-6 text-right">
                 {course.usefulRating ?? "N/A"}
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="px-6 text-right">
                 {course.likedRating ?? "N/A"}
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="px-6 text-right">
                 {course.easyRating ?? "N/A"}
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="px-6 text-right">
                 {course.numRatings ?? "N/A"}
               </TableCell>
             </TableRow>

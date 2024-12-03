@@ -132,6 +132,10 @@ export const courses = createTable("course", {
   likedRating: decimal("liked_rating", { precision: 4, scale: 3 }),
   easyRating: decimal("easy_rating", { precision: 4, scale: 3 }),
   numRatings: integer("num_ratings"),
+  description: text('description').default(''),
+  prereqs: text('prereqs').default(''),
+  antireqs: text('antireqs').default(''),
+  coreqs: text('coreqs').default(''),
 }, (table) => ({
   codeIdx: index("course_code_idx").on(table.code), // Add index for course code lookups
 }));

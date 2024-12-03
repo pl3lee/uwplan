@@ -16,8 +16,9 @@ import { type Course, type FreeCourse } from "@/types/course";
 import { ArrowDown, ArrowUp, ArrowUpDown, Check, X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { Button } from "../../../components/ui/button";
 import { toast } from "sonner";
+import { Button } from "../../../components/ui/button";
+import { CourseHoverLink } from "./CourseHoverLink";
 
 type SortDirection = "asc" | "desc" | null;
 type SortColumn =
@@ -226,26 +227,19 @@ export function CourseTable({
                 {otherSelectedCourses.includes(course.id) ? <Check /> : <X />}
               </TableCell>
               <TableCell>
-                <Button asChild variant="link">
-                  <Link
-                    href={`https://uwflow.com/course/${course.code}`}
-                    target="_blank"
-                  >
-                    {course.code}
-                  </Link>
-                </Button>
+                <CourseHoverLink course={course} />
               </TableCell>
-              <TableCell>{course.name}</TableCell>
-              <TableCell className="text-right">
+              <TableCell className="px-6">{course.name}</TableCell>
+              <TableCell className="px-6 text-right">
                 {formatRating(course.usefulRating)}
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="px-6 text-right">
                 {formatRating(course.likedRating)}
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="px-6 text-right">
                 {formatRating(course.easyRating)}
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="px-6 text-right">
                 {course.numRatings ? Number(course.numRatings) : 0}
               </TableCell>
             </TableRow>
@@ -317,39 +311,28 @@ export function CourseTable({
                       }
                     }}
                     placeholder="Course code"
-                    className="w-full"
+                    className="w-fit text-sm"
                   />
                   {freeCourse.course && (
-                    <div className="text-xs text-muted-foreground">
-                      Current:
-                      <Button asChild variant="link">
-                        <Link
-                          href={`https://uwflow.com/course/${freeCourse.course.code}`}
-                          target="_blank"
-                          className="text-xs"
-                        >
-                          <span className="text-muted-foreground">
-                            {freeCourse.course.code}
-                          </span>
-                        </Link>
-                      </Button>
+                    <div className="text-sm text-muted-foreground">
+                      Current: <CourseHoverLink course={freeCourse.course} />
                     </div>
                   )}
                 </div>
               </TableCell>
-              <TableCell>
+              <TableCell className="px-6">
                 {freeCourse.course?.name ?? "No course selected"}
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="px-6 text-right">
                 {formatRating(freeCourse.course?.usefulRating)}
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="px-6 text-right">
                 {formatRating(freeCourse.course?.likedRating)}
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="px-6 text-right">
                 {formatRating(freeCourse.course?.easyRating)}
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="px-6 text-right">
                 {freeCourse.course?.numRatings
                   ? Number(freeCourse.course.numRatings)
                   : 0}

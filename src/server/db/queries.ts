@@ -155,6 +155,10 @@ export async function getTemplateDetails(templateId: string) {
         easyRating: courses.easyRating,
         numRatings: courses.numRatings,
         type: courseItems.type,
+        description: courses.description,
+        antireqs: courses.antireqs,
+        prereqs: courses.prereqs,
+        coreqs: courses.coreqs,
       })
       .from(courseItems)
       .innerJoin(courses, eq(courses.id, courseItems.courseId))
@@ -175,6 +179,10 @@ export async function getTemplateDetails(templateId: string) {
         likedRating: courses.likedRating,
         easyRating: courses.easyRating,
         numRatings: courses.numRatings,
+        description: courses.description,
+        antireqs: courses.antireqs,
+        prereqs: courses.prereqs,
+        coreqs: courses.coreqs,
       })
       .from(courseItems)
       .leftJoin(freeCourses, eq(freeCourses.courseItemId, courseItems.id))
@@ -201,6 +209,10 @@ export async function getTemplateDetails(templateId: string) {
               likedRating: c.likedRating,
               easyRating: c.easyRating,
               numRatings: c.numRatings,
+              description: c.description,
+              antireqs: c.antireqs,
+              prereqs: c.prereqs,
+              coreqs: c.coreqs,
             }
           })),
         freeCourses: freeCourseItems
@@ -214,7 +226,11 @@ export async function getTemplateDetails(templateId: string) {
               usefulRating: c.usefulRating,
               likedRating: c.likedRating,
               easyRating: c.easyRating,
-              numRatings: c.numRatings
+              numRatings: c.numRatings,
+              description: c.description,
+              antireqs: c.antireqs,
+              prereqs: c.prereqs,
+              coreqs: c.coreqs,
             } : null
           }))
       }))
@@ -425,6 +441,10 @@ export async function getCoursesWithRatings() {
         likedRating: courses.likedRating,
         easyRating: courses.easyRating,
         numRatings: courses.numRatings,
+        description: courses.description,
+        antireqs: courses.antireqs,
+        prereqs: courses.prereqs,
+        coreqs: courses.coreqs,
       })
       .from(courses)
       .orderBy(courses.code);
