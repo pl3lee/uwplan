@@ -142,7 +142,7 @@ export default function HomePage() {
                 our GitHub repository to see how you can contribute to making
                 UWPlan even better.
               </p>
-              <div className="flex justify-center">
+              <div className="flex justify-center space-x-4">
                 <a
                   href="https://github.com/pl3lee/uwplan"
                   className="inline-flex items-center space-x-2 text-primary hover:underline"
@@ -163,6 +163,7 @@ export default function HomePage() {
           </div>
         </div>
       </div>
+
       {/* Detailed Features Section */}
       <div id="features" className="w-full scroll-mt-16 bg-muted/50">
         <div className="container mx-auto px-4 py-16">
@@ -309,6 +310,19 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* Bottom CTA */}
+      <div className="w-full bg-background py-16 text-center">
+        <div className="mx-auto max-w-2xl space-y-4">
+          <h2 className="text-3xl font-bold">Start Planning Your Degree</h2>
+          <p className="text-lg text-muted-foreground">
+            Join the next generation of smarter course planning at UWaterloo
+          </p>
+          <Button size="lg" asChild className="mt-4">
+            <Link href="/signin">Start Planning Today →</Link>
+          </Button>
+        </div>
+      </div>
+
       {/* Footer */}
       <footer className="w-full border-t">
         <div className="mx-auto max-w-5xl px-4 py-12">
@@ -371,9 +385,6 @@ export default function HomePage() {
             <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
               <p className="text-sm text-muted-foreground">
                 © {new Date().getFullYear()} UWPlan. All rights reserved.
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Made with ❤️ for University of Waterloo students
               </p>
             </div>
           </div>
