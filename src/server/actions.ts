@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { addCourseToSchedule, changeScheduleName, changeTermRange, createSchedule, createTemplate, deleteSchedule, getSchedules, removeCourseFromSchedule, removeCourseSelection, toggleCourse, toggleUserTemplate, validateScheduleId, updateFreeCourse } from '@/server/db/queries';
+import { addCourseToSchedule, changeScheduleName, changeTermRange, createSchedule, createTemplate, deleteSchedule, getSchedules, removeCourseFromSchedule, removeCourseSelection, toggleCourse, toggleUserTemplate, validateScheduleId, updateFreeCourse, getRole, deleteTemplate } from '@/server/db/queries';
 import { auth } from './auth';
 import { type CreateTemplateInput } from '@/types/template';
 import { type Season } from '@/types/schedule';
@@ -53,6 +53,19 @@ export async function createTemplateAction(template: CreateTemplateInput) {
 
 
   revalidatePath('/select');
+}
+
+export async function deleteTemplateAction(templateId: string) {
+  const session = await auth();
+  if (!session?.user) {
+    throw new Error('Not authenticated');
+  }
+  const role = await getRole(session.user.id);
+  if (role !== 'admin') {
+    throw new Error('Not authorized');
+  }
+  await deleteTemplate(templateId);
+  revalidatePath('/admin');
 }
 
 export async function createScheduleAction(name: string) {

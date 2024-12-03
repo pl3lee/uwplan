@@ -27,6 +27,21 @@ function isValidCourse(course: { code: string | null; name: string | null; }): c
 }
 
 /**
+ * Retrieves all users
+ * @returns Array of user objects
+ */
+export async function getUsers() {
+  try {
+    return await db
+      .select()
+      .from(users)
+  } catch (error) {
+    console.error("Failed to get users:", error);
+    throw new Error("Failed to get users");
+  }
+}
+
+/**
  * Retrieves all available academic plan templates
  * @returns Array of template objects containing id, name and description
  */
@@ -66,6 +81,31 @@ export async function getUserSelectedTemplates(userId: string) {
   } catch (error) {
     console.error("Failed to get user selected templates:", error);
     throw new Error("Failed to get user selected templates");
+  }
+}
+
+/**
+ * Gets the user's role
+ * @param userId - ID of the user
+ * @returns User's role or undefined if not found
+ */
+export async function getRole(userId: string) {
+  try {
+    const [role] = await db
+      .select({
+        role: users.role,
+      })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    if (!role) {
+      await db.update(users).set({ role: "user" }).where(eq(users.id, userId));
+      return "user";
+    }
+    return role.role;
+  } catch (error) {
+    console.error("Failed to get role:", error);
+    throw new Error("Failed to get role");
   }
 }
 
@@ -240,6 +280,22 @@ export async function getTemplateDetails(templateId: string) {
     throw new Error("Failed to get template details");
   }
 }
+
+/**
+ * Deletes a template
+ * @param templateId - ID of the template to delete
+ */
+export async function deleteTemplate(templateId: string) {
+  try {
+    await db
+      .delete(templates)
+      .where(eq(templates.id, templateId));
+  } catch (error) {
+    console.error("Failed to delete template:", error);
+    throw new Error("Failed to delete template");
+  }
+}
+
 
 /**
  * Gets all selected course items for a user

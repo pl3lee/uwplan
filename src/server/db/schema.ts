@@ -22,6 +22,7 @@ import { type AdapterAccount } from "next-auth/adapters";
  * @see https://orm.drizzle.team/docs/goodies#multi-project-schema
  */
 export const createTable = pgTableCreator((name) => `${name}`); // Remove prefix
+export const roleEnum = pgEnum("role_type", ["user", "admin"]);
 
 // NextAuth required tables
 export const users = createTable("user", {
@@ -36,6 +37,7 @@ export const users = createTable("user", {
     withTimezone: true,
   }).default(sql`CURRENT_TIMESTAMP`),
   image: varchar("image", { length: 255 }),
+  role: roleEnum("role").notNull().default("user"),
 });
 
 export const usersRelations = relations(users, ({ many }) => ({

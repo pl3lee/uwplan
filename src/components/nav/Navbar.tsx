@@ -1,5 +1,6 @@
 import { auth, signOut } from "@/server/auth";
 import {
+  getRole,
   getTemplates,
   getUserPlan,
   getUserSelectedTemplates,
@@ -17,10 +18,16 @@ export default async function Navbar() {
     ? await getUserSelectedTemplates(session.user.id)
     : [];
   const userPlan = session?.user ? await getUserPlan(session.user.id) : null;
+  const userRole = session?.user ? await getRole(session.user.id) : null;
   return (
     <>
       <nav className="p-4">
         <div className="container mx-auto flex items-center justify-end gap-4">
+          {userRole && userRole === "admin" && (
+            <Button variant="link" asChild>
+              <Link href="/admin">Admin</Link>
+            </Button>
+          )}
           <div className="hidden md:block">
             {session?.user && <TabSelector />}
           </div>
