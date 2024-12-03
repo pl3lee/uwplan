@@ -1,9 +1,12 @@
-import {
-  addCourseToScheduleAction,
-  removeCourseFromScheduleAction,
-} from "@/server/actions";
-import { type Term, type TermCourseInstance } from "@/types/schedule";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -11,6 +14,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  addCourseToScheduleAction,
+  removeCourseFromScheduleAction,
+} from "@/server/actions";
+import { type Term, type TermCourseInstance } from "@/types/schedule";
+import { Info } from "lucide-react";
 
 type Props = {
   coursesToSchedule: TermCourseInstance[];
@@ -18,6 +27,57 @@ type Props = {
   activeScheduleId: string;
   terms: Term[];
 };
+
+function CourseInfoDialog({ course }: { course: TermCourseInstance }) {
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="icon" className="h-8 w-8">
+          <Info className="h-4 w-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{course.courseCode}</DialogTitle>
+        </DialogHeader>
+        <div className="flex flex-col gap-4 pt-4">
+          {course.courseDescription && (
+            <div>
+              <div className="font-medium">Description</div>
+              <div className="text-sm text-muted-foreground">
+                {course.courseDescription}
+              </div>
+            </div>
+          )}
+          {course.coursePrereqs && (
+            <div>
+              <div className="font-medium">Prerequisites</div>
+              <div className="text-sm text-muted-foreground">
+                {course.coursePrereqs}
+              </div>
+            </div>
+          )}
+          {course.courseAntireqs && (
+            <div>
+              <div className="font-medium">Antirequisites</div>
+              <div className="text-sm text-muted-foreground">
+                {course.courseAntireqs}
+              </div>
+            </div>
+          )}
+          {course.courseCoreqs && (
+            <div>
+              <div className="font-medium">Corequisites</div>
+              <div className="text-sm text-muted-foreground">
+                {course.courseCoreqs}
+              </div>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export function MobileScheduler({
   coursesToSchedule,
@@ -38,11 +98,16 @@ export function MobileScheduler({
               <Card key={course.courseId}>
                 <CardHeader className="p-4">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">{course.courseCode}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {course.courseName}
-                      </p>
+                    <div className="flex items-center gap-2">
+                      <div>
+                        <p className="font-medium">
+                          {course.courseCode}{" "}
+                          <CourseInfoDialog course={course} />
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {course.courseName}
+                        </p>
+                      </div>
                     </div>
                     <Select
                       value={course.term === "" ? "available" : course.term}
@@ -101,7 +166,10 @@ export function MobileScheduler({
                       className="flex items-center justify-between py-2"
                     >
                       <div>
-                        <p className="font-medium">{course.courseCode}</p>
+                        <p className="font-medium">
+                          {course.courseCode}{" "}
+                          <CourseInfoDialog course={course} />
+                        </p>
                         <p className="text-sm text-muted-foreground">
                           {course.courseName}
                         </p>

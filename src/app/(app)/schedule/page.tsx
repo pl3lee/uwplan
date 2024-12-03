@@ -25,6 +25,10 @@ const selectedCoursesSchema = z.array(
     courseId: z.string().min(1),
     courseCode: z.string(),
     courseName: z.string(),
+    courseDescription: z.string(),
+    courseAntireqs: z.string(),
+    coursePrereqs: z.string(),
+    courseCoreqs: z.string(),
   }),
 );
 const schedulesSchema = z
@@ -79,6 +83,10 @@ export default async function SchedulePage({ searchParams }: Props) {
             courseCode: course.courseCode,
             courseName: course.courseName,
             term: "",
+            courseDescription: course.courseDescription,
+            courseAntireqs: course.courseAntireqs,
+            coursePrereqs: course.coursePrereqs,
+            courseCoreqs: course.courseCoreqs,
           },
         ]),
     ).values(),

@@ -227,10 +227,10 @@ export async function getTemplateDetails(templateId: string) {
               likedRating: c.likedRating,
               easyRating: c.easyRating,
               numRatings: c.numRatings,
-              description: c.description,
-              antireqs: c.antireqs,
-              prereqs: c.prereqs,
-              coreqs: c.coreqs,
+              description: c.description ?? '',
+              antireqs: c.antireqs ?? '',
+              prereqs: c.prereqs ?? '',
+              coreqs: c.coreqs ?? '',
             } : null
           }))
       }))
@@ -253,7 +253,11 @@ export async function getSelectedCourses(userId: string) {
         courseItemId: selectedCourses.courseItemId,
         courseId: courseItems.courseId,
         courseCode: courses.code,
-        courseName: courses.name
+        courseName: courses.name,
+        courseDescription: courses.description,
+        courseAntireqs: courses.antireqs,
+        coursePrereqs: courses.prereqs,
+        courseCoreqs: courses.coreqs
       })
       .from(selectedCourses)
       .innerJoin(plans, eq(plans.id, selectedCourses.planId))
@@ -654,6 +658,10 @@ export async function getScheduleCourses(scheduleId: string) {
         term: scheduleCourses.term,
         courseCode: courses.code,
         courseName: courses.name,
+        courseDescription: courses.description,
+        courseAntireqs: courses.antireqs,
+        coursePrereqs: courses.prereqs,
+        courseCoreqs: courses.coreqs
       })
       .from(scheduleCourses)
       .innerJoin(courses, eq(courses.id, scheduleCourses.courseId))

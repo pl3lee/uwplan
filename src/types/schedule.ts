@@ -11,6 +11,10 @@ export type TermCourseInstance = {
   term: string;
   courseCode: string;
   courseName: string;
+  courseDescription: string;
+  courseAntireqs: string;
+  coursePrereqs: string;
+  courseCoreqs: string;
 };
 
 export type Schedule = {

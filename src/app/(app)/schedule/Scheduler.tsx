@@ -280,7 +280,7 @@ export function Scheduler({
         </div>
 
         {/* Mobile view */}
-        <div className="md:hidden">
+        <div className="lg:hidden">
           <MobileScheduler
             coursesToSchedule={coursesToSchedule}
             coursesInSchedule={coursesInSchedule}
@@ -290,7 +290,7 @@ export function Scheduler({
         </div>
 
         {/* Desktop view with DnD */}
-        <div className="hidden md:block">
+        <div className="hidden lg:block">
           <DndContext onDragEnd={handleDragEnd}>
             <div className="grid grid-cols-[0.25fr,0.75fr] gap-6">
               <AvailableCourses courses={coursesToSchedule} />
