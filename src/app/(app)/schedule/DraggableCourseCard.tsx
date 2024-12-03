@@ -1,13 +1,12 @@
 "use client";
 
+import { type TermCourseInstance } from "@/types/schedule";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { Card, CardContent } from "./ui/card";
-import { type SelectedCourses } from "@/server/db/queries";
-import { type TermCourseInstance } from "@/types/schedule";
+import { Card, CardContent } from "@/components/ui/card";
 
 type Props = {
-  id?: string; // Optional ID for term instances
+  id?: string;
   course: TermCourseInstance;
 };
 

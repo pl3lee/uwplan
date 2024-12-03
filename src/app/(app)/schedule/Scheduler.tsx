@@ -1,41 +1,35 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
-import { type TermRange, type SelectedCourses } from "@/server/db/queries";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { Button } from "./ui/button";
-import { DndContext, type DragEndEvent, useDroppable } from "@dnd-kit/core";
-import { TermRangeSelector } from "./TermRangeSelector";
-import { DraggableCourseCard } from "./DraggableCourseCard";
 import { cn, generateTerms } from "@/lib/utils";
-import { type Schedule, Term, type TermCourseInstance } from "@/types/schedule";
 import {
   addCourseToScheduleAction,
-  createScheduleAction,
-  removeCourseFromScheduleAction,
   changeScheduleNameAction,
-  deleteScheduleAction,
   changeTermRangeAction,
+  createScheduleAction,
+  deleteScheduleAction,
+  removeCourseFromScheduleAction,
 } from "@/server/actions";
+import { type TermRange } from "@/server/db/queries";
+import { type Schedule, type TermCourseInstance } from "@/types/schedule";
+import { DndContext, type DragEndEvent, useDroppable } from "@dnd-kit/core";
+import { Edit2, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "./ui/dialog";
-import { Input } from "./ui/input";
-import { Edit2, Plus, Trash2 } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "./ui/select";
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { DraggableCourseCard } from "./DraggableCourseCard";
 import { MobileScheduler } from "./MobileScheduler";
+import { TermRangeSelector } from "./TermRangeSelector";
+import { toast } from "sonner";
 
 type Props = {
   coursesToSchedule: TermCourseInstance[];
@@ -78,6 +72,10 @@ function AddScheduleDialog() {
                   await createScheduleAction(name);
                   setName("");
                   setOpen(false);
+                  toast.success("Schedule created");
+                } catch (error) {
+                  console.error("Failed to create schedule", error);
+                  toast.error("Failed to create schedule");
                 } finally {
                   setIsLoading(false);
                 }
@@ -130,6 +128,10 @@ function RenameScheduleDialog({
                 try {
                   await changeScheduleNameAction(scheduleId, name);
                   setOpen(false);
+                  toast.success("Schedule renamed");
+                } catch (error) {
+                  console.error("Failed to rename schedule", error);
+                  toast.error("Failed to rename schedule");
                 } finally {
                   setIsLoading(false);
                 }
@@ -159,8 +161,9 @@ export function Scheduler({
     season: termRange.endTerm,
     year: termRange.endYear,
   });
-
+  const router = useRouter();
   const terms = generateTerms(startTerm, endTerm);
+  const activeSchedule = schedules.find((s) => s.id === activeScheduleId);
 
   const handleTermRangeChange = async (
     newStart: typeof startTerm,
@@ -168,12 +171,16 @@ export function Scheduler({
   ) => {
     setStartTerm(newStart);
     setEndTerm(newEnd);
-    await changeTermRangeAction(
-      newStart.season,
-      newStart.year,
-      newEnd.season,
-      newEnd.year,
-    );
+    try {
+      await changeTermRangeAction(
+        newStart.season,
+        newStart.year,
+        newEnd.season,
+        newEnd.year,
+      );
+    } catch (error) {
+      console.error("Failed to change term range", error);
+    }
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
@@ -182,8 +189,6 @@ export function Scheduler({
     const { active, over } = event;
 
     if (!over) return;
-    console.log("active", active);
-    console.log("over", over);
     if (over.id.toString() === "available") {
       try {
         await removeCourseFromScheduleAction(
@@ -200,15 +205,11 @@ export function Scheduler({
           active.id.toString(),
           over.id.toString(),
         );
-        console.log("Added course to term");
       } catch (error) {
         console.error("Failed to add course to term", error);
       }
     }
   };
-
-  const router = useRouter();
-  const activeSchedule = schedules.find((s) => s.id === activeScheduleId);
 
   return (
     <div className="container mx-auto py-10">
@@ -235,15 +236,21 @@ export function Scheduler({
                   if (
                     confirm("Are you sure you want to delete this schedule?")
                   ) {
-                    await deleteScheduleAction(activeScheduleId);
-                    const nextSchedule = schedules.find(
-                      (s) => s.id !== activeScheduleId,
-                    );
-                    router.push(
-                      nextSchedule
-                        ? `/schedule?scheduleId=${nextSchedule.id}`
-                        : "/schedule",
-                    );
+                    try {
+                      await deleteScheduleAction(activeScheduleId);
+                      const nextSchedule = schedules.find(
+                        (s) => s.id !== activeScheduleId,
+                      );
+                      toast.success("Schedule deleted");
+                      router.push(
+                        nextSchedule
+                          ? `/schedule?scheduleId=${nextSchedule.id}`
+                          : "/schedule",
+                      );
+                    } catch (error) {
+                      console.error("Failed to delete schedule", error);
+                      toast.error("Failed to delete schedule");
+                    }
                   }
                 }}
               >

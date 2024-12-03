@@ -7,7 +7,7 @@ import {
 import Link from "next/link";
 import { TabSelector } from "./TabSelector";
 import { TemplateSelector } from "./TemplateSelector";
-import { Button } from "./ui/button";
+import { Button } from "@/components/ui/button";
 import { BottomNav } from "./BottomNav";
 
 export default async function Navbar() {

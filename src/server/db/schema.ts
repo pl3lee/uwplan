@@ -126,13 +126,15 @@ export const seasonEnum = pgEnum("season", ["Fall", "Winter", "Spring"]);
 // Contains course information and pre-populated ratings from external sources
 export const courses = createTable("course", {
   id: uuid("id").defaultRandom().primaryKey(),
-  code: varchar("code", { length: 10 }).notNull().unique(), // Add unique constraint
+  code: varchar("code", { length: 10 }).notNull().unique(),
   name: varchar("name", { length: 255 }).notNull(),
   usefulRating: decimal("useful_rating", { precision: 4, scale: 3 }),
   likedRating: decimal("liked_rating", { precision: 4, scale: 3 }),
   easyRating: decimal("easy_rating", { precision: 4, scale: 3 }),
-  numRatings: integer("num_ratings"), // Changed from generalRating decimal to numRatings integer
-});
+  numRatings: integer("num_ratings"),
+}, (table) => ({
+  codeIdx: index("course_code_idx").on(table.code), // Add index for course code lookups
+}));
 
 // Templates represent predefined academic plans (e.g., Computational Mathematics Major)
 // Contains basic template information
@@ -149,9 +151,9 @@ export const plans = createTable("plan", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: varchar("user_id", { length: 255 })
     .notNull()
-    .references(() => users.id),
+    .references(() => users.id, { onDelete: "cascade" }),
 }, (plan) => ({
-  userIdIdx: uniqueIndex("plan_user_id_idx").on(plan.userId), // Ensure 1:1 with user
+  userIdIdx: uniqueIndex("plan_user_id_idx").on(plan.userId),
 }));
 
 // Items that make up a template
@@ -159,7 +161,7 @@ export const plans = createTable("plan", {
 // Order is maintained through orderIndex
 export const templateItems = createTable("template_item", {
   id: uuid("id").defaultRandom().primaryKey(),
-  templateId: uuid("template_id").notNull().references(() => templates.id),
+  templateId: uuid("template_id").notNull().references(() => templates.id, { onDelete: "cascade" }),
   type: itemTypeEnum("type").notNull(),
   description: text("description"),
   orderIndex: integer("order_index").notNull(),
@@ -170,20 +172,20 @@ export const courseItems = createTable("course_item", {
   id: uuid("id").defaultRandom().primaryKey(),
   requirementId: uuid("requirement_id")
     .notNull()
-    .references(() => templateItems.id),
-  type: courseItemTypeEnum("type").notNull(), // Using the enum type
+    .references(() => templateItems.id, { onDelete: "cascade" }),
+  type: courseItemTypeEnum("type").notNull(),
   courseId: uuid("course_id")
-    .references(() => courses.id), // Only set for fixed courses
+    .references(() => courses.id, { onDelete: "cascade" }),
 }, (t) => ({
-  // Add index for faster lookups
   requirementIdIdx: index("course_item_requirement_id_idx").on(t.requirementId),
+  courseIdIdx: index("course_item_course_id_idx").on(t.courseId), // Add index for course lookups
 }));
 
 // Junction table between plans and templates
 // Tracks which templates are used in each plan
 export const planTemplates = createTable("plan_template", {
-  planId: uuid("plan_id").notNull().references(() => plans.id),
-  templateId: uuid("template_id").notNull().references(() => templates.id),
+  planId: uuid("plan_id").notNull().references(() => plans.id, { onDelete: "cascade" }),
+  templateId: uuid("template_id").notNull().references(() => templates.id, { onDelete: "cascade" }),
 }, (t) => ({
   pk: primaryKey({ columns: [t.planId, t.templateId] }),
 }));
@@ -193,7 +195,7 @@ export const planTemplates = createTable("plan_template", {
 export const schedules = createTable("schedule", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
-  planId: uuid("plan_id").notNull().references(() => plans.id),
+  planId: uuid("plan_id").notNull().references(() => plans.id, { onDelete: "cascade" }),
 });
 
 // Junction table between schedules and courses
@@ -207,16 +209,16 @@ export const scheduleCourses = createTable("schedule_course", {
   term: varchar("term", { length: 20 }).notNull(), // e.g., "Fall 2023"
 }, (t) => ({
   pk: primaryKey({ columns: [t.scheduleId, t.courseId] }),
+  termIdx: index("schedule_course_term_idx").on(t.term), // Add index for term queries
 }));
 
-// Junction table between plans and courses (MODIFIED)
-// Now links to course items instead of courses directly
+// Junction table between plans and courses
 export const selectedCourses = createTable("selected_course", {
-  planId: uuid("plan_id").notNull().references(() => plans.id),
-  courseItemId: uuid("course_item_id").notNull().references(() => courseItems.id), // Changed from courseId
+  planId: uuid("plan_id").notNull().references(() => plans.id, { onDelete: "cascade" }),
+  courseItemId: uuid("course_item_id").notNull().references(() => courseItems.id, { onDelete: "cascade" }),
   selected: boolean("selected").notNull().default(false),
 }, (t) => ({
-  pk: primaryKey({ columns: [t.planId, t.courseItemId] }), // Updated primary key
+  pk: primaryKey({ columns: [t.planId, t.courseItemId] }),
 }));
 
 // When a user fills in a free course
@@ -224,16 +226,16 @@ export const freeCourses = createTable("free_course", {
   id: uuid("id").defaultRandom().primaryKey(),
   courseItemId: uuid("course_item_id")
     .notNull()
-    .references(() => courseItems.id),
+    .references(() => courseItems.id, { onDelete: "cascade" }),
   userId: varchar("user_id", { length: 255 })
     .notNull()
-    .references(() => users.id),
+    .references(() => users.id, { onDelete: "cascade" }),
   filledCourseId: uuid("filled_course_id")
     .notNull()
-    .references(() => courses.id),
+    .references(() => courses.id, { onDelete: "cascade" }),
 }, (t) => ({
-  // Add unique constraint to ensure one user can only fill a course item once
   uniqueCourseItemUser: uniqueIndex("free_course_item_user_idx").on(t.courseItemId, t.userId),
+  userIdIdx: index("free_course_user_id_idx").on(t.userId), // Add index for user lookups
 }));
 
 // Add this new table

@@ -1,22 +1,21 @@
-import styles from "@/styles/utils.module.css";
+import { CourseTable } from "@/app/(app)/select/CourseTable";
+import { ScrollToTopButton } from "@/components/nav/ScrollToTopButton";
+import { SelectedCoursesTable } from "@/app/(app)/select/SelectedCoursesTable";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { auth } from "@/server/auth";
 import {
   getCoursesWithRatings,
   getSelectedCourses,
   getUserTemplatesWithCourses,
 } from "@/server/db/queries";
-import { CourseTable } from "@/components/CourseTable";
-import { auth } from "@/server/auth";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-  CardDescription,
-} from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { type FixedCourse } from "@/types/course";
-import { SelectedCoursesTable } from "@/components/SelectedCoursesTable";
-import { ScrollToTopButton } from "@/components/ScrollToTopButton";
+import styles from "@/styles/utils.module.css";
 import { redirect } from "next/navigation";
 
 export default async function SelectPage() {
@@ -30,7 +29,7 @@ export default async function SelectPage() {
     getCoursesWithRatings(),
     getSelectedCourses(session.user.id),
   ]);
-  console.log("selected courses", selectedCourses);
+
   // Map courses to their details for the selected courses section and deduplicate
   const selectedCoursesWithDetails = Array.from(
     selectedCourses
@@ -38,7 +37,6 @@ export default async function SelectPage() {
         if (!courseId) return map;
         const course = allCourses.find((course) => course.id === courseId);
         if (!course) return map;
-        // Only keep the first occurrence of each course.id
         if (!map.has(course.id)) {
           map.set(course.id, { courseItemId, course });
         }
@@ -47,7 +45,6 @@ export default async function SelectPage() {
       .values(),
   );
 
-  // Create a set of selected courseItemIds
   const selectedCourseItems = new Set(
     selectedCourses.map((course) => course.courseItemId),
   );
@@ -74,7 +71,6 @@ export default async function SelectPage() {
             <CardDescription>{template.description}</CardDescription>
           </CardHeader>
           <CardContent>
-            {/* {console.log("item", template.items[1])} */}
             {template.items.map((item) => (
               <div key={item.id} className="mt-6">
                 {item.type === "requirement" && (

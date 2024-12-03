@@ -1,15 +1,14 @@
 "use client";
 
-import { type Season } from "@/types/schedule";
+import { type Season, Seasons } from "@/types/schedule";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "./ui/select";
+} from "@/components/ui/select";
 
-const SEASONS = ["Winter", "Spring", "Fall"] as const;
 const YEARS = Array.from(
   { length: 30 },
   (_, i) => new Date().getFullYear() - 15 + i,
@@ -42,7 +41,7 @@ export function TermRangeSelector({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {SEASONS.map((season) => (
+            {Seasons.map((season) => (
               <SelectItem key={season} value={season}>
                 {season}
               </SelectItem>
@@ -79,7 +78,7 @@ export function TermRangeSelector({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {SEASONS.map((season) => (
+            {Seasons.map((season) => (
               <SelectItem key={season} value={season}>
                 {season}
               </SelectItem>

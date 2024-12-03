@@ -1,5 +1,5 @@
 import styles from "@/styles/utils.module.css";
-import { Scheduler } from "@/components/Scheduler";
+import { Scheduler } from "@/app/(app)/schedule/Scheduler";
 import { auth } from "@/server/auth";
 import {
   getScheduleCourses,
@@ -10,7 +10,7 @@ import {
   validateScheduleId,
 } from "@/server/db/queries";
 import * as z from "zod";
-import { ScrollToTopButton } from "@/components/ScrollToTopButton";
+import { ScrollToTopButton } from "@/components/nav/ScrollToTopButton";
 import { redirect } from "next/navigation";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -22,7 +22,7 @@ type Props = {
 const selectedCoursesSchema = z.array(
   z.object({
     courseItemId: z.string(),
-    courseId: z.string().nonempty(), // Ensure courseId is not null or empty
+    courseId: z.string().min(1),
     courseCode: z.string(),
     courseName: z.string(),
   }),
@@ -32,7 +32,6 @@ const schedulesSchema = z
     z.object({
       id: z.string(),
       name: z.string(),
-      // Add other fields as necessary
     }),
   )
   .nonempty();
@@ -53,7 +52,6 @@ export default async function SchedulePage({ searchParams }: Props) {
   const scheduleId = searchParameters.scheduleId;
 
   const activeScheduleId = scheduleId ? String(scheduleId) : schedules[0].id;
-  console.log("scheduleId", activeScheduleId);
   const scheduleIsValid = await validateScheduleId(
     session.user.id,
     activeScheduleId,
@@ -66,7 +64,6 @@ export default async function SchedulePage({ searchParams }: Props) {
     );
   }
   const scheduleCourses = await getScheduleCourses(activeScheduleId);
-  console.log("scheduleCourses", scheduleCourses);
   const coursesToSchedule = Array.from(
     new Map(
       selectedCourses

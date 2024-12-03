@@ -13,7 +13,8 @@ import { type Course } from "@/types/course";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { Button } from "./ui/button";
+import { Button } from "../../../components/ui/button";
+import { toast } from "sonner";
 
 type SortDirection = "asc" | "desc" | null;
 type SortColumn =
@@ -181,6 +182,10 @@ export function SelectedCoursesTable({ fixedCourses }: CourseTableProps) {
                     setRemovingCourseId(course.id);
                     try {
                       await removeCourseSelectionAction(course.id);
+                      toast.success("Course removed successfully");
+                    } catch (error) {
+                      console.error(error);
+                      toast.error("Failed to remove course");
                     } finally {
                       setRemovingCourseId(null);
                     }

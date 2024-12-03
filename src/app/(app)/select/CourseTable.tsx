@@ -1,5 +1,7 @@
 "use client";
 
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -8,15 +10,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { toggleCourseAction, updateFreeCourseAction } from "@/server/actions";
-import { type FixedCourse, type FreeCourse, type Course } from "@/types/course";
-import { useState } from "react";
-import Link from "next/link";
-import { Button } from "./ui/button";
 import { normalizeCourseCode } from "@/lib/utils";
-import { ArrowUpDown, ArrowUp, ArrowDown, Check, X } from "lucide-react";
+import { toggleCourseAction, updateFreeCourseAction } from "@/server/actions";
+import { type Course, type FreeCourse } from "@/types/course";
+import { ArrowDown, ArrowUp, ArrowUpDown, Check, X } from "lucide-react";
+import Link from "next/link";
+import { useState } from "react";
+import { Button } from "../../../components/ui/button";
+import { toast } from "sonner";
 
 type SortDirection = "asc" | "desc" | null;
 type SortColumn =
@@ -134,8 +135,6 @@ export function CourseTable({
   };
 
   const sortedFixedCourses = sortCourses(fixedCourses);
-  // Remove sorting for free courses
-  const sortedFreeCourses = freeCourses;
 
   return (
     <div className="rounded-md border">
@@ -214,6 +213,9 @@ export function CourseTable({
                         courseItemId,
                         checked as boolean,
                       );
+                    } catch (error) {
+                      console.error(error);
+                      toast.error("Failed to toggle course selection");
                     } finally {
                       setToggleLoading(null);
                     }
@@ -248,7 +250,7 @@ export function CourseTable({
               </TableCell>
             </TableRow>
           ))}
-          {sortedFreeCourses.map((freeCourse) => (
+          {freeCourses.map((freeCourse) => (
             <TableRow key={freeCourse.courseItemId}>
               <TableCell>
                 <Checkbox
@@ -265,6 +267,9 @@ export function CourseTable({
                         freeCourse.courseItemId,
                         checked as boolean,
                       );
+                    } catch (error) {
+                      console.error(error);
+                      toast.error("Failed to toggle course selection");
                     } finally {
                       setToggleLoading(null);
                     }
@@ -301,10 +306,15 @@ export function CourseTable({
                       if (!filledCourseId) {
                         return;
                       }
-                      await updateFreeCourseAction(
-                        freeCourse.courseItemId,
-                        filledCourseId,
-                      );
+                      try {
+                        await updateFreeCourseAction(
+                          freeCourse.courseItemId,
+                          filledCourseId,
+                        );
+                      } catch (error) {
+                        console.error(error);
+                        toast.error("Failed to update free course");
+                      }
                     }}
                     placeholder="Course code"
                     className="w-full"

@@ -4,9 +4,6 @@ import {
   type courseItems
 } from "@/server/db/schema";
 
-
-
-
 export type Course = InferSelectModel<typeof courses>;
 
 export type CourseItems = InferSelectModel<typeof courseItems>;

@@ -1,7 +1,3 @@
-import { CourseInstance } from "./course";
-import { type InferSelectModel } from "drizzle-orm";
-import { type seasonEnum } from "@/server/db/schema";
-
 export type Season = "Fall" | "Winter" | "Spring";
 
 export const Seasons: Season[] = ["Fall", "Winter", "Spring"];

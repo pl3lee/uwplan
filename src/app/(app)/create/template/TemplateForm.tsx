@@ -2,32 +2,21 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Textarea } from "@/components/ui/textarea";
-import { useState } from "react";
-import { createTemplateAction } from "@/server/actions";
-import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
 import { normalizeCourseCode } from "@/lib/utils";
-import { z } from "zod";
+import { createTemplateAction } from "@/server/actions";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { z } from "zod";
 
 const formSchema = z.object({
   name: z.string().min(1),
@@ -37,25 +26,21 @@ const formSchema = z.object({
       z.object({
         type: z.literal("instruction"),
         description: z.string().min(1, { message: "Instruction is required" }),
-        // orderIndex: z.number(),
       }),
       z.object({
         type: z.literal("separator"),
-        // orderIndex: z.number(),
       }),
       z.object({
         type: z.literal("requirement"),
         courseType: z.literal("fixed"),
         description: z.string().min(1),
         courses: z.string().min(1),
-        // orderIndex: z.number(),
       }),
       z.object({
         type: z.literal("requirement"),
         courseType: z.enum(["free"]),
         description: z.string().min(1),
         count: z.number().min(1),
-        // orderIndex: z.number(),
       }),
     ]),
   ),
@@ -372,29 +357,6 @@ export function TemplateForm({ courseOptions }: TemplateFormProps) {
             </Card>
           ))}
         </div>
-        {/* <div className="mt-4 flex flex-wrap gap-2">
-          <Button type="button" onClick={addInstruction} variant="secondary">
-            Add Instruction
-          </Button>
-          <Button
-            type="button"
-            onClick={addFixedRequirement}
-            variant="secondary"
-          >
-            Add Fixed Requirement
-          </Button>
-          <Button
-            type="button"
-            onClick={addFreeRequirement}
-            variant="secondary"
-          >
-            Add Free Requirement
-          </Button>
-          <Button type="button" onClick={addSeparator} variant="secondary">
-            Add Separator
-          </Button>
-          <Button type="submit">Create Template</Button>
-        </div> */}
       </form>
     </Form>
   );

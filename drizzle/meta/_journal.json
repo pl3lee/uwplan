@@ -22,6 +22,20 @@
       "when": 1733005101442,
       "tag": "0002_colorful_dorian_gray",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1733197569083,
+      "tag": "0003_real_champions",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1733197681184,
+      "tag": "0004_stiff_blue_blade",
+      "breakpoints": true
     }
   ]
 }
