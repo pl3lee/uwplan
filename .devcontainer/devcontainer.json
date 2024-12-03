@@ -1,5 +1,5 @@
 {
-	"name": "UW Course Planner",
+	"name": "UWPlan",
 	"image": "mcr.microsoft.com/devcontainers/base:jammy",
 	"features": {
 		"ghcr.io/devcontainers/features/docker-in-docker:2": {},
