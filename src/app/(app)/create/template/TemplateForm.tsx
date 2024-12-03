@@ -207,7 +207,7 @@ export function TemplateForm({ courseOptions }: TemplateFormProps) {
       <form onSubmit={form.handleSubmit(onSubmit)}>
         <Card className="mt-6">
           <CardHeader>
-            <CardTitle>Template Details</CardTitle>
+            <CardTitle>Academic Plan Details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <FormField
@@ -261,7 +261,7 @@ export function TemplateForm({ courseOptions }: TemplateFormProps) {
             <Button type="button" onClick={addSeparator} variant="secondary">
               Add Separator
             </Button>
-            <Button type="submit">Create Template</Button>
+            <Button type="submit">Create Academic Plan</Button>
           </div>
 
           {items.map((item, index) => (

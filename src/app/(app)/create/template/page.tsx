@@ -18,7 +18,20 @@ export default async function CreateTemplatePage() {
 
   return (
     <div className="container mx-auto py-10">
-      <h1 className={styles.pageTitleText}>Create Template</h1>
+      <h1 className={styles.pageTitleText}>Create Academic Plan</h1>
+      <p>
+        Please read the following{" "}
+        <span>
+          <a
+            href="https://docs.google.com/document/d/e/2PACX-1vS_LFzvKc6Ne0I4NXkIwkENpTFGZUVlyn_Fc5ZdGTljMVLc7o0KhOa_R5hP43jRMgzzGHOB5q6h47ZV/pub"
+            target="_blank"
+            className="text-blue-500 underline"
+          >
+            instructions
+          </a>
+        </span>{" "}
+        for creating academic plans.
+      </p>
       <TemplateForm courseOptions={courseOptions} />
     </div>
   );
