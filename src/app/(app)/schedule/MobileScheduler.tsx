@@ -20,6 +20,8 @@ import {
 } from "@/server/actions";
 import { type Term, type TermCourseInstance } from "@/types/schedule";
 import { Info } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 
 type Props = {
   coursesToSchedule: TermCourseInstance[];
@@ -79,6 +81,77 @@ function CourseInfoDialog({ course }: { course: TermCourseInstance }) {
   );
 }
 
+function CourseCard({
+  course,
+  activeScheduleId,
+  terms,
+}: {
+  course: TermCourseInstance;
+  activeScheduleId: string;
+  terms: Term[];
+}) {
+  const [term, setTerm] = useState(course.term);
+  const [pending, setPending] = useState(false);
+  return (
+    <Card key={course.courseId}>
+      <CardHeader className="p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div>
+              <p className="font-medium">
+                {course.courseCode} <CourseInfoDialog course={course} />
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {course.courseName}
+              </p>
+            </div>
+          </div>
+          <Select
+            value={term === "" ? "available" : term}
+            disabled={pending}
+            onValueChange={async (term) => {
+              setPending(true);
+              try {
+                if (term === "available") {
+                  setTerm("");
+                  await removeCourseFromScheduleAction(
+                    activeScheduleId,
+                    course.courseId,
+                  );
+                } else {
+                  setTerm(term);
+                  await addCourseToScheduleAction(
+                    activeScheduleId,
+                    course.courseId,
+                    term,
+                  );
+                }
+              } catch (e) {
+                toast.error("Failed to update course term");
+                console.error(e);
+              } finally {
+                setPending(false);
+              }
+            }}
+          >
+            <SelectTrigger className="w-32">
+              <SelectValue placeholder="Select term" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="available">Unscheduled</SelectItem>
+              {terms.map((term) => (
+                <SelectItem key={term.name} value={term.name}>
+                  {term.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </CardHeader>
+    </Card>
+  );
+}
+
 export function MobileScheduler({
   coursesToSchedule,
   coursesInSchedule,
@@ -95,52 +168,12 @@ export function MobileScheduler({
           {[...coursesToSchedule, ...coursesInSchedule]
             .sort((a, b) => a.courseCode.localeCompare(b.courseCode))
             .map((course) => (
-              <Card key={course.courseId}>
-                <CardHeader className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div>
-                        <p className="font-medium">
-                          {course.courseCode}{" "}
-                          <CourseInfoDialog course={course} />
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {course.courseName}
-                        </p>
-                      </div>
-                    </div>
-                    <Select
-                      value={course.term === "" ? "available" : course.term}
-                      onValueChange={async (term) => {
-                        if (term === "available") {
-                          await removeCourseFromScheduleAction(
-                            activeScheduleId,
-                            course.courseId,
-                          );
-                        } else {
-                          await addCourseToScheduleAction(
-                            activeScheduleId,
-                            course.courseId,
-                            term,
-                          );
-                        }
-                      }}
-                    >
-                      <SelectTrigger className="w-32">
-                        <SelectValue placeholder="Select term" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="available">Unscheduled</SelectItem>
-                        {terms.map((term) => (
-                          <SelectItem key={term.name} value={term.name}>
-                            {term.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </CardHeader>
-              </Card>
+              <CourseCard
+                key={course.courseId}
+                course={course}
+                activeScheduleId={activeScheduleId}
+                terms={terms}
+              />
             ))}
         </CardContent>
       </Card>
