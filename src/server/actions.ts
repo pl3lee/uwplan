@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { addCourseToSchedule, changeScheduleName, changeTermRange, createSchedule, createTemplate, deleteSchedule, getSchedules, removeCourseFromSchedule, removeCourseSelection, toggleCourse, toggleUserTemplate, validateScheduleId, updateFreeCourse, getRole, deleteTemplate } from '@/server/db/queries';
+import { addCourseToSchedule, changeScheduleName, changeTermRange, createSchedule, createTemplate, deleteSchedule, getSchedules, removeCourseFromSchedule, removeCourseSelection, toggleCourse, toggleUserTemplate, validateScheduleId, updateFreeCourse, getRole, deleteTemplate, getSelectedCourses, getScheduleCourses } from '@/server/db/queries';
 import { auth } from './auth';
 import { type CreateTemplateInput } from '@/types/template';
 import { type Season } from '@/types/schedule';
@@ -146,4 +146,51 @@ export async function changeTermRangeAction(startTerm: Season, startYear: number
   }
   await changeTermRange(session.user.id, startTerm, startYear, endTerm, endYear);
   revalidatePath('/schedule');
+}
+
+
+
+export async function exportScheduleToCSV(scheduleId: string) {
+  const session = await auth()
+  if (!session?.user) {
+    throw new Error('Not authenticated')
+  }
+
+  const selectedCourses = await getSelectedCourses(session.user.id)
+  const scheduledCourses = await getScheduleCourses(scheduleId)
+
+  // Helper function to escape CSV field
+  const escapeField = (field: string) => {
+    if (field.includes(',') || field.includes('"')) {
+      return `"${field.replace(/"/g, '""')}"`
+    }
+    return field
+  }
+
+  const coursesByTerm = new Map<string, string[]>();
+
+  for (const course of scheduledCourses) {
+    if (!course.term) continue;
+    if (!coursesByTerm.has(course.term)) {
+      coursesByTerm.set(course.term, []);
+    }
+    coursesByTerm.get(course.term)?.push(escapeField(`${course.courseCode}`));
+  }
+
+  let csvContent = 'Selected Courses:\n'
+  selectedCourses.forEach(course => {
+    csvContent += escapeField(`${course.courseCode} - ${course.courseName}`) + '\n'
+  })
+
+  csvContent += '\nScheduled Courses:\n'
+
+  const maxCourses = Math.max(...Array.from(coursesByTerm.values()).map(courses => courses.length))
+  csvContent += Array.from(coursesByTerm.keys()).map(escapeField).join(',') + '\n'
+
+  for (let i = 0; i < maxCourses; i++) {
+    const row = Array.from(coursesByTerm.values()).map(courses => courses[i] ?? '').join(',')
+    csvContent += row + '\n'
+  }
+
+  return csvContent
 }

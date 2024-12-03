@@ -1,5 +1,8 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 import { cn, generateTerms } from "@/lib/utils";
 import {
   addCourseToScheduleAction,
@@ -30,6 +33,26 @@ import { DraggableCourseCard } from "./DraggableCourseCard";
 import { MobileScheduler } from "./MobileScheduler";
 import { TermRangeSelector } from "./TermRangeSelector";
 import { toast } from "sonner";
+import { ExportButton } from "./ExportButton";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+
+const scheduleFormSchema = z.object({
+  name: z
+    .string()
+    .min(1, {
+      message: "Schedule name is required.",
+    })
+    .max(20, {
+      message: "Schedule name cannot be longer than 20 characters.",
+    }),
+});
 
 type Props = {
   coursesToSchedule: TermCourseInstance[];
@@ -41,8 +64,28 @@ type Props = {
 
 function AddScheduleDialog() {
   const [open, setOpen] = useState(false);
-  const [name, setName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const form = useForm<z.infer<typeof scheduleFormSchema>>({
+    resolver: zodResolver(scheduleFormSchema),
+    defaultValues: {
+      name: "",
+    },
+  });
+
+  const onSubmit = async (values: z.infer<typeof scheduleFormSchema>) => {
+    setIsLoading(true);
+    try {
+      await createScheduleAction(values.name);
+      form.reset();
+      setOpen(false);
+      toast.success("Schedule created");
+    } catch (error) {
+      console.error("Failed to create schedule", error);
+      toast.error("Failed to create schedule");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -56,35 +99,26 @@ function AddScheduleDialog() {
         <DialogHeader>
           <DialogTitle>New Schedule</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
-          <Input
-            placeholder="Schedule name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            maxLength={20}
-          />
-          <Button
-            disabled={isLoading}
-            onClick={async () => {
-              if (name) {
-                setIsLoading(true);
-                try {
-                  await createScheduleAction(name);
-                  setName("");
-                  setOpen(false);
-                  toast.success("Schedule created");
-                } catch (error) {
-                  console.error("Failed to create schedule", error);
-                  toast.error("Failed to create schedule");
-                } finally {
-                  setIsLoading(false);
-                }
-              }
-            }}
-          >
-            {isLoading ? "Creating..." : "Create"}
-          </Button>
-        </div>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Schedule Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Schedule name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? "Creating..." : "Create"}
+            </Button>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );
@@ -98,8 +132,28 @@ function RenameScheduleDialog({
   currentName: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [name, setName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const form = useForm<z.infer<typeof scheduleFormSchema>>({
+    resolver: zodResolver(scheduleFormSchema),
+    defaultValues: {
+      name: "",
+    },
+  });
+
+  const onSubmit = async (values: z.infer<typeof scheduleFormSchema>) => {
+    setIsLoading(true);
+    try {
+      await changeScheduleNameAction(scheduleId, values.name);
+      form.reset();
+      setOpen(false);
+      toast.success("Schedule renamed");
+    } catch (error) {
+      console.error("Failed to rename schedule", error);
+      toast.error("Failed to rename schedule");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -113,34 +167,26 @@ function RenameScheduleDialog({
         <DialogHeader>
           <DialogTitle>Rename Schedule</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
-          <Input
-            placeholder={currentName}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            maxLength={20}
-          />
-          <Button
-            disabled={isLoading}
-            onClick={async () => {
-              if (name) {
-                setIsLoading(true);
-                try {
-                  await changeScheduleNameAction(scheduleId, name);
-                  setOpen(false);
-                  toast.success("Schedule renamed");
-                } catch (error) {
-                  console.error("Failed to rename schedule", error);
-                  toast.error("Failed to rename schedule");
-                } finally {
-                  setIsLoading(false);
-                }
-              }
-            }}
-          >
-            {isLoading ? "Renaming..." : "Rename"}
-          </Button>
-        </div>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>New Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder={currentName} {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? "Renaming..." : "Rename"}
+            </Button>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );
@@ -230,8 +276,10 @@ export function Scheduler({
                 scheduleId={activeScheduleId}
                 currentName={activeSchedule.name}
               />
+              <ExportButton scheduleId={activeScheduleId} />
               <Button
                 variant="destructive"
+                disabled={schedules.length <= 1}
                 onClick={async () => {
                   if (
                     confirm("Are you sure you want to delete this schedule?")
