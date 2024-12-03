@@ -67,7 +67,9 @@ export default async function SchedulePage({ searchParams }: Props) {
       </div>
     );
   }
-  const scheduleCourses = await getScheduleCourses(activeScheduleId);
+  const scheduleCourses = (await getScheduleCourses(activeScheduleId)).sort(
+    (a, b) => a.courseCode.localeCompare(b.courseCode),
+  );
   const coursesToSchedule = Array.from(
     new Map(
       selectedCourses
@@ -90,7 +92,7 @@ export default async function SchedulePage({ searchParams }: Props) {
           },
         ]),
     ).values(),
-  );
+  ).sort((a, b) => a.courseCode.localeCompare(b.courseCode));
 
   const termRange: TermRange = await getTermRange(session.user.id);
   return (

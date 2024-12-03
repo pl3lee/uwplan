@@ -1,4 +1,4 @@
-import { fetchCourses, fetchUWFlowData, insertUWFlowCourses } from "@/lib/uwflow";
+import { fetchCourses } from "@/lib/uwflow";
 import { createTemplate } from "./queries";
 
 

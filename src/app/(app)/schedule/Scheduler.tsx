@@ -18,7 +18,7 @@ import { DndContext, type DragEndEvent, useDroppable } from "@dnd-kit/core";
 import { Edit2, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useOptimistic, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -60,6 +60,17 @@ type Props = {
   activeScheduleId: string;
   coursesInSchedule: TermCourseInstance[];
   termRange: TermRange;
+};
+
+type ToScheduleOptimisticValue = {
+  operation: "add" | "remove";
+  courseId: string;
+};
+
+type InScheduleOptimisticValue = {
+  operation: "add" | "remove";
+  courseId: string;
+  term: string;
 };
 
 function AddScheduleDialog() {
@@ -209,7 +220,76 @@ export function Scheduler({
   });
   const router = useRouter();
   const terms = generateTerms(startTerm, endTerm);
+  const [_, startTransition] = useTransition();
   const activeSchedule = schedules.find((s) => s.id === activeScheduleId);
+  const [optimisticCoursesToSchedule, setOptimisticCoursesToSchedule] =
+    useOptimistic(
+      coursesToSchedule,
+      (
+        currentCoursesToSchedule,
+        optimisticValue: ToScheduleOptimisticValue,
+      ) => {
+        const newState = [...currentCoursesToSchedule];
+
+        if (optimisticValue.operation === "add") {
+          const newCourse = coursesInSchedule.find(
+            (course) => course.courseId === optimisticValue.courseId,
+          );
+          if (newCourse) {
+            newState.push({ ...newCourse, term: "available" });
+          }
+        } else {
+          const index = newState.findIndex(
+            (course) => course.courseId === optimisticValue.courseId,
+          );
+          if (index !== -1) {
+            newState.splice(index, 1);
+          }
+        }
+        return newState.sort((a, b) =>
+          a.courseCode.localeCompare(b.courseCode),
+        );
+      },
+    );
+  const [optimisticCoursesInSchedule, setOptimisticCoursesInSchedule] =
+    useOptimistic(
+      coursesInSchedule,
+      (
+        currentCoursesInSchedule,
+        optimisticValue: InScheduleOptimisticValue,
+      ) => {
+        const newState = [...currentCoursesInSchedule];
+
+        if (optimisticValue.operation === "add") {
+          const newCourseInToSchedule = coursesToSchedule.find(
+            (course) => course.courseId === optimisticValue.courseId,
+          );
+          if (newCourseInToSchedule) {
+            newState.push({
+              ...newCourseInToSchedule,
+              term: optimisticValue.term,
+            });
+          } else {
+            const newCourse = coursesInSchedule.find(
+              (course) => course.courseId === optimisticValue.courseId,
+            );
+            if (newCourse) {
+              newState.push({ ...newCourse, term: optimisticValue.term });
+            }
+          }
+        } else {
+          const index = newState.findIndex(
+            (course) => course.courseId === optimisticValue.courseId,
+          );
+          if (index !== -1) {
+            newState.splice(index, 1);
+          }
+        }
+        return newState.sort((a, b) =>
+          a.courseCode.localeCompare(b.courseCode),
+        );
+      },
+    );
 
   const handleTermRangeChange = async (
     newStart: typeof startTerm,
@@ -237,6 +317,17 @@ export function Scheduler({
     if (!over) return;
     if (over.id.toString() === "available") {
       try {
+        startTransition(() => {
+          setOptimisticCoursesToSchedule({
+            operation: "add",
+            courseId: active.id.toString(),
+          });
+          setOptimisticCoursesInSchedule({
+            operation: "remove",
+            courseId: active.id.toString(),
+            term: "",
+          });
+        });
         await removeCourseFromScheduleAction(
           activeScheduleId,
           active.id.toString(),
@@ -246,6 +337,30 @@ export function Scheduler({
       }
     } else {
       try {
+        startTransition(() => {
+          // find origin of course
+          const origin = optimisticCoursesInSchedule.find(
+            (course) => course.courseId === active.id.toString(),
+          );
+          if (origin) {
+            setOptimisticCoursesInSchedule({
+              operation: "remove",
+              courseId: active.id.toString(),
+              term: origin.term,
+            });
+          } else {
+            setOptimisticCoursesToSchedule({
+              operation: "remove",
+              courseId: active.id.toString(),
+            });
+          }
+          console.log(over.id.toString());
+          setOptimisticCoursesInSchedule({
+            operation: "add",
+            courseId: active.id.toString(),
+            term: over.id.toString(),
+          });
+        });
         await addCourseToScheduleAction(
           activeScheduleId,
           active.id.toString(),
@@ -330,8 +445,8 @@ export function Scheduler({
         {/* Mobile view */}
         <div className="lg:hidden">
           <MobileScheduler
-            coursesToSchedule={coursesToSchedule}
-            coursesInSchedule={coursesInSchedule}
+            coursesToSchedule={optimisticCoursesToSchedule}
+            coursesInSchedule={optimisticCoursesInSchedule}
             activeScheduleId={activeScheduleId}
             terms={terms}
           />
@@ -341,14 +456,14 @@ export function Scheduler({
         <div className="hidden lg:block">
           <DndContext onDragEnd={handleDragEnd}>
             <div className="grid grid-cols-[0.25fr,0.75fr] gap-6">
-              <AvailableCourses courses={coursesToSchedule} />
+              <AvailableCourses courses={optimisticCoursesToSchedule} />
               <div className="w-full space-y-4">
                 <div className="grid h-min max-w-full grid-cols-3 gap-4 p-2">
                   {terms.map((term) => (
                     <TermBoard
                       key={term.name}
                       name={term.name}
-                      courses={coursesInSchedule.filter(
+                      courses={optimisticCoursesInSchedule.filter(
                         (course) => course.term === term.name,
                       )}
                     />

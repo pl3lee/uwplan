@@ -1,5 +1,6 @@
 "use client";
 
+import { useOptimistic, useTransition } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import {
@@ -14,7 +15,6 @@ import { normalizeCourseCode } from "@/lib/utils";
 import { toggleCourseAction, updateFreeCourseAction } from "@/server/actions";
 import { type Course, type FreeCourse } from "@/types/course";
 import { ArrowDown, ArrowUp, ArrowUpDown, Check, X } from "lucide-react";
-import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "../../../components/ui/button";
@@ -33,6 +33,11 @@ type SortColumn =
 type FixedCourseWithItem = {
   courseItemId: string;
   course: Course;
+};
+
+type OptimisticUpdate = {
+  courseItemId: string;
+  checked: boolean;
 };
 
 type CourseTableProps = {
@@ -62,6 +67,20 @@ export function CourseTable({
   const [sortColumn, setSortColumn] = useState<SortColumn>("code");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [toggleLoading, setToggleLoading] = useState<string | null>(null);
+  const [optimisticSelectedCourseItems, setOptimisticSelectedCourseItem] =
+    useOptimistic(
+      selectedCourseItems,
+      (currentState, optimisticValue: OptimisticUpdate) => {
+        const newState = new Set(currentState);
+        if (optimisticValue.checked) {
+          newState.add(optimisticValue.courseItemId);
+        } else {
+          newState.delete(optimisticValue.courseItemId);
+        }
+        return newState;
+      },
+    );
+  const [_, startTransition] = useTransition();
 
   const formatRating = (rating: string | null | undefined) => {
     if (!rating) return "N/A";
@@ -205,11 +224,17 @@ export function CourseTable({
             <TableRow key={courseItemId}>
               <TableCell>
                 <Checkbox
-                  checked={selectedCourseItems.has(courseItemId)}
+                  checked={optimisticSelectedCourseItems.has(courseItemId)}
                   disabled={toggleLoading === courseItemId}
                   onCheckedChange={async (checked) => {
                     setToggleLoading(courseItemId);
                     try {
+                      startTransition(() =>
+                        setOptimisticSelectedCourseItem({
+                          courseItemId,
+                          checked: checked as boolean,
+                        }),
+                      );
                       await toggleCourseAction(
                         courseItemId,
                         checked as boolean,
@@ -248,7 +273,9 @@ export function CourseTable({
             <TableRow key={freeCourse.courseItemId}>
               <TableCell>
                 <Checkbox
-                  checked={selectedCourseItems.has(freeCourse.courseItemId)}
+                  checked={optimisticSelectedCourseItems.has(
+                    freeCourse.courseItemId,
+                  )}
                   disabled={
                     !freeCourse.course ||
                     toggleLoading === freeCourse.courseItemId
@@ -257,6 +284,12 @@ export function CourseTable({
                     if (!freeCourse.course) return;
                     setToggleLoading(freeCourse.courseItemId);
                     try {
+                      startTransition(() =>
+                        setOptimisticSelectedCourseItem({
+                          courseItemId: freeCourse.courseItemId,
+                          checked: checked as boolean,
+                        }),
+                      );
                       await toggleCourseAction(
                         freeCourse.courseItemId,
                         checked as boolean,

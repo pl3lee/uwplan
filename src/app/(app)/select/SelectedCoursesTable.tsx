@@ -11,10 +11,9 @@ import {
 import { removeCourseSelectionAction } from "@/server/actions";
 import { type Course } from "@/types/course";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
-import Link from "next/link";
-import { useState } from "react";
-import { Button } from "../../../components/ui/button";
+import { useOptimistic, useState, useTransition } from "react";
 import { toast } from "sonner";
+import { Button } from "../../../components/ui/button";
 import { CourseHoverLink } from "./CourseHoverLink";
 
 type SortDirection = "asc" | "desc" | null;
@@ -39,7 +38,16 @@ type CourseTableProps = {
 export function SelectedCoursesTable({ fixedCourses }: CourseTableProps) {
   const [sortColumn, setSortColumn] = useState<SortColumn>("code");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-  const [removingCourseId, setRemovingCourseId] = useState<string | null>(null);
+  const [optimisticFixedCourses, removeOptimisticFixedCourse] = useOptimistic(
+    fixedCourses,
+    (currentFixedCourses, courseId: string) => {
+      const newState = currentFixedCourses.filter(
+        (c) => c.course.id !== courseId,
+      );
+      return newState;
+    },
+  );
+  const [_, startTransition] = useTransition();
 
   const handleSort = (column: SortColumn) => {
     if (sortColumn === column) {
@@ -108,7 +116,7 @@ export function SelectedCoursesTable({ fixedCourses }: CourseTableProps) {
     });
   };
 
-  const sortedFixedCourses = sortCourses(fixedCourses);
+  const sortedFixedCourses = sortCourses(optimisticFixedCourses);
 
   return (
     <div className="rounded-md border">
@@ -178,17 +186,16 @@ export function SelectedCoursesTable({ fixedCourses }: CourseTableProps) {
               <TableCell>
                 <Button
                   variant="destructive"
-                  disabled={removingCourseId === course.id}
                   onClick={async () => {
-                    setRemovingCourseId(course.id);
                     try {
+                      startTransition(() => {
+                        removeOptimisticFixedCourse(course.id);
+                      });
                       await removeCourseSelectionAction(course.id);
                       toast.success("Course removed successfully");
                     } catch (error) {
                       console.error(error);
                       toast.error("Failed to remove course");
-                    } finally {
-                      setRemovingCourseId(null);
                     }
                   }}
                 >

@@ -36,7 +36,7 @@ export function DraggableCourseCard({ id, course }: Props) {
       {...listeners}
       className="cursor-grab active:cursor-grabbing"
     >
-      <CardContent className="relative p-4">
+      <CardContent className="relative select-none p-4">
         <div className="absolute right-4 top-4">
           <HoverCard>
             <HoverCardTrigger>
