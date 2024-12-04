@@ -42,6 +42,17 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const scheduleFormSchema = z.object({
   name: z
@@ -200,6 +211,52 @@ function RenameScheduleDialog({
         </Form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function DeleteScheduleButton({
+  disabled,
+  onDelete,
+}: {
+  scheduleId: string;
+  disabled: boolean;
+  onDelete: () => Promise<void>;
+}) {
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await onDelete();
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button variant="destructive" disabled={disabled}>
+          <Trash2 className="mr-2 h-4 w-4" />
+          Delete Schedule
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete Schedule</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to delete this schedule? This action cannot be
+            undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={handleDelete} disabled={isDeleting}>
+            {isDeleting ? "Deleting..." : "Delete"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
@@ -392,34 +449,27 @@ export function Scheduler({
                 currentName={activeSchedule.name}
               />
               <ExportButton scheduleId={activeScheduleId} />
-              <Button
-                variant="destructive"
+              <DeleteScheduleButton
+                scheduleId={activeScheduleId}
                 disabled={schedules.length <= 1}
-                onClick={async () => {
-                  if (
-                    confirm("Are you sure you want to delete this schedule?")
-                  ) {
-                    try {
-                      await deleteScheduleAction(activeScheduleId);
-                      const nextSchedule = schedules.find(
-                        (s) => s.id !== activeScheduleId,
-                      );
-                      toast.success("Schedule deleted");
-                      router.push(
-                        nextSchedule
-                          ? `/schedule?scheduleId=${nextSchedule.id}`
-                          : "/schedule",
-                      );
-                    } catch (error) {
-                      console.error("Failed to delete schedule", error);
-                      toast.error("Failed to delete schedule");
-                    }
+                onDelete={async () => {
+                  try {
+                    await deleteScheduleAction(activeScheduleId);
+                    const nextSchedule = schedules.find(
+                      (s) => s.id !== activeScheduleId,
+                    );
+                    toast.success("Schedule deleted");
+                    router.push(
+                      nextSchedule
+                        ? `/schedule?scheduleId=${nextSchedule.id}`
+                        : "/schedule",
+                    );
+                  } catch (error) {
+                    console.error("Failed to delete schedule", error);
+                    toast.error("Failed to delete schedule");
                   }
                 }}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete Schedule
-              </Button>
+              />
             </>
           )}
         </div>

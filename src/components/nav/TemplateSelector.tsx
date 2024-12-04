@@ -95,7 +95,7 @@ export function TemplateSelector({ templates, selectedTemplates }: Props) {
               </ScrollArea>
             </CommandGroup>
           </CommandList>
-          <div className="border-t p-2 text-center">
+          <div className="flex flex-col border-t p-2 text-center">
             <Link
               href="/create/template"
               className="text-sm text-blue-500 hover:underline"
