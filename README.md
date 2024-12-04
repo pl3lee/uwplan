@@ -8,6 +8,15 @@ UWPlan is a degree planning tool for University of Waterloo students to help org
 
 Check it out at [uwplan.com](https://uwplan.com)!
 
+## Built With
+- Full Stack Framework: [Next.js](https://nextjs.org/)
+- Styling: [Tailwind CSS](https://tailwindcss.com/)
+- Component Library: [shadcn/ui](https://ui.shadcn.com/)
+- Authentication/Authorization: [Auth.js](https://authjs.dev/)
+- ORM: [Drizzle ORM](https://orm.drizzle.team/)
+- Database: [PostgreSQL](https://www.postgresql.org/)
+- Hosting: [Coolify](https://coolify.io/)
+
 ## Getting Started
 
 ### Development Environment
