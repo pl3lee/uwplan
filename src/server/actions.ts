@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { addCourseToSchedule, changeScheduleName, changeTermRange, createSchedule, createTemplate, deleteSchedule, getSchedules, removeCourseFromSchedule, removeCourseSelection, toggleCourse, toggleUserTemplate, validateScheduleId, updateFreeCourse, getRole, deleteTemplate, getSelectedCourses, getScheduleCourses, templateNameExists } from '@/server/db/queries';
+import { addCourseToSchedule, changeScheduleName, changeTermRange, createSchedule, createTemplate, deleteSchedule, getSchedules, removeCourseFromSchedule, removeCourseSelection, toggleCourse, toggleUserTemplate, validateScheduleId, updateFreeCourse, getRole, deleteTemplate, getSelectedCourses, getScheduleCourses, templateNameExists, getTemplate, renameTemplate, getTemplateWithName } from '@/server/db/queries';
 import { auth } from './auth';
 import { type CreateTemplateInput } from '@/types/template';
 import { type Season } from '@/types/schedule';
@@ -56,7 +56,7 @@ export async function createTemplateAction(template: CreateTemplateInput) {
     if (templateExists) {
       return false
     } else {
-      await createTemplate(template);
+      await createTemplate(template, session.user.id);
       revalidatePath('/select');
       return true
     }
@@ -73,11 +73,41 @@ export async function deleteTemplateAction(templateId: string) {
     throw new Error('Not authenticated');
   }
   const role = await getRole(session.user.id);
-  if (role !== 'admin') {
+  const template = await getTemplate(templateId);
+  if (!template) {
+    throw new Error('Template not found');
+  }
+  if (role !== 'admin' && !template.createdBy) {
+    throw new Error('Not authorized');
+  }
+  if (template.createdBy && template.createdBy !== session.user.id) {
     throw new Error('Not authorized');
   }
   await deleteTemplate(templateId);
   revalidatePath('/admin');
+  revalidatePath('/manage/template');
+}
+
+export async function renameTemplateAction(templateId: string, name: string, description: string) {
+  const session = await auth();
+  if (!session?.user) {
+    throw new Error('Not authenticated');
+  }
+  const role = await getRole(session.user.id);
+  const template = await getTemplate(templateId);
+  const existingTemplate = await getTemplateWithName(name);
+  if (existingTemplate && existingTemplate.id !== templateId) {
+    throw new Error('Template name already exists');
+  }
+  if (role !== 'admin' && !template.createdBy) {
+    throw new Error('Not authorized');
+  }
+  if (template.createdBy && template.createdBy !== session.user.id) {
+    throw new Error('Not authorized');
+  }
+  await renameTemplate(templateId, name, description);
+  revalidatePath('/admin');
+  revalidatePath('/manage/template');
 }
 
 export async function createScheduleAction(name: string) {

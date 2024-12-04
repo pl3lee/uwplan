@@ -103,6 +103,13 @@ export function TemplateSelector({ templates, selectedTemplates }: Props) {
             >
               Add a new academic plan
             </Link>
+            <Link
+              href="/manage/template"
+              className="text-sm text-blue-500 hover:underline"
+              onClick={() => setOpen(false)}
+            >
+              Manage your created plans
+            </Link>
           </div>
         </Command>
       </PopoverContent>

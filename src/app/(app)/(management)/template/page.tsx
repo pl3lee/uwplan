@@ -2,7 +2,7 @@ import { auth } from "@/server/auth";
 import { redirect } from "next/navigation";
 import styles from "@/styles/utils.module.css";
 import { getRole, getTemplates, getUsers } from "@/server/db/queries";
-import { DeleteTemplateButton } from "./DeleteTemplateButton";
+import { DeleteTemplateButton } from "@/app/(app)/(management)/DeleteTemplateButton";
 import {
   Table,
   TableBody,
@@ -12,45 +12,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-export default async function AdminPage() {
+export default async function ManageTemplatePage() {
   const session = await auth();
   if (!session?.user) {
     redirect("/signin");
   }
-  const role = await getRole(session.user.id);
-  if (role !== "admin") {
-    redirect("/select");
-  }
   const templates = await getTemplates();
-  const users = await getUsers();
 
   return (
     <div className="container mx-auto py-10">
       <h1 className={styles.pageTitleText}>Admin page</h1>
-
-      <div className="mt-8">
-        <h2 className="mb-4 text-2xl font-bold">Users</h2>
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Role</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell>{user.name ?? "N/A"}</TableCell>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell>{user.role}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
 
       <div className="mt-8">
         <h2 className="mb-4 text-2xl font-bold">Templates</h2>
