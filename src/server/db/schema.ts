@@ -148,6 +148,7 @@ export const templates = createTable("template", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: varchar("name", { length: 255 }).notNull().unique(),
   description: text("description"),
+  createdBy: varchar("created_by", { length: 255 }).references(() => users.id, { onDelete: "set null" }),
 });
 
 // Academic plans for users

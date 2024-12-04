@@ -52,6 +52,7 @@ export async function getTemplates() {
         id: templates.id,
         name: templates.name,
         description: templates.description,
+        createdBy: templates.createdBy,
       })
       .from(templates)
       .orderBy(templates.name);
@@ -62,8 +63,30 @@ export async function getTemplates() {
 }
 
 /**
+ * Retrieves template
+ * @param templateId - ID of the template
+ * @returns Array of template objects containing id, name and description
+ */
+export async function getTemplate(templateId: string) {
+  try {
+    const [template] = await db
+      .select()
+      .from(templates)
+      .where(eq(templates.id, templateId))
+      .limit(1);
+    if (!template) {
+      throw new Error(`Template with ID ${templateId} not found`);
+    }
+    return template
+  } catch (error) {
+    console.error("Failed to get template:", error);
+    throw new Error("Failed to get template");
+  }
+}
+
+/**
  * Checks if a template name already exists
- * @returns 
+ * @returns True if the name exists, false otherwise
  */
 export async function templateNameExists(name: string) {
   try {
@@ -80,6 +103,23 @@ export async function templateNameExists(name: string) {
   } catch (error) {
     console.error("Failed to check if template name exists:", error);
     throw new Error("Failed to check if template name exists");
+  }
+}
+
+/**
+ * Retrieves all templates with a specific name
+ * @returns Template object or undefined
+ */
+export async function getTemplateWithName(name: string) {
+  try {
+    const [template] = await db
+      .select()
+      .from(templates)
+      .where(eq(templates.name, name));
+    return template;
+  } catch (error) {
+    console.error("Failed to get templates with name:", error);
+    throw new Error("Failed to get templates with name");
   }
 }
 
@@ -181,6 +221,23 @@ export async function getOrCreateUserPlan(userId: string) {
   }
 }
 
+
+/**
+ * Gets all templates created by a user
+ * @param userId - ID of the user
+ */
+export async function getTemplatesCreatedByUser(userId: string) {
+  try {
+    return await db
+      .select()
+      .from(templates)
+      .where(eq(templates.createdBy, userId));
+  } catch (error) {
+    console.error("Failed to get templates created by user:", error);
+    throw new Error("Failed to get templates created by user");
+  }
+}
+
 /**
  * Deletes a template
  * @param templateId - ID of the template to delete
@@ -193,6 +250,22 @@ export async function deleteTemplate(templateId: string) {
   } catch (error) {
     console.error("Failed to delete template:", error);
     throw new Error("Failed to delete template");
+  }
+}
+
+/**
+ * Renames a template, including its description
+ * @param templateId - ID of the template to delete
+ */
+export async function renameTemplate(templateId: string, name: string, description: string) {
+  try {
+    await db
+      .update(templates)
+      .set({ name, description })
+      .where(eq(templates.id, templateId));
+  } catch (error) {
+    console.error("Failed to rename template:", error);
+    throw new Error("Failed to rename template");
   }
 }
 
@@ -615,9 +688,10 @@ export async function updateFreeCourse(userId: string, courseItemId: string, fil
 /**
  * Creates a new academic plan template
  * @param input - Template creation input data
+ * @param userId - ID of the user creating the template
  * @returns Created template object
  */
-export async function createTemplate(input: CreateTemplateInput) {
+export async function createTemplate(input: CreateTemplateInput, userId: string) {
   try {
     return await db.transaction(async (tx) => {
       // Insert the template first
@@ -626,6 +700,7 @@ export async function createTemplate(input: CreateTemplateInput) {
         .values({
           name: input.name,
           description: input.description,
+          createdBy: userId,
         })
         .returning();
 
