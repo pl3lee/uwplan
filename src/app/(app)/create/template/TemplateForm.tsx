@@ -204,7 +204,14 @@ export function TemplateForm({ courseOptions }: TemplateFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)}>
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+          }
+        }}
+      >
         <Card className="mt-6">
           <CardHeader>
             <CardTitle>Academic Plan Details</CardTitle>
