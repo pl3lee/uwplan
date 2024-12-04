@@ -46,6 +46,9 @@ If not using DevContainer, you'll need:
 8. Run `npm run dev` to start the development server. The application should now be running at `http://localhost:3000`.
 9. If you need to look at the database tables, you can use `npm run db:studio` to run Drizzle Studio, which would then be accessible at `https://local.drizzle.studio`.
 
+## Database Design
+The database design can be found in [DATABASE_DESIGN.md](DATABASE_DESIGN.md).
+
 ## Contributing
 We welcome contributions! Please feel free to submit a Pull Request.
 
