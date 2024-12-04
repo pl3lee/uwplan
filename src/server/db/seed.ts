@@ -133,7 +133,7 @@ async function main() {
       }
 
     ]
-  })
+  }, null)
 
   await createTemplate({
     name: "Computational Mathematics Major - 2024",
@@ -280,7 +280,7 @@ async function main() {
           "STAT441", "STAT442", "STAT444"]
       }
     ]
-  })
+  }, null)
 
   await createTemplate({
     name: "Free Electives - 10 Courses",
@@ -295,7 +295,7 @@ async function main() {
         courseCount: 10
       }
     ]
-  });
+  }, null);
   await createTemplate({
     name: "Free Electives - 5 Courses",
     description: "Add courses of your choice to your schedule",
@@ -309,7 +309,7 @@ async function main() {
         courseCount: 5
       }
     ]
-  });
+  }, null);
   await createTemplate({
     name: "Free Electives - 15 Courses",
     description: "Add courses of your choice to your schedule",
@@ -323,7 +323,7 @@ async function main() {
         courseCount: 15
       }
     ]
-  });
+  }, null);
 
 
   console.log("Database seeded successfully!");

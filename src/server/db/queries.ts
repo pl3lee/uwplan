@@ -135,6 +135,7 @@ export async function getUserSelectedTemplates(userId: string) {
         name: templates.name,
         id: planTemplates.templateId,
         description: templates.description,
+        createdBy: templates.createdBy,
       })
       .from(planTemplates)
       .innerJoin(plans, eq(plans.id, planTemplates.planId))
@@ -691,7 +692,7 @@ export async function updateFreeCourse(userId: string, courseItemId: string, fil
  * @param userId - ID of the user creating the template
  * @returns Created template object
  */
-export async function createTemplate(input: CreateTemplateInput, userId: string) {
+export async function createTemplate(input: CreateTemplateInput, userId: string | null) {
   try {
     return await db.transaction(async (tx) => {
       // Insert the template first
@@ -700,7 +701,7 @@ export async function createTemplate(input: CreateTemplateInput, userId: string)
         .values({
           name: input.name,
           description: input.description,
-          createdBy: userId,
+          createdBy: userId ?? null,
         })
         .returning();
 

@@ -22,7 +22,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useState, useOptimistic, startTransition } from "react";
 import { toggleUserTemplateAction } from "@/server/actions";
 import { type Template } from "@/types/template";
-import { Separator } from "../ui/separator";
 
 type Props = {
   templates: Template[];
