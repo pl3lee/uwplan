@@ -22,6 +22,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useState, useOptimistic, startTransition } from "react";
 import { toggleUserTemplateAction } from "@/server/actions";
 import { type Template } from "@/types/template";
+import { Separator } from "../ui/separator";
 
 type Props = {
   templates: Template[];
@@ -95,21 +96,17 @@ export function TemplateSelector({ templates, selectedTemplates }: Props) {
               </ScrollArea>
             </CommandGroup>
           </CommandList>
-          <div className="flex flex-col border-t p-2 text-center">
-            <Link
-              href="/create/template"
-              className="text-sm text-blue-500 hover:underline"
-              onClick={() => setOpen(false)}
-            >
-              Add a new academic plan
-            </Link>
-            <Link
-              href="/manage/template"
-              className="text-sm text-blue-500 hover:underline"
-              onClick={() => setOpen(false)}
-            >
-              Manage your created plans
-            </Link>
+          <div className="flex flex-col gap-2 border-t p-2 text-center">
+            <Button asChild variant="link">
+              <Link href="/create/template" onClick={() => setOpen(false)}>
+                Add a new academic plan
+              </Link>
+            </Button>
+            <Button asChild variant="link">
+              <Link href="/manage/template" onClick={() => setOpen(false)}>
+                Manage your created plans
+              </Link>
+            </Button>
           </div>
         </Command>
       </PopoverContent>
