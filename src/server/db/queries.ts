@@ -160,128 +160,6 @@ export async function getOrCreateUserPlan(userId: string) {
 }
 
 /**
- * Gets detailed information about a template including all its items and courses
- * @param templateId - ID of the template
- * @returns Template object with detailed items and courses or null if not found
- */
-export async function getTemplateDetails(templateId: string) {
-  try {
-    // Get template
-    const [template] = await db
-      .select()
-      .from(templates)
-      .where(eq(templates.id, templateId))
-      .limit(1);
-
-    if (!template) return null;
-
-    // Get template items
-    const items = await db
-      .select()
-      .from(templateItems)
-      .where(eq(templateItems.templateId, templateId))
-      .orderBy(templateItems.orderIndex);
-
-    // Get fixed courses for requirements
-    const fixedCoursesForItems = await db
-      .select({
-        courseItemId: courseItems.id,
-        templateItemId: courseItems.requirementId,
-        courseId: courses.id,
-        code: courses.code,
-        name: courses.name,
-        usefulRating: courses.usefulRating,
-        likedRating: courses.likedRating,
-        easyRating: courses.easyRating,
-        numRatings: courses.numRatings,
-        type: courseItems.type,
-        description: courses.description,
-        antireqs: courses.antireqs,
-        prereqs: courses.prereqs,
-        coreqs: courses.coreqs,
-      })
-      .from(courseItems)
-      .innerJoin(courses, eq(courses.id, courseItems.courseId))
-      .where(and(
-        inArray(courseItems.requirementId, items.map(item => item.id)),
-        eq(courseItems.type, "fixed"),
-      ));
-
-    // Get free course items and their filled courses if any
-    const freeCourseItems = await db
-      .select({
-        courseItemId: courseItems.id,
-        templateItemId: courseItems.requirementId,
-        filledCourseId: freeCourses.filledCourseId,
-        code: courses.code,
-        name: courses.name,
-        usefulRating: courses.usefulRating,
-        likedRating: courses.likedRating,
-        easyRating: courses.easyRating,
-        numRatings: courses.numRatings,
-        description: courses.description,
-        antireqs: courses.antireqs,
-        prereqs: courses.prereqs,
-        coreqs: courses.coreqs,
-      })
-      .from(courseItems)
-      .leftJoin(freeCourses, eq(freeCourses.courseItemId, courseItems.id))
-      .leftJoin(courses, eq(courses.id, freeCourses.filledCourseId))
-      .where(and(
-        inArray(courseItems.requirementId, items.map(item => item.id)),
-        eq(courseItems.type, "free")
-      ));
-
-    // Combine the data and filter out invalid courses
-    return {
-      ...template,
-      items: items.map(item => ({
-        ...item,
-        fixedCourses: fixedCoursesForItems
-          .filter(c => c.templateItemId === item.id && isValidCourse(c))
-          .map(c => ({
-            courseItemId: c.courseItemId,
-            course: {
-              id: c.courseId,
-              code: c.code,
-              name: c.name,
-              usefulRating: c.usefulRating,
-              likedRating: c.likedRating,
-              easyRating: c.easyRating,
-              numRatings: c.numRatings,
-              description: c.description,
-              antireqs: c.antireqs,
-              prereqs: c.prereqs,
-              coreqs: c.coreqs,
-            }
-          })),
-        freeCourses: freeCourseItems
-          .filter(c => c.templateItemId === item.id)
-          .map(c => ({
-            courseItemId: c.courseItemId,
-            course: c.filledCourseId && isValidCourse(c) ? {
-              id: c.filledCourseId,
-              code: c.code,
-              name: c.name,
-              usefulRating: c.usefulRating,
-              likedRating: c.likedRating,
-              easyRating: c.easyRating,
-              numRatings: c.numRatings,
-              description: c.description ?? '',
-              antireqs: c.antireqs ?? '',
-              prereqs: c.prereqs ?? '',
-              coreqs: c.coreqs ?? '',
-            } : null
-          }))
-      }))
-    };
-  } catch (error) {
-    console.error("Failed to get template details:", error);
-    throw new Error("Failed to get template details");
-  }
-}
-
-/**
  * Deletes a template
  * @param templateId - ID of the template to delete
  */
@@ -537,7 +415,7 @@ export async function getUserTemplatesWithCourses(userId: string) {
 
     // Get details for each template
     const templateDetails = await Promise.all(
-      selectedTemplates.map(t => getTemplateDetails(t.templateId))
+      selectedTemplates.map(t => getTemplateDetails(userId, t.templateId))
     );
 
     return templateDetails.filter((t): t is NonNullable<typeof t> => t !== null);
@@ -546,6 +424,131 @@ export async function getUserTemplatesWithCourses(userId: string) {
     throw new Error("Failed to get user templates with courses");
   }
 }
+
+/**
+ * Gets detailed information about a template including all its items and courses
+ * @param userId - ID of the user
+ * @param templateId - ID of the template
+ * @returns Template object with detailed items and courses or null if not found
+ */
+export async function getTemplateDetails(userId: string, templateId: string) {
+  try {
+    // Get template
+    const [template] = await db
+      .select()
+      .from(templates)
+      .where(eq(templates.id, templateId))
+      .limit(1);
+
+    if (!template) return null;
+
+    // Get template items
+    const items = await db
+      .select()
+      .from(templateItems)
+      .where(eq(templateItems.templateId, templateId))
+      .orderBy(templateItems.orderIndex);
+
+    // Get fixed courses for requirements
+    const fixedCoursesForItems = await db
+      .select({
+        courseItemId: courseItems.id,
+        templateItemId: courseItems.requirementId,
+        courseId: courses.id,
+        code: courses.code,
+        name: courses.name,
+        usefulRating: courses.usefulRating,
+        likedRating: courses.likedRating,
+        easyRating: courses.easyRating,
+        numRatings: courses.numRatings,
+        type: courseItems.type,
+        description: courses.description,
+        antireqs: courses.antireqs,
+        prereqs: courses.prereqs,
+        coreqs: courses.coreqs,
+      })
+      .from(courseItems)
+      .innerJoin(courses, eq(courses.id, courseItems.courseId))
+      .where(and(
+        inArray(courseItems.requirementId, items.map(item => item.id)),
+        eq(courseItems.type, "fixed"),
+      ));
+
+    // Get free course items and their filled courses if any
+    const freeCourseItems = await db
+      .select({
+        courseItemId: courseItems.id,
+        templateItemId: courseItems.requirementId,
+        filledCourseId: freeCourses.filledCourseId,
+        code: courses.code,
+        name: courses.name,
+        usefulRating: courses.usefulRating,
+        likedRating: courses.likedRating,
+        easyRating: courses.easyRating,
+        numRatings: courses.numRatings,
+        description: courses.description,
+        antireqs: courses.antireqs,
+        prereqs: courses.prereqs,
+        coreqs: courses.coreqs,
+      })
+      .from(courseItems)
+      .leftJoin(freeCourses, and(eq(freeCourses.courseItemId, courseItems.id), eq(freeCourses.userId, userId)))
+      .leftJoin(courses, eq(courses.id, freeCourses.filledCourseId))
+      .where(and(
+        inArray(courseItems.requirementId, items.map(item => item.id)),
+        eq(courseItems.type, "free")
+      ));
+
+    // Combine the data and filter out invalid courses
+    return {
+      ...template,
+      items: items.map(item => ({
+        ...item,
+        fixedCourses: fixedCoursesForItems
+          .filter(c => c.templateItemId === item.id && isValidCourse(c))
+          .map(c => ({
+            courseItemId: c.courseItemId,
+            course: {
+              id: c.courseId,
+              code: c.code,
+              name: c.name,
+              usefulRating: c.usefulRating,
+              likedRating: c.likedRating,
+              easyRating: c.easyRating,
+              numRatings: c.numRatings,
+              description: c.description,
+              antireqs: c.antireqs,
+              prereqs: c.prereqs,
+              coreqs: c.coreqs,
+            }
+          })),
+        freeCourses: freeCourseItems
+          .filter(c => c.templateItemId === item.id)
+          .map(c => ({
+            courseItemId: c.courseItemId,
+            course: c.filledCourseId && isValidCourse(c) ? {
+              id: c.filledCourseId,
+              code: c.code,
+              name: c.name,
+              usefulRating: c.usefulRating,
+              likedRating: c.likedRating,
+              easyRating: c.easyRating,
+              numRatings: c.numRatings,
+              description: c.description ?? '',
+              antireqs: c.antireqs ?? '',
+              prereqs: c.prereqs ?? '',
+              coreqs: c.coreqs ?? '',
+            } : null
+          }))
+      }))
+    };
+  } catch (error) {
+    console.error("Failed to get template details:", error);
+    throw new Error("Failed to get template details");
+  }
+}
+
+
 
 /**
  * Updates a free course selection for a user
