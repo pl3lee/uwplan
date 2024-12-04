@@ -19,7 +19,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 
 const formSchema = z.object({
-  name: z.string().min(1),
+  name: z.string().min(1, { message: "Name is required" }),
   description: z.string().optional(),
   items: z.array(
     z.union([
@@ -33,14 +33,14 @@ const formSchema = z.object({
       z.object({
         type: z.literal("requirement"),
         courseType: z.literal("fixed"),
-        description: z.string().min(1),
+        description: z.string().min(1, { message: "Description is required" }),
         courses: z.string().min(1),
       }),
       z.object({
         type: z.literal("requirement"),
         courseType: z.enum(["free"]),
-        description: z.string().min(1),
-        count: z.number().min(1),
+        description: z.string().min(1, { message: "Description is required" }),
+        count: z.number().min(1, { message: "Must have at least 1 course" }),
       }),
     ]),
   ),
@@ -70,6 +70,10 @@ export function TemplateForm({ courseOptions }: TemplateFormProps) {
   const items = form.watch("items");
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    if (values.items.length === 0) {
+      toast.error("At least one item is required");
+      return;
+    }
     try {
       // Validate course codes for fixed requirements
       for (const item of values.items) {
@@ -94,7 +98,7 @@ export function TemplateForm({ courseOptions }: TemplateFormProps) {
       }
 
       // Transform data for createTemplateAction
-      await createTemplateAction({
+      const templateSuccessfullyCreated = await createTemplateAction({
         name: values.name,
         description: values.description,
         items: values.items.map((item, index) => {
@@ -138,9 +142,14 @@ export function TemplateForm({ courseOptions }: TemplateFormProps) {
           return item;
         }),
       });
-
-      toast.success("Template created successfully");
-      form.reset();
+      console.log("templateExists", templateSuccessfullyCreated);
+      if (templateSuccessfullyCreated) {
+        toast.success("Template created successfully");
+        form.reset();
+      } else {
+        toast.error("Template with this name already exists");
+        return;
+      }
     } catch (error) {
       toast.error("Failed to create template");
       console.error(error);

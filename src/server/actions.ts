@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { addCourseToSchedule, changeScheduleName, changeTermRange, createSchedule, createTemplate, deleteSchedule, getSchedules, removeCourseFromSchedule, removeCourseSelection, toggleCourse, toggleUserTemplate, validateScheduleId, updateFreeCourse, getRole, deleteTemplate, getSelectedCourses, getScheduleCourses } from '@/server/db/queries';
+import { addCourseToSchedule, changeScheduleName, changeTermRange, createSchedule, createTemplate, deleteSchedule, getSchedules, removeCourseFromSchedule, removeCourseSelection, toggleCourse, toggleUserTemplate, validateScheduleId, updateFreeCourse, getRole, deleteTemplate, getSelectedCourses, getScheduleCourses, getTemplates, templateNameExists } from '@/server/db/queries';
 import { auth } from './auth';
 import { type CreateTemplateInput } from '@/types/template';
 import { type Season } from '@/types/schedule';
@@ -44,15 +44,27 @@ export async function removeCourseSelectionAction(courseId: string) {
   revalidatePath('/select');
 }
 
+// returns false if the template name is already in use
+// returns true if the template name is not in use
 export async function createTemplateAction(template: CreateTemplateInput) {
   const session = await auth();
   if (!session?.user) {
     throw new Error('Not authenticated');
   }
-  await createTemplate(template);
+  try {
+    const templateExists = await templateNameExists(template.name);
+    if (templateExists) {
+      return false
+    } else {
+      await createTemplate(template);
+      revalidatePath('/select');
+      return true
+    }
 
-
-  revalidatePath('/select');
+  } catch (error) {
+    console.error("Failed to create template", error);
+    throw new Error('Failed to create template');
+  }
 }
 
 export async function deleteTemplateAction(templateId: string) {

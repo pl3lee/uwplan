@@ -62,6 +62,28 @@ export async function getTemplates() {
 }
 
 /**
+ * Checks if a template name already exists
+ * @returns 
+ */
+export async function templateNameExists(name: string) {
+  try {
+    const [template] = await db
+      .select()
+      .from(templates)
+      .where(eq(templates.name, name))
+      .limit(1);
+    if (template) {
+      return true;
+    } else {
+      return false;
+    }
+  } catch (error) {
+    console.error("Failed to check if template name exists:", error);
+    throw new Error("Failed to check if template name exists");
+  }
+}
+
+/**
  * Gets all templates linked to a user's plan
  * @param userId - ID of the user
  * @returns Array of template objects with name, id and description

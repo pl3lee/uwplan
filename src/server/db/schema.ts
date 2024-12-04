@@ -146,7 +146,7 @@ export const courses = createTable("course", {
 // Contains basic template information
 export const templates = createTable("template", {
   id: uuid("id").defaultRandom().primaryKey(),
-  name: varchar("name", { length: 255 }).notNull(),
+  name: varchar("name", { length: 255 }).notNull().unique(),
   description: text("description"),
 });
 

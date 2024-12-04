@@ -74,7 +74,7 @@ export function TemplateSelector({ templates, selectedTemplates }: Props) {
                 {templates.map((template) => (
                   <CommandItem
                     key={template.id}
-                    value={template.id}
+                    value={template.name}
                     onSelect={async () =>
                       await handleToggleTemplate(template.id)
                     }
