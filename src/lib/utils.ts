@@ -1,8 +1,8 @@
-import { CourseOption, FormItem, formSchema } from "@/app/(app)/create/template/TemplateForm";
+import { type CourseOption, type FormItem, type formSchema } from "@/app/(app)/create/template/TemplateForm";
 import { type Term } from "@/types/schedule";
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { z } from "zod";
+import { type z } from "zod";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
