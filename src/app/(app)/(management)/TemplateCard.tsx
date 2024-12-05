@@ -18,7 +18,7 @@ export function TemplateCard({ template }: { template: Template }) {
             </div>
           </div>
         </div>
-        <div className="w-1/4">
+        <div className="flex flex-row md:w-1/4 md:items-center md:justify-end">
           <RenameTemplateButton
             templateId={template.id}
             initialName={template.name}
