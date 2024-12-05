@@ -11,14 +11,20 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { normalizeCourseCode } from "@/lib/utils";
+import {
+  getTemplateFormItemTitle,
+  transformTemplateFormData,
+  validateCreateTemplateFormCourseCodes,
+} from "@/lib/utils";
 import { createTemplateAction } from "@/server/actions";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { ArrowDown, ArrowUp } from "lucide-react";
+import { useFieldArray, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
+import { AnimatePresence, motion } from "framer-motion";
 
-const formSchema = z.object({
+export const formSchema = z.object({
   name: z.string().min(1, { message: "Name is required" }),
   description: z.string().optional(),
   items: z.array(
@@ -46,7 +52,7 @@ const formSchema = z.object({
   ),
 });
 
-type CourseOption = {
+export type CourseOption = {
   id: string;
   code: string;
 };
@@ -55,7 +61,7 @@ type TemplateFormProps = {
   courseOptions: CourseOption[];
 };
 
-type FormItem = z.infer<typeof formSchema>["items"][number];
+export type FormItem = z.infer<typeof formSchema>["items"][number];
 
 export function TemplateForm({ courseOptions }: TemplateFormProps) {
   const form = useForm<z.infer<typeof formSchema>>({
@@ -67,7 +73,54 @@ export function TemplateForm({ courseOptions }: TemplateFormProps) {
     },
   });
 
-  const items = form.watch("items");
+  const { fields, append, remove, swap } = useFieldArray({
+    control: form.control,
+    name: "items",
+  });
+  const addInstruction = () => {
+    append({
+      type: "instruction",
+      description: "",
+    });
+  };
+
+  const addFixedRequirement = () => {
+    append({
+      type: "requirement",
+      courseType: "fixed",
+      description: "",
+      courses: "",
+    });
+  };
+
+  const addFreeRequirement = () => {
+    append({
+      type: "requirement",
+      courseType: "free",
+      description: "",
+      count: 1,
+    });
+  };
+
+  const addSeparator = () => {
+    append({
+      type: "separator",
+    });
+  };
+
+  const removeItem = (index: number) => {
+    remove(index);
+  };
+
+  function moveItem(index: number, direction: "up" | "down") {
+    if (
+      (direction === "up" && index > 0) ||
+      (direction === "down" && index < fields.length - 1)
+    ) {
+      const newIndex = direction === "up" ? index - 1 : index + 1;
+      swap(index, newIndex);
+    }
+  }
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     if (values.items.length === 0) {
@@ -76,72 +129,19 @@ export function TemplateForm({ courseOptions }: TemplateFormProps) {
     }
     try {
       // Validate course codes for fixed requirements
-      for (const item of values.items) {
-        if (item.type === "requirement" && item.courseType === "fixed") {
-          const courseCodes = item.courses
-            .split(",")
-            .map((code) => normalizeCourseCode(code.trim()));
-
-          const invalidCodes = courseCodes.filter(
-            (code) => !courseOptions.find((opt) => opt.code === code),
-          );
-
-          if (invalidCodes.length > 0) {
-            toast.error(
-              `Invalid course codes in requirement "${item.description}": ${invalidCodes.join(
-                ", ",
-              )}`,
-            );
-            return;
-          }
-        }
+      const errors = validateCreateTemplateFormCourseCodes(
+        values.items,
+        courseOptions,
+      );
+      if (errors.length > 0) {
+        errors.forEach((error) => toast.error(error));
+        return;
       }
 
       // Transform data for createTemplateAction
-      const templateSuccessfullyCreated = await createTemplateAction({
-        name: values.name,
-        description: values.description,
-        items: values.items.map((item, index) => {
-          if (item.type === "instruction") {
-            return {
-              type: "instruction",
-              description: item.description,
-              orderIndex: index,
-            };
-          } else if (item.type === "separator") {
-            return {
-              type: "separator",
-              orderIndex: index,
-            };
-          } else if (
-            item.type === "requirement" &&
-            item.courseType === "fixed"
-          ) {
-            return {
-              type: "requirement",
-              courseType: "fixed",
-              description: item.description,
-              courses: item.courses
-                .split(",")
-                .map((c) => normalizeCourseCode(c.trim())),
-              orderIndex: index,
-            };
-          } else if (
-            item.type === "requirement" &&
-            item.courseType === "free"
-          ) {
-            return {
-              type: "requirement",
-              courseType: "free",
-              description: item.description,
-              courses: [],
-              courseCount: item.count,
-              orderIndex: index,
-            };
-          }
-          return item;
-        }),
-      });
+      const templateSuccessfullyCreated = await createTemplateAction(
+        transformTemplateFormData(values),
+      );
       console.log("templateExists", templateSuccessfullyCreated);
       if (templateSuccessfullyCreated) {
         toast.success("Template created successfully");
@@ -154,61 +154,6 @@ export function TemplateForm({ courseOptions }: TemplateFormProps) {
       toast.error("Failed to create template");
       console.error(error);
     }
-  };
-
-  const addInstruction = () => {
-    const currentItems = form.getValues("items");
-    form.setValue("items", [
-      ...currentItems,
-      {
-        type: "instruction",
-        description: "",
-      },
-    ]);
-  };
-
-  const addFixedRequirement = () => {
-    const currentItems = form.getValues("items");
-    form.setValue("items", [
-      ...currentItems,
-      {
-        type: "requirement",
-        courseType: "fixed",
-        description: "",
-        courses: "",
-      },
-    ]);
-  };
-
-  const addFreeRequirement = () => {
-    const currentItems = form.getValues("items");
-    form.setValue("items", [
-      ...currentItems,
-      {
-        type: "requirement",
-        courseType: "free",
-        description: "",
-        count: 1,
-      },
-    ]);
-  };
-
-  const addSeparator = () => {
-    const currentItems = form.getValues("items");
-    form.setValue("items", [
-      ...currentItems,
-      {
-        type: "separator",
-      },
-    ]);
-  };
-
-  const removeItem = (index: number) => {
-    const currentItems = form.getValues("items");
-    form.setValue(
-      "items",
-      currentItems.filter((_, i) => i !== index),
-    );
   };
 
   return (
@@ -280,97 +225,135 @@ export function TemplateForm({ courseOptions }: TemplateFormProps) {
             <Button type="submit">Create Academic Plan</Button>
           </div>
 
-          {items.map((item, index) => (
-            <Card key={index}>
-              <CardHeader>
-                <CardTitle>
-                  {String(item.type[0]).toUpperCase() +
-                    String(item.type).slice(1)}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {item.type === "instruction" && (
-                  <FormField
-                    control={form.control}
-                    name={`items.${index}.description`}
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col gap-2">
-                        <FormControl>
-                          <Input
-                            {...field}
-                            placeholder="e.g. Complete all of the following"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
+          {fields.map((field, index) => (
+            <AnimatePresence mode="popLayout" initial={false} key={field.id}>
+              <motion.div
+                layout
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{
+                  duration: 0.2,
+                  ease: "easeInOut",
+                  layout: {
+                    duration: 0.2,
+                    ease: "easeInOut",
+                  },
+                }}
+              >
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle>
+                      {getTemplateFormItemTitle(field, index)}
+                    </CardTitle>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => moveItem(index, "up")}
+                        disabled={index === 0}
+                      >
+                        <ArrowUp className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => moveItem(index, "down")}
+                        disabled={index === fields.length - 1}
+                      >
+                        <ArrowDown className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {field.type === "instruction" && (
+                      <FormField
+                        control={form.control}
+                        name={`items.${index}.description` as const}
+                        render={({ field: inputField }) => (
+                          <FormItem className="flex flex-col gap-2">
+                            <FormControl>
+                              <Input
+                                {...inputField}
+                                placeholder="e.g. Complete all of the following"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     )}
-                  />
-                )}
-                {item.type === "requirement" && (
-                  <>
-                    <FormField
-                      control={form.control}
-                      name={`items.${index}.description`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Description</FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              placeholder="e.g. Complete all of the following"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name={
-                        item.courseType === "fixed"
-                          ? `items.${index}.courses`
-                          : `items.${index}.count`
-                      }
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>
-                            {item.courseType === "fixed"
-                              ? "Select Courses"
-                              : "How many courses?"}
-                          </FormLabel>
-                          <FormControl>
-                            {item.courseType === "fixed" ? (
-                              <Input
-                                type="text"
-                                {...field}
-                                placeholder="CS135, CS136"
-                              />
-                            ) : (
-                              <Input
-                                type="number"
-                                min={1}
-                                {...field}
-                                onChange={(e) =>
-                                  field.onChange(parseInt(e.target.value, 10))
-                                }
-                              />
-                            )}
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </>
-                )}
-                <Button
-                  type="button"
-                  onClick={() => removeItem(index)}
-                  variant="destructive"
-                >
-                  Remove
-                </Button>
-              </CardContent>
-            </Card>
+                    {field.type === "requirement" && (
+                      <>
+                        <FormField
+                          control={form.control}
+                          name={`items.${index}.description` as const}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Description</FormLabel>
+                              <FormControl>
+                                <Input
+                                  {...field}
+                                  placeholder="e.g. Complete all of the following"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name={
+                            field.courseType === "fixed"
+                              ? (`items.${index}.courses` as const)
+                              : (`items.${index}.count` as const)
+                          }
+                          render={({ field: formField }) => (
+                            <FormItem>
+                              <FormLabel>
+                                {field.courseType === "fixed"
+                                  ? "Select Courses"
+                                  : "How many courses?"}
+                              </FormLabel>
+                              <FormControl>
+                                {field.courseType === "fixed" ? (
+                                  <Input
+                                    type="text"
+                                    {...formField}
+                                    placeholder="CS135, CS136"
+                                  />
+                                ) : (
+                                  <Input
+                                    type="number"
+                                    min={1}
+                                    {...formField}
+                                    onChange={(e) => {
+                                      formField.onChange(
+                                        parseInt(e.target.value, 10),
+                                      );
+                                    }}
+                                  />
+                                )}
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </>
+                    )}
+                    <Button
+                      type="button"
+                      onClick={() => removeItem(index)}
+                      variant="destructive"
+                    >
+                      Remove
+                    </Button>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </AnimatePresence>
           ))}
         </div>
       </form>
