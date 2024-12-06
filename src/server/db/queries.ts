@@ -413,13 +413,28 @@ export async function addTemplateToPlan(planId: string, templateId: string) {
  */
 export async function removeTemplateFromPlan(planId: string, templateId: string) {
   try {
-    await db
-      .delete(planTemplates)
-      .where(and(
-        eq(planTemplates.planId, planId),
-        eq(planTemplates.templateId, templateId)
-      ));
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(planTemplates)
+        .where(and(
+          eq(planTemplates.planId, planId),
+          eq(planTemplates.templateId, templateId)
+        ));
 
+      const courseItemsInTemplate = tx
+        .select({ id: courseItems.id })
+        .from(courseItems)
+        .innerJoin(templateItems, eq(templateItems.id, courseItems.requirementId))
+        .where(eq(templateItems.templateId, templateId))
+
+      await tx
+        .update(selectedCourses)
+        .set({ selected: false })
+        .where(and(
+          eq(selectedCourses.planId, planId),
+          inArray(selectedCourses.courseItemId, courseItemsInTemplate)
+        ));
+    });
   } catch (error) {
     console.error("Failed to remove template from plan:", error);
     throw new Error("Failed to remove template from plan");
