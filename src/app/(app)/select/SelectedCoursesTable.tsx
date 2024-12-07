@@ -47,7 +47,7 @@ export function SelectedCoursesTable({ fixedCourses }: CourseTableProps) {
       return newState;
     },
   );
-  const [_, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
 
   const handleSort = (column: SortColumn) => {
     if (sortColumn === column) {

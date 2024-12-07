@@ -277,7 +277,7 @@ export function Scheduler({
   });
   const router = useRouter();
   const terms = generateTerms(startTerm, endTerm);
-  const [_, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
   const activeSchedule = schedules.find((s) => s.id === activeScheduleId);
   const [optimisticCoursesToSchedule, setOptimisticCoursesToSchedule] =
     useOptimistic(

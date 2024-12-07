@@ -49,6 +49,17 @@ If not using DevContainer, you'll need:
 ## Database Design
 The database design can be found in [DATABASE_DESIGN.md](DATABASE_DESIGN.md).
 
+## Git Branching Strategy
+There are two long-lived branches:
+- `main`: which gets automatically deployed to the staging environment [staging.uwplan.com](https://staging.uwplan.com).
+- `production`: which gets automatically deployed to the production environment [uwplan.com](https://uwplan.com).
+
+For feature development, create a new branch off of `main` and open a pull request to `main` when ready for review.
+
+Merges to `main` will trigger a deployment to the staging environment. After testing on the staging environment, merge `main` into `production` to trigger a deployment to the production environment.
+
+Note that pull requests to `main` require that the CI checks pass, which includes running tests and linting.
+
 ## Contributing
 We welcome contributions! Please feel free to submit a Pull Request.
 

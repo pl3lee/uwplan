@@ -17,7 +17,7 @@ import {
 } from "@/server/db/queries";
 import styles from "@/styles/utils.module.css";
 import { redirect } from "next/navigation";
-import { Metadata } from "next";
+import { type Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "UWPlan - Select Courses",

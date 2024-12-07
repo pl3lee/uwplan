@@ -5,7 +5,7 @@ import styles from "@/styles/utils.module.css";
 import { type Template } from "@/types/template";
 import { redirect } from "next/navigation";
 import { TemplateCard } from "../../TemplateCard";
-import { Metadata } from "next";
+import { type Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "UWPlan - Manage Academic Plans",

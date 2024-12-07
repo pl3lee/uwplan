@@ -80,7 +80,7 @@ export function CourseTable({
         return newState;
       },
     );
-  const [_, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
 
   const formatRating = (rating: string | null | undefined) => {
     if (!rating) return "N/A";
