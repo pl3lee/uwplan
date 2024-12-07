@@ -20,7 +20,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
       - run: npm ci
-      - run: SKIP_ENV_VALIDATION=1 npm run lint:fix
+      - run: SKIP_ENV_VALIDATION=1 npm run lint
 
   test:
     runs-on: ubuntu-latest
