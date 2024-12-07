@@ -5,6 +5,11 @@ import styles from "@/styles/utils.module.css";
 import { type Template } from "@/types/template";
 import { redirect } from "next/navigation";
 import { TemplateCard } from "../../TemplateCard";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "UWPlan - Manage Academic Plans",
+};
 
 export default async function ManageTemplatePage() {
   const session = await auth();

@@ -6,7 +6,19 @@ import { type Metadata } from "next";
 export const metadata: Metadata = {
   title: "UWPlan",
   description: "Degree planning tool for University of Waterloo students",
-  icons: [{ rel: "icon", url: "/favicon.ico" }],
+  keywords: [
+    "UW",
+    "University of Waterloo",
+    "degree",
+    "planning",
+    "tool",
+    "course",
+    "schedule",
+    "course planning",
+    "schedule planning",
+    "degree planning",
+  ],
+  icons: [{ rel: "icon", url: "/favicon.svg" }],
 };
 
 export default function RootLayout({

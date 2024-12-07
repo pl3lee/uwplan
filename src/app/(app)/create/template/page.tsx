@@ -3,6 +3,11 @@ import { auth } from "@/server/auth";
 import { getCoursesWithRatings } from "@/server/db/queries";
 import { TemplateForm } from "./TemplateForm";
 import { redirect } from "next/navigation";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "UWPlan - Create Academic Plan",
+};
 
 export default async function CreateTemplatePage() {
   const session = await auth();
