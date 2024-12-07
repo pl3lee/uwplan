@@ -1,4 +1,4 @@
-# UWPlan
+# UWPland
 
 UWPlan is a degree planning tool for University of Waterloo students to help organize and plan their academic journey.
 
