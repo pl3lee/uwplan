@@ -18,7 +18,6 @@ export const metadata: Metadata = {
     "schedule planning",
     "degree planning",
   ],
-  icons: [{ rel: "icon", url: "/favicon.svg" }],
 };
 
 export default function RootLayout({
