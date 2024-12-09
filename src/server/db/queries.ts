@@ -688,12 +688,6 @@ export async function updateFreeCourse(userId: string, courseItemId: string, fil
           target: [freeCourses.userId, freeCourses.courseItemId],
           set: { filledCourseId },
         });
-
-      // This should not be updated, since course_id is null for type free course.
-      // await db
-      //   .update(courseItems)
-      //   .set({ courseId: filledCourseId })
-      //   .where(eq(courseItems.id, courseItemId));
     }
   } catch (error) {
     console.error("Failed to update free course:", error);
