@@ -15,7 +15,7 @@ import {
 } from "@/server/db/schema";
 import { type Season } from "@/types/schedule";
 import { type CreateTemplateInput } from "@/types/template";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, or } from "drizzle-orm";
 
 /**
  * Type guard to check if a course object has valid code and name
@@ -278,10 +278,13 @@ export async function renameTemplate(templateId: string, name: string, descripti
  */
 export async function getSelectedCourses(userId: string) {
   try {
+    const userPlan = await getUserPlan(userId);
+    if (!userPlan) throw new Error(`Failed to get plan for user ${userId}`);
+
     return await db
       .select({
         courseItemId: selectedCourses.courseItemId,
-        courseId: courseItems.courseId,
+        courseId: courses.id,
         courseCode: courses.code,
         courseName: courses.name,
         courseDescription: courses.description,
@@ -290,14 +293,10 @@ export async function getSelectedCourses(userId: string) {
         courseCoreqs: courses.coreqs
       })
       .from(selectedCourses)
-      .innerJoin(plans, eq(plans.id, selectedCourses.planId))
+      .where(and(eq(selectedCourses.planId, userPlan.id), eq(selectedCourses.selected, true)))
       .innerJoin(courseItems, eq(courseItems.id, selectedCourses.courseItemId))
-      .innerJoin(users, eq(users.id, plans.userId))
-      .innerJoin(courses, eq(courses.id, courseItems.courseId))
-      .where(and(
-        eq(users.id, userId),
-        eq(selectedCourses.selected, true),
-      ));
+      .innerJoin(freeCourses, and(eq(freeCourses.courseItemId, courseItems.id), eq(freeCourses.userId, userId)))
+      .leftJoin(courses, or(eq(courses.id, courseItems.courseId), eq(courses.id, freeCourses.filledCourseId)));
   } catch (error) {
     console.error("Failed to get selected courses:", error);
     throw new Error("Failed to get selected courses");
@@ -355,7 +354,11 @@ export async function removeCourseSelection(userId: string, courseId: string) {
         courseItemId: courseItems.id,
       })
       .from(courseItems)
-      .where(eq(courseItems.courseId, courseId));
+      .innerJoin(freeCourses, eq(freeCourses.courseItemId, courseItems.id))
+      .where(or(
+        and(eq(courseItems.type, "fixed"), eq(courseItems.courseId, courseId)),
+        and(eq(courseItems.type, "free"), eq(freeCourses.filledCourseId, courseId))
+      ));
 
 
     // Remove selections for all instances of this course
@@ -521,8 +524,9 @@ export async function getUserTemplatesWithCourses(userId: string) {
         templateId: planTemplates.templateId,
       })
       .from(planTemplates)
-      .innerJoin(templates, eq(templates.id, planTemplates.templateId))
       .where(eq(planTemplates.planId, userPlan.id))
+      .innerJoin(templates, eq(templates.id, planTemplates.templateId))
+
 
     // Get details for each template
     const templateDetails = await Promise.all(
@@ -579,11 +583,11 @@ export async function getTemplateDetails(userId: string, templateId: string) {
         coreqs: courses.coreqs,
       })
       .from(courseItems)
-      .innerJoin(courses, eq(courses.id, courseItems.courseId))
       .where(and(
         inArray(courseItems.requirementId, items.map(item => item.id)),
         eq(courseItems.type, "fixed"),
-      ));
+      ))
+      .innerJoin(courses, eq(courses.id, courseItems.courseId));
 
     // Get free course items and their filled courses if any
     const freeCourseItems = await db
@@ -603,12 +607,12 @@ export async function getTemplateDetails(userId: string, templateId: string) {
         coreqs: courses.coreqs,
       })
       .from(courseItems)
-      .leftJoin(freeCourses, and(eq(freeCourses.courseItemId, courseItems.id), eq(freeCourses.userId, userId)))
-      .leftJoin(courses, eq(courses.id, freeCourses.filledCourseId))
       .where(and(
         inArray(courseItems.requirementId, items.map(item => item.id)),
         eq(courseItems.type, "free")
-      ));
+      ))
+      .innerJoin(freeCourses, and(eq(freeCourses.courseItemId, courseItems.id), eq(freeCourses.userId, userId)))
+      .innerJoin(courses, eq(courses.id, freeCourses.filledCourseId));
 
     // Combine the data and filter out invalid courses
     return {
@@ -690,10 +694,6 @@ export async function updateFreeCourse(userId: string, courseItemId: string, fil
           target: [freeCourses.userId, freeCourses.courseItemId],
           set: { filledCourseId },
         });
-      await db
-        .update(courseItems)
-        .set({ courseId: filledCourseId })
-        .where(eq(courseItems.id, courseItemId));
     }
   } catch (error) {
     console.error("Failed to update free course:", error);
