@@ -35,8 +35,6 @@ export default async function SelectPage() {
     getSelectedCourses(session.user.id),
   ]);
 
-  console.log(selectedCourses);
-
   // Map courses to their details for the selected courses section and deduplicate
   const selectedCoursesWithDetails = Array.from(
     selectedCourses
