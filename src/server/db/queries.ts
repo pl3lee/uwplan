@@ -294,8 +294,15 @@ export async function getSelectedCourses(userId: string) {
       })
       .from(selectedCourses)
       .where(and(eq(selectedCourses.planId, userPlan.id), eq(selectedCourses.selected, true)))
-      .innerJoin(courseItems, eq(courseItems.id, selectedCourses.courseItemId))
-      .innerJoin(freeCourses, and(eq(freeCourses.courseItemId, courseItems.id), eq(freeCourses.userId, userId)))
+      .innerJoin(courseItems, and(
+        eq(courseItems.type, "fixed"),
+        eq(courseItems.id, selectedCourses.courseItemId)
+      ))
+      .innerJoin(freeCourses, and(
+        eq(courseItems.type, "free"),
+        eq(freeCourses.courseItemId, courseItems.id),
+        eq(freeCourses.userId, userId)
+      ))
       .leftJoin(courses, or(eq(courses.id, courseItems.courseId), eq(courses.id, freeCourses.filledCourseId)));
   } catch (error) {
     console.error("Failed to get selected courses:", error);
