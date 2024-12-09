@@ -278,10 +278,13 @@ export async function renameTemplate(templateId: string, name: string, descripti
  */
 export async function getSelectedCourses(userId: string) {
   try {
+    const userPlan = await getUserPlan(userId);
+    if (!userPlan) throw new Error(`Failed to get plan for user ${userId}`);
+
     return await db
       .select({
         courseItemId: selectedCourses.courseItemId,
-        courseId: courseItems.courseId,
+        courseId: courses.id,
         courseCode: courses.code,
         courseName: courses.name,
         courseDescription: courses.description,
@@ -290,14 +293,9 @@ export async function getSelectedCourses(userId: string) {
         courseCoreqs: courses.coreqs
       })
       .from(selectedCourses)
-      .innerJoin(plans, eq(plans.id, selectedCourses.planId))
+      .where(and(eq(selectedCourses.planId, userPlan.id), eq(selectedCourses.selected, true)))
       .innerJoin(courseItems, eq(courseItems.id, selectedCourses.courseItemId))
-      .innerJoin(users, eq(users.id, plans.userId))
-      .innerJoin(courses, eq(courses.id, courseItems.courseId))
-      .where(and(
-        eq(users.id, userId),
-        eq(selectedCourses.selected, true),
-      ));
+      .leftJoin(courses, eq(courses.id, courseItems.courseId))
   } catch (error) {
     console.error("Failed to get selected courses:", error);
     throw new Error("Failed to get selected courses");
@@ -690,10 +688,12 @@ export async function updateFreeCourse(userId: string, courseItemId: string, fil
           target: [freeCourses.userId, freeCourses.courseItemId],
           set: { filledCourseId },
         });
-      await db
-        .update(courseItems)
-        .set({ courseId: filledCourseId })
-        .where(eq(courseItems.id, courseItemId));
+
+      // This should not be updated, since course_id is null for type free course.
+      // await db
+      //   .update(courseItems)
+      //   .set({ courseId: filledCourseId })
+      //   .where(eq(courseItems.id, courseItemId));
     }
   } catch (error) {
     console.error("Failed to update free course:", error);
