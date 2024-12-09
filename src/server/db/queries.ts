@@ -354,7 +354,11 @@ export async function removeCourseSelection(userId: string, courseId: string) {
         courseItemId: courseItems.id,
       })
       .from(courseItems)
-      .where(eq(courseItems.courseId, courseId));
+      .innerJoin(freeCourses, eq(freeCourses.courseItemId, courseItems.id))
+      .where(or(
+        and(eq(courseItems.type, "fixed"), eq(courseItems.courseId, courseId)),
+        and(eq(courseItems.type, "free"), eq(freeCourses.filledCourseId, courseId))
+      ));
 
 
     // Remove selections for all instances of this course
