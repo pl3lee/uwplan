@@ -22,6 +22,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useState, useOptimistic, startTransition } from "react";
 import { toggleUserTemplateAction } from "@/server/actions";
 import { type Template } from "@/types/template";
+import { toast } from "sonner";
 
 type Props = {
   templates: Template[];
@@ -46,7 +47,15 @@ export function TemplateSelector({ templates, selectedTemplates }: Props) {
     startTransition(() => {
       updateOptimisticTemplates(templateId);
     });
-    await toggleUserTemplateAction(templateId);
+    try {
+      await toggleUserTemplateAction(
+        templateId,
+        !optimisticTemplates.some((t) => t.id === templateId),
+      );
+    } catch (error) {
+      toast.error("Failed to toggle academic plan");
+      console.error(error);
+    }
   };
 
   return (

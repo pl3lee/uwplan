@@ -139,20 +139,15 @@ export function TemplateForm({ courseOptions }: TemplateFormProps) {
       }
 
       // Transform data for createTemplateAction
-      const templateSuccessfullyCreated = await createTemplateAction(
-        transformTemplateFormData(values),
-      );
-      console.log("templateExists", templateSuccessfullyCreated);
-      if (templateSuccessfullyCreated) {
-        toast.success("Template created successfully");
-        form.reset();
-      } else {
-        toast.error("Template with this name already exists");
-        return;
-      }
+      await createTemplateAction(transformTemplateFormData(values));
+      toast.success("Template created successfully");
+      form.reset();
     } catch (error) {
-      toast.error("Failed to create template");
-      console.error(error);
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error("An unknown error occurred");
+      }
     }
   };
 

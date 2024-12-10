@@ -244,81 +244,83 @@ export async function getTemplatesCreatedByUser(userId: string) {
  */
 export async function getTemplateDetails(userId: string, templateId: string) {
   try {
-    // Get template
-    const [template] = await db
-      .select()
-      .from(templates)
-      .where(eq(templates.id, templateId))
-      .limit(1);
+    const [[template], items] = await Promise.all([
+      // Get template
+      db
+        .select()
+        .from(templates)
+        .where(eq(templates.id, templateId))
+        .limit(1),
+      // Get template items
+      db
+        .select()
+        .from(templateItems)
+        .where(eq(templateItems.templateId, templateId))
+        .orderBy(templateItems.orderIndex)
+    ])
 
     if (!template) return null;
 
-    // Get template items
-    const items = await db
-      .select()
-      .from(templateItems)
-      .where(eq(templateItems.templateId, templateId))
-      .orderBy(templateItems.orderIndex);
-
-    // Get fixed courses for requirements
-    const fixedCoursesForItems = await db
-      .select({
-        courseItemId: courseItems.id,
-        templateItemId: courseItems.requirementId,
-        courseId: courses.id,
-        code: courses.code,
-        name: courses.name,
-        usefulRating: courses.usefulRating,
-        likedRating: courses.likedRating,
-        easyRating: courses.easyRating,
-        numRatings: courses.numRatings,
-        type: courseItems.type,
-        description: courses.description,
-        antireqs: courses.antireqs,
-        prereqs: courses.prereqs,
-        coreqs: courses.coreqs,
-      })
-      .from(courseItems)
-      .where(and(
-        inArray(courseItems.requirementId, items.map(item => item.id)),
-        eq(courseItems.type, "fixed"),
-      ))
-      .innerJoin(courses, eq(courses.id, courseItems.courseId));
-
-    // Get free course items and their filled courses if any
-    const freeCourseItems = await db
-      .select({
-        courseItemId: courseItems.id,
-        templateItemId: courseItems.requirementId,
-        filledCourseId: freeCourses.filledCourseId,
-        code: courses.code,
-        name: courses.name,
-        usefulRating: courses.usefulRating,
-        likedRating: courses.likedRating,
-        easyRating: courses.easyRating,
-        numRatings: courses.numRatings,
-        description: courses.description,
-        antireqs: courses.antireqs,
-        prereqs: courses.prereqs,
-        coreqs: courses.coreqs,
-      })
-      .from(courseItems)
-      .where(and(
-        inArray(courseItems.requirementId, items.map(item => item.id)),
-        eq(courseItems.type, "free")
-      ))
-      .leftJoin(freeCourses, and(
-        eq(freeCourses.courseItemId, courseItems.id),
-        eq(freeCourses.userId, userId)
-      ))
-      .leftJoin(courses, eq(courses.id, freeCourses.filledCourseId));
+    const [fixedCourseItems, freeCourseItems] = await Promise.all([
+      // Get fixed course items with details
+      db
+        .select({
+          courseItemId: courseItems.id,
+          templateItemId: courseItems.requirementId,
+          courseId: courses.id,
+          code: courses.code,
+          name: courses.name,
+          usefulRating: courses.usefulRating,
+          likedRating: courses.likedRating,
+          easyRating: courses.easyRating,
+          numRatings: courses.numRatings,
+          type: courseItems.type,
+          description: courses.description,
+          antireqs: courses.antireqs,
+          prereqs: courses.prereqs,
+          coreqs: courses.coreqs,
+        })
+        .from(courseItems)
+        .where(and(
+          inArray(courseItems.requirementId, items.map(item => item.id)),
+          eq(courseItems.type, "fixed"),
+        ))
+        .innerJoin(courses, eq(courses.id, courseItems.courseId)),
+      // Get free course items and their filled courses if any
+      db
+        .select({
+          courseItemId: courseItems.id,
+          templateItemId: courseItems.requirementId,
+          filledCourseId: freeCourses.filledCourseId,
+          code: courses.code,
+          name: courses.name,
+          usefulRating: courses.usefulRating,
+          likedRating: courses.likedRating,
+          easyRating: courses.easyRating,
+          numRatings: courses.numRatings,
+          description: courses.description,
+          antireqs: courses.antireqs,
+          prereqs: courses.prereqs,
+          coreqs: courses.coreqs,
+        })
+        .from(courseItems)
+        .where(and(
+          inArray(courseItems.requirementId, items.map(item => item.id)),
+          eq(courseItems.type, "free")
+        ))
+        .leftJoin(freeCourses, and(
+          eq(freeCourses.courseItemId, courseItems.id),
+          eq(freeCourses.userId, userId)
+        ))
+        .leftJoin(courses, eq(courses.id, freeCourses.filledCourseId))
+    ])
 
     // Combine the data and filter out invalid courses
     return {
       ...template,
       items: items.map(item => ({
         ...item,
-        fixedCourses: fixedCoursesForItems
+        fixedCourses: fixedCourseItems
           .filter(c => c.templateItemId === item.id && isValidCourse(c))
           .map(c => ({
             courseItemId: c.courseItemId,
@@ -517,26 +519,27 @@ export async function addTemplateToPlan(planId: string, templateId: string) {
 export async function removeTemplateFromPlan(planId: string, templateId: string) {
   try {
     await db.transaction(async (tx) => {
-      await tx
-        .delete(planTemplates)
-        .where(and(
-          eq(planTemplates.planId, planId),
-          eq(planTemplates.templateId, templateId)
-        ));
-
       const courseItemsInTemplate = tx
         .select({ id: courseItems.id })
         .from(courseItems)
         .innerJoin(templateItems, eq(templateItems.id, courseItems.requirementId))
         .where(eq(templateItems.templateId, templateId))
 
-      await tx
-        .update(selectedCourses)
-        .set({ selected: false })
-        .where(and(
-          eq(selectedCourses.planId, planId),
-          inArray(selectedCourses.courseItemId, courseItemsInTemplate)
-        ));
+      await Promise.all([
+        tx
+          .delete(planTemplates)
+          .where(and(
+            eq(planTemplates.planId, planId),
+            eq(planTemplates.templateId, templateId)
+          )),
+        tx
+          .update(selectedCourses)
+          .set({ selected: false })
+          .where(and(
+            eq(selectedCourses.planId, planId),
+            inArray(selectedCourses.courseItemId, courseItemsInTemplate)
+          ))
+      ])
     });
   } catch (error) {
     console.error("Failed to remove template from plan:", error);
@@ -549,7 +552,7 @@ export async function removeTemplateFromPlan(planId: string, templateId: string)
  * @param userId - ID of the user
  * @param templateId - ID of the template to toggle
  */
-export async function toggleUserTemplate(userId: string, templateId: string) {
+export async function toggleUserTemplate(userId: string, templateId: string, take: boolean) {
   try {
     const userPlan = await getUserPlan(userId);
     if (!userPlan) {
@@ -558,16 +561,7 @@ export async function toggleUserTemplate(userId: string, templateId: string) {
 
     const planId = userPlan.id;
 
-    const [existingTemplate] = await db
-      .select()
-      .from(planTemplates)
-      .where(and(
-        eq(planTemplates.planId, planId),
-        eq(planTemplates.templateId, templateId)
-      ))
-      .limit(1);
-
-    if (existingTemplate) {
+    if (!take) {
       await removeTemplateFromPlan(planId, templateId);
     } else {
       await addTemplateToPlan(planId, templateId);
@@ -726,7 +720,7 @@ export async function removeCourseSelection(userId: string, courseId: string) {
 
   try {
     // Find all course items that contain this course
-    const courseItemsToUnselect = await db
+    const courseItemsToUnselect = db
       .select({
         courseItemId: courseItems.id,
       })
@@ -740,28 +734,36 @@ export async function removeCourseSelection(userId: string, courseId: string) {
         and(eq(courseItems.type, "free"), eq(freeCourses.filledCourseId, courseId))
       ));
 
-
-    // Remove selections for all instances of this course
-    await db
-      .delete(selectedCourses)
-      .where(and(
-        eq(selectedCourses.planId, userPlan.id),
-        inArray(
-          selectedCourses.courseItemId,
-          courseItemsToUnselect.map(item => item.courseItemId)
-        )
-      ));
-
     // find all user schedules
-    const userSchedules = await getSchedules(userId)
-    const userSchedulesIds = userSchedules.map(schedule => schedule.id)
-    // Remove course from all user schedules
-    await db
-      .delete(scheduleCourses)
-      .where(and(
-        inArray(scheduleCourses.scheduleId, userSchedulesIds),
-        eq(scheduleCourses.courseId, courseId)
-      ))
+    const userSchedules = db
+      .select({
+        id: schedules.id,
+      })
+      .from(schedules)
+      .where(eq(schedules.planId, userPlan.id))
+
+
+    await db.transaction(async (tx) => {
+      await Promise.all([
+        // Remove selections for all instances of this course
+        tx
+          .delete(selectedCourses)
+          .where(and(
+            eq(selectedCourses.planId, userPlan.id),
+            inArray(
+              selectedCourses.courseItemId,
+              courseItemsToUnselect
+            )
+          )),
+        // Remove course from all user schedules
+        tx
+          .delete(scheduleCourses)
+          .where(and(
+            inArray(scheduleCourses.scheduleId, userSchedules),
+            eq(scheduleCourses.courseId, courseId)
+          ))
+      ])
+    })
   } catch (e) {
     console.error("Failed to remove course selection", e);
     throw new Error("Failed to remove course selection");
@@ -852,8 +854,8 @@ export async function getScheduleCourses(scheduleId: string) {
         courseCoreqs: courses.coreqs
       })
       .from(scheduleCourses)
-      .innerJoin(courses, eq(courses.id, scheduleCourses.courseId))
-      .where(eq(scheduleCourses.scheduleId, scheduleId));
+      .where(eq(scheduleCourses.scheduleId, scheduleId))
+      .innerJoin(courses, eq(courses.id, scheduleCourses.courseId));
   } catch (error) {
     console.error("Failed to get schedule courses:", error);
     throw new Error("Failed to get schedule courses");
@@ -1007,6 +1009,7 @@ export async function getTermRange(userId: string) {
       .where(eq(userTermRanges.userId, userId))
       .limit(1);
     if (!termRange) {
+      console.error(`Failed to get term range for user ${userId}`);
       throw new Error(`Failed to get term range for user ${userId}`);
     }
     return termRange;
