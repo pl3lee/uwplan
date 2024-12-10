@@ -360,7 +360,10 @@ export async function removeCourseSelection(userId: string, courseId: string) {
         courseItemId: courseItems.id,
       })
       .from(courseItems)
-      .innerJoin(freeCourses, eq(freeCourses.courseItemId, courseItems.id))
+      .leftJoin(freeCourses, and(
+        eq(freeCourses.courseItemId, courseItems.id),
+        eq(freeCourses.userId, userId)
+      ))
       .where(or(
         and(eq(courseItems.type, "fixed"), eq(courseItems.courseId, courseId)),
         and(eq(courseItems.type, "free"), eq(freeCourses.filledCourseId, courseId))
