@@ -12,13 +12,14 @@ import { Button } from "@/components/ui/button";
 import { BottomNav } from "./BottomNav";
 
 export default async function Navbar() {
-  const session = await auth();
-  const templates = await getTemplates();
-  const selectedTemplates = session?.user
-    ? await getUserSelectedTemplates(session.user.id)
-    : [];
-  const userPlan = session?.user ? await getUserPlan(session.user.id) : null;
-  const userRole = session?.user ? await getRole(session.user.id) : null;
+  const [session, templates] = await Promise.all([auth(), getTemplates()]);
+  const [selectedTemplates, userPlan, userRole] = session?.user
+    ? await Promise.all([
+        getUserSelectedTemplates(session.user.id),
+        getUserPlan(session.user.id),
+        getRole(session.user.id),
+      ])
+    : [[], null, null];
   return (
     <>
       <nav className="p-4">
