@@ -294,16 +294,15 @@ export async function getSelectedCourses(userId: string) {
       })
       .from(selectedCourses)
       .where(and(eq(selectedCourses.planId, userPlan.id), eq(selectedCourses.selected, true)))
-      .innerJoin(courseItems, and(
-        eq(courseItems.type, "fixed"),
-        eq(courseItems.id, selectedCourses.courseItemId)
-      ))
-      .innerJoin(freeCourses, and(
-        eq(courseItems.type, "free"),
+      .innerJoin(courseItems, eq(courseItems.id, selectedCourses.courseItemId))
+      .leftJoin(freeCourses, and(
         eq(freeCourses.courseItemId, courseItems.id),
         eq(freeCourses.userId, userId)
       ))
-      .leftJoin(courses, or(eq(courses.id, courseItems.courseId), eq(courses.id, freeCourses.filledCourseId)));
+      .leftJoin(courses, or(
+        and(eq(courseItems.type, "fixed"), eq(courses.id, courseItems.courseId)),
+        and(eq(courseItems.type, "free"), eq(courses.id, freeCourses.filledCourseId))
+      ));
   } catch (error) {
     console.error("Failed to get selected courses:", error);
     throw new Error("Failed to get selected courses");
@@ -618,8 +617,11 @@ export async function getTemplateDetails(userId: string, templateId: string) {
         inArray(courseItems.requirementId, items.map(item => item.id)),
         eq(courseItems.type, "free")
       ))
-      .innerJoin(freeCourses, and(eq(freeCourses.courseItemId, courseItems.id), eq(freeCourses.userId, userId)))
-      .innerJoin(courses, eq(courses.id, freeCourses.filledCourseId));
+      .leftJoin(freeCourses, and(
+        eq(freeCourses.courseItemId, courseItems.id),
+        eq(freeCourses.userId, userId)
+      ))
+      .leftJoin(courses, eq(courses.id, freeCourses.filledCourseId));
 
     // Combine the data and filter out invalid courses
     return {
