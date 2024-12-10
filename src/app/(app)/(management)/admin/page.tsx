@@ -22,8 +22,7 @@ export default async function AdminPage() {
   if (role !== "admin") {
     redirect("/select");
   }
-  const templates = await getTemplates();
-  const users = await getUsers();
+  const [templates, users] = await Promise.all([getTemplates(), getUsers()]);
 
   return (
     <div className="container mx-auto py-10">

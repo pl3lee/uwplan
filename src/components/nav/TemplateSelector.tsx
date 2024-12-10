@@ -84,9 +84,14 @@ export function TemplateSelector({ templates, selectedTemplates }: Props) {
                   <CommandItem
                     key={template.id}
                     value={template.name}
-                    onSelect={async () =>
-                      await handleToggleTemplate(template.id)
-                    }
+                    onSelect={async () => {
+                      try {
+                        await handleToggleTemplate(template.id);
+                      } catch (error) {
+                        toast.error("Failed to toggle academic plan");
+                        console.error(error);
+                      }
+                    }}
                   >
                     <Check
                       className={cn(

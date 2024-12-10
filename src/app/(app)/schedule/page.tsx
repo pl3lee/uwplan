@@ -51,20 +51,21 @@ export default async function SchedulePage({ searchParams }: Props) {
     redirect("/signin");
   }
 
-  const [selectedCourses, schedules] = await Promise.all([
-    selectedCoursesSchema.parse(await getSelectedCourses(session.user.id)),
-    schedulesSchema.parse(await getSchedules(session.user.id)),
-  ]);
+  const [selectedCourses, schedules, termRange, searchParameters] =
+    await Promise.all([
+      selectedCoursesSchema.parse(await getSelectedCourses(session.user.id)),
+      schedulesSchema.parse(await getSchedules(session.user.id)),
+      getTermRange(session.user.id),
+      searchParams,
+    ]);
 
-  // Validate and parse searchParams
-  const searchParameters = await searchParams;
   const scheduleId = searchParameters.scheduleId;
 
   const activeScheduleId = scheduleId ? String(scheduleId) : schedules[0].id;
-  const scheduleIsValid = await validateScheduleId(
-    session.user.id,
-    activeScheduleId,
-  );
+  const [scheduleIsValid, scheduleCourses] = await Promise.all([
+    validateScheduleId(session.user.id, activeScheduleId),
+    getScheduleCourses(activeScheduleId),
+  ]);
   if (!scheduleIsValid) {
     return (
       <div>
@@ -72,14 +73,14 @@ export default async function SchedulePage({ searchParams }: Props) {
       </div>
     );
   }
-  const scheduleCourses = (await getScheduleCourses(activeScheduleId)).sort(
-    (a, b) => a.courseCode.localeCompare(b.courseCode),
+  const sortedScheduleCourses = scheduleCourses.sort((a, b) =>
+    a.courseCode.localeCompare(b.courseCode),
   );
   const coursesToSchedule = Array.from(
     new Map(
       selectedCourses
         .filter((course) => {
-          return !scheduleCourses.some(
+          return !sortedScheduleCourses.some(
             (scheduleCourse) => scheduleCourse.courseId === course.courseId,
           );
         })
@@ -98,8 +99,6 @@ export default async function SchedulePage({ searchParams }: Props) {
         ]),
     ).values(),
   ).sort((a, b) => a.courseCode.localeCompare(b.courseCode));
-
-  const termRange: TermRange = await getTermRange(session.user.id);
   return (
     <div className="container mx-auto py-10">
       <h1 className={styles.pageTitleText}>Schedule Your Courses</h1>
@@ -107,7 +106,7 @@ export default async function SchedulePage({ searchParams }: Props) {
         coursesToSchedule={coursesToSchedule}
         schedules={schedules}
         activeScheduleId={activeScheduleId}
-        coursesInSchedule={scheduleCourses}
+        coursesInSchedule={sortedScheduleCourses}
         termRange={termRange}
       />
       <ScrollToTopButton />
