@@ -16,6 +16,7 @@ import {
 import { type Season } from "@/types/schedule";
 import { type CreateTemplateInput } from "@/types/template";
 import { and, eq, inArray, or } from "drizzle-orm";
+import { cache } from "react";
 
 // ============================================================================
 // Utility Functions
@@ -54,7 +55,7 @@ export async function getUsers() {
  * @param userId - ID of the user
  * @returns User's role or undefined if not found
  */
-export async function getRole(userId: string) {
+export const getRole = cache(async (userId: string) => {
   try {
     const [role] = await db
       .select({
@@ -72,7 +73,7 @@ export async function getRole(userId: string) {
     console.error("Failed to get role:", error);
     throw new Error("Failed to get role");
   }
-}
+});
 
 // ============================================================================
 // Plan Management
@@ -83,26 +84,7 @@ export async function getRole(userId: string) {
  * @param userId - ID of the user
  * @returns User's plan object or undefined if not found
  */
-export async function getUserPlan(userId: string) {
-  try {
-    const [plan] = await db
-      .select()
-      .from(plans)
-      .where(eq(plans.userId, userId))
-      .limit(1);
-    return plan;
-  } catch (error) {
-    console.error("Failed to get user plan:", error);
-    throw new Error("Failed to get user plan");
-  }
-}
-
-/**
- * Gets or creates a user's plan. Every user must have exactly one plan
- * @param userId - ID of the user
- * @returns Existing or newly created plan object
- */
-export async function getOrCreateUserPlan(userId: string) {
+export const getUserPlan = cache(async (userId: string) => {
   try {
     // Try to get existing plan
     const [existingPlan] = await db
@@ -126,7 +108,7 @@ export async function getOrCreateUserPlan(userId: string) {
     console.error("Failed to get or create user plan:", error);
     throw new Error("Failed to get or create user plan");
   }
-}
+})
 
 // ============================================================================
 // Template Management
@@ -569,7 +551,7 @@ export async function removeTemplateFromPlan(planId: string, templateId: string)
  */
 export async function toggleUserTemplate(userId: string, templateId: string) {
   try {
-    const userPlan = await getOrCreateUserPlan(userId);
+    const userPlan = await getUserPlan(userId);
     if (!userPlan) {
       throw new Error(`Failed to get or create plan for user ${userId}`);
     }
@@ -636,7 +618,7 @@ export async function getUserTemplatesWithCourses(userId: string) {
  * Gets all courses with their associated ratings
  * @returns Array of course objects with rating information
  */
-export async function getCoursesWithRatings() {
+export const getCoursesWithRatings = cache(async () => {
   try {
     const coursesResults = await db
       .select({
@@ -660,7 +642,7 @@ export async function getCoursesWithRatings() {
     console.error("Failed to get courses with ratings:", error);
     throw new Error("Failed to get courses with ratings");
   }
-}
+})
 
 /**
  * Gets all selected course items for a user
@@ -708,7 +690,7 @@ export async function getSelectedCourses(userId: string) {
  */
 export async function toggleCourse(userId: string, courseItemId: string, selected: boolean) {
   try {
-    const userPlan = await getOrCreateUserPlan(userId);
+    const userPlan = await getUserPlan(userId);
     if (!userPlan) {
       throw new Error(`Failed to get or create plan for user ${userId}`);
     }
