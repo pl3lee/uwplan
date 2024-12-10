@@ -212,8 +212,8 @@ export async function getUserSelectedTemplates(userId: string) {
       })
       .from(planTemplates)
       .innerJoin(plans, eq(plans.id, planTemplates.planId))
-      .innerJoin(templates, eq(templates.id, planTemplates.templateId))
-      .where(eq(plans.userId, userId));
+      .where(eq(plans.userId, userId))
+      .innerJoin(templates, eq(templates.id, planTemplates.templateId));
   } catch (error) {
     console.error("Failed to get user selected templates:", error);
     throw new Error("Failed to get user selected templates");
