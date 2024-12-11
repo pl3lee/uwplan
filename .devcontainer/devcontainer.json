@@ -14,7 +14,7 @@
 
 	"customizations": {
 		"vscode": {
-			"extensions": ["streetsidesoftware.code-spell-checker", "eamodio.gitlens", "esbenp.prettier-vscode", "bradlc.vscode-tailwindcss", "github.copilot", "github.copilot-chat", "rangav.vscode-thunder-client", "eamodio.gitlens", "yoavbls.pretty-ts-errors"]
+			"extensions": ["streetsidesoftware.code-spell-checker", "eamodio.gitlens", "esbenp.prettier-vscode", "bradlc.vscode-tailwindcss", "github.copilot", "github.copilot-chat", "eamodio.gitlens", "yoavbls.pretty-ts-errors"]
 		}
 	},
 
