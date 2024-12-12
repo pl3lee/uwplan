@@ -131,3 +131,8 @@ export function transformTemplateFormData(data: z.infer<typeof formSchema>) {
     }),
   }
 }
+
+export const formatRating = (rating: string | null | undefined) => {
+  if (!rating) return "N/A";
+  return `${(Number(rating) * 100).toFixed(1)}%`;
+};
