@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { normalizeCourseCode } from "@/lib/utils";
+import { normalizeCourseCode, formatRating } from "@/lib/utils";
 import { toggleCourseAction, updateFreeCourseAction } from "@/server/actions";
 import { type Course, type FreeCourse } from "@/types/course";
 import { ArrowDown, ArrowUp, ArrowUpDown, Check, X } from "lucide-react";
@@ -82,11 +82,6 @@ export function CourseTable({
     );
   const [, startTransition] = useTransition();
 
-  const formatRating = (rating: string | null | undefined) => {
-    if (!rating) return "N/A";
-    return `${(Number(rating) * 100).toFixed(1)}%`;
-  };
-
   const handleSort = (column: SortColumn) => {
     if (sortColumn === column) {
       setSortDirection((curr) =>
@@ -109,7 +104,15 @@ export function CourseTable({
   };
 
   const sortCourses = (courses: FixedCourseWithItem[]) => {
-    if (!sortColumn || !sortDirection) return courses;
+    const getCourseYear = (code: string | null) => {
+      const match = code?.match(/\d+/);
+      return match ? parseInt(match[0]) : 0;
+    };
+
+    if (!sortColumn || !sortDirection)
+      return [...courses].sort((a, b) => {
+        return getCourseYear(a.course.code) - getCourseYear(b.course.code);
+      });
 
     return [...courses].sort((a, b) => {
       const courseA = a.course;

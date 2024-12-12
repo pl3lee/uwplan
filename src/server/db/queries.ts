@@ -16,7 +16,6 @@ import {
 import { type Season } from "@/types/schedule";
 import { type CreateTemplateInput } from "@/types/template";
 import { and, eq, inArray, or } from "drizzle-orm";
-import { cache } from "react";
 
 // ============================================================================
 // Utility Functions
@@ -55,7 +54,7 @@ export async function getUsers() {
  * @param userId - ID of the user
  * @returns User's role or undefined if not found
  */
-export const getRole = cache(async (userId: string) => {
+export async function getRole(userId: string) {
   try {
     const [role] = await db
       .select({
@@ -73,7 +72,7 @@ export const getRole = cache(async (userId: string) => {
     console.error("Failed to get role:", error);
     throw new Error("Failed to get role");
   }
-});
+};
 
 // ============================================================================
 // Plan Management
@@ -84,7 +83,7 @@ export const getRole = cache(async (userId: string) => {
  * @param userId - ID of the user
  * @returns User's plan object or undefined if not found
  */
-export const getUserPlan = cache(async (userId: string) => {
+export async function getUserPlan(userId: string) {
   try {
     // Try to get existing plan
     const [existingPlan] = await db
@@ -108,7 +107,7 @@ export const getUserPlan = cache(async (userId: string) => {
     console.error("Failed to get or create user plan:", error);
     throw new Error("Failed to get or create user plan");
   }
-})
+}
 
 // ============================================================================
 // Template Management
@@ -612,7 +611,7 @@ export async function getUserTemplatesWithCourses(userId: string) {
  * Gets all courses with their associated ratings
  * @returns Array of course objects with rating information
  */
-export const getCoursesWithRatings = cache(async () => {
+export async function getCoursesWithRatings() {
   try {
     const coursesResults = await db
       .select({
@@ -636,7 +635,7 @@ export const getCoursesWithRatings = cache(async () => {
     console.error("Failed to get courses with ratings:", error);
     throw new Error("Failed to get courses with ratings");
   }
-})
+}
 
 /**
  * Gets all selected course items for a user

@@ -8,6 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { formatRating } from "@/lib/utils";
 import { removeCourseSelectionAction } from "@/server/actions";
 import { type Course } from "@/types/course";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
@@ -71,7 +72,15 @@ export function SelectedCoursesTable({ fixedCourses }: CourseTableProps) {
   };
 
   const sortCourses = (courses: FixedCourseWithItem[]) => {
-    if (!sortColumn || !sortDirection) return courses;
+    const getCourseYear = (code: string | null) => {
+      const match = code?.match(/\d+/);
+      return match ? parseInt(match[0]) : 0;
+    };
+
+    if (!sortColumn || !sortDirection)
+      return [...courses].sort((a, b) => {
+        return getCourseYear(a.course.code) - getCourseYear(b.course.code);
+      });
 
     return [...courses].sort((a, b) => {
       const courseA = a.course;
@@ -207,13 +216,13 @@ export function SelectedCoursesTable({ fixedCourses }: CourseTableProps) {
               </TableCell>
               <TableCell className="px-6">{course.name}</TableCell>
               <TableCell className="px-6 text-right">
-                {course.usefulRating ?? "N/A"}
+                {formatRating(course.usefulRating)}
               </TableCell>
               <TableCell className="px-6 text-right">
-                {course.likedRating ?? "N/A"}
+                {formatRating(course.likedRating)}
               </TableCell>
               <TableCell className="px-6 text-right">
-                {course.easyRating ?? "N/A"}
+                {formatRating(course.easyRating)}
               </TableCell>
               <TableCell className="px-6 text-right">
                 {course.numRatings ?? "N/A"}
