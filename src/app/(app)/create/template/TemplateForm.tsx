@@ -140,7 +140,7 @@ export function TemplateForm({ courseOptions }: TemplateFormProps) {
 
       // Transform data for createTemplateAction
       await createTemplateAction(transformTemplateFormData(values));
-      toast.success("Template created successfully");
+      toast.success("Academic plan created successfully");
       form.reset();
     } catch (error) {
       if (error instanceof Error) {

@@ -61,13 +61,13 @@ export function RenameTemplateButton({
     setIsRenaming(true);
     try {
       await renameTemplateAction(templateId, data.name, data.description);
-      toast.success("Template renamed");
+      toast.success("Academic plan renamed");
       setOpen(false);
     } catch (error) {
       if (error instanceof Error) {
         toast.error(error.message);
       } else {
-        toast.error("Failed to rename template");
+        toast.error("Failed to rename academic plan");
       }
     } finally {
       setIsRenaming(false);
@@ -83,7 +83,7 @@ export function RenameTemplateButton({
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Rename Template</DialogTitle>
+          <DialogTitle>Rename Academic Plan</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form
@@ -97,7 +97,7 @@ export function RenameTemplateButton({
                 <FormItem>
                   <FormLabel>Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter template name" {...field} />
+                    <Input placeholder="Enter plan name" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -110,10 +110,7 @@ export function RenameTemplateButton({
                 <FormItem>
                   <FormLabel>Description</FormLabel>
                   <FormControl>
-                    <Textarea
-                      placeholder="Enter template description"
-                      {...field}
-                    />
+                    <Textarea placeholder="Enter plan description" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

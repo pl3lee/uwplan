@@ -102,7 +102,7 @@ async function processBatch<T, R>(
     );
     results.push(...batchResults.filter(Boolean));
     // Wait between batches to avoid overloading the API
-    await delay(1000);
+    await delay(100);
   }
   return results as R[];
 }
@@ -132,7 +132,7 @@ export async function fetchUWFlowData(): Promise<CourseWithDetails[]> {
   // Process courses in smaller batches with proper typing
   const coursesWithDetails = await processBatch(
     data.course_search_index,
-    30, // batch size
+    100, // batch size
     async (course): Promise<CourseWithDetails | null> => {
       const details = await fetchCourseDetails(course.code.toLowerCase());
       return {

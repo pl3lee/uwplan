@@ -23,10 +23,10 @@ export function DeleteTemplateButton({ templateId }: { templateId: string }) {
     setIsDeleting(true);
     try {
       await deleteTemplateAction(templateId);
-      toast.success("Template deleted");
+      toast.success("Academic plan deleted");
     } catch (error) {
       console.error("Error deleting template:", error);
-      toast.error("Error deleting template");
+      toast.error("Error deleting academic plan");
     } finally {
       setIsDeleting(false);
     }
@@ -39,10 +39,10 @@ export function DeleteTemplateButton({ templateId }: { templateId: string }) {
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete Template</AlertDialogTitle>
+          <AlertDialogTitle>Delete Academic Plan</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete this template? This action cannot be
-            undone.
+            Are you sure you want to delete this academic plan? This action
+            cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

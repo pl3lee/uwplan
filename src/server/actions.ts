@@ -75,13 +75,13 @@ export async function createTemplateAction(template: CreateTemplateInput) {
     }
     const templateExists = await templateNameExists(template.name);
     if (templateExists) {
-      throw new Error('Template name already exists');
+      throw new Error('Academic plan name already exists');
     } else {
       await createTemplate(template, session.user.id);
       revalidatePath('/select');
     }
   } catch (error) {
-    console.error("Failed to create template", error);
+    console.error("Failed to create academic plan", error);
     throw error
   }
 }
@@ -123,7 +123,7 @@ export async function renameTemplateAction(templateId: string, name: string, des
     const template = await getTemplate(templateId);
     const existingTemplate = await getTemplateWithName(name);
     if (existingTemplate && existingTemplate.id !== templateId) {
-      throw new Error('Template name already exists');
+      throw new Error('Academic plan name already exists');
     }
     if (role !== 'admin' && !template.createdBy) {
       throw new Error('Not authorized');
