@@ -15,7 +15,7 @@ import {
 } from "@/server/db/schema";
 import { type Season } from "@/types/schedule";
 import { type CreateTemplateInput } from "@/types/template";
-import { and, eq, inArray, or } from "drizzle-orm";
+import { and, desc, eq, inArray, or } from "drizzle-orm";
 
 // ============================================================================
 // Utility Functions
@@ -360,6 +360,35 @@ export async function getTemplateDetails(userId: string, templateId: string) {
   } catch (error) {
     console.error("Failed to get template details:", error);
     throw new Error("Failed to get template details");
+  }
+}
+
+export async function getTemplateForms() {
+  try {
+    const allTemplates = await db
+      .select()
+      .from(templates)
+    const allTemplateItems = await db
+      .select()
+      .from(templateItems)
+    const templatesWithItems = allTemplates.map(template => {
+      let items = allTemplateItems.filter(item => item.templateId === template.id)
+      const itemsWithDetails = items.map(async item => {
+        if (item.type === "requirement") {
+          const associatedCourseItems = await db
+          .select()
+          .from(courseItems)
+          .where(eq(courseItems.requirementId, item.id))
+        }
+      })
+      return {
+        ...template,
+        items
+      }
+    })
+  } catch (error) {
+    console.error("Failed to get template forms:", error);
+    throw new Error("Failed to get template forms");
   }
 }
 
