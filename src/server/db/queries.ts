@@ -1,3 +1,4 @@
+import { formSchema } from "@/app/(app)/create/template/TemplateForm";
 import { db } from "@/server/db";
 import {
   courseItems,
@@ -363,29 +364,80 @@ export async function getTemplateDetails(userId: string, templateId: string) {
   }
 }
 
+
+/**
+ * Retrieves all available academic plan templates, for use in create template form.
+ * For reference, the template schema is
+ * export const formSchema = z.object({
+   name: z.string().min(1, { message: "Name is required" }),
+   description: z.string().optional(),
+   items: z.array(
+     z.union([
+       z.object({
+         type: z.literal("instruction"),
+         description: z.string().min(1, { message: "Instruction is required" }),
+       }),
+       z.object({
+         type: z.literal("separator"),
+       }),
+       z.object({
+         type: z.literal("requirement"),
+         courseType: z.literal("fixed"),
+         description: z.string().min(1, { message: "Description is required" }),
+         courses: z.string().min(1),
+       }),
+       z.object({
+         type: z.literal("requirement"),
+         courseType: z.enum(["free"]),
+         description: z.string().min(1, { message: "Description is required" }),
+         count: z.number().min(1, { message: "Must have at least 1 course" }),
+       }),
+     ]),
+   ),
+ });
+ * @returns Array of template objects
+ */
 export async function getTemplateForms() {
   try {
-    const allTemplates = await db
-      .select()
-      .from(templates)
-    const allTemplateItems = await db
-      .select()
-      .from(templateItems)
-    const templatesWithItems = allTemplates.map(template => {
-      let items = allTemplateItems.filter(item => item.templateId === template.id)
-      const itemsWithDetails = items.map(async item => {
-        if (item.type === "requirement") {
-          const associatedCourseItems = await db
-          .select()
-          .from(courseItems)
-          .where(eq(courseItems.requirementId, item.id))
+    const items = await db
+    .select()
+    .from(templateItems)
+
+    const itemsWithCourses = items.map(async (item) => {
+      if (item.type === "instruction" || item.type === "separator") {
+        return item
+      } else {
+        const coursesInRequirement = await db
+        .select({
+          type: courseItems.type,
+          code: courses.code,
+        })
+        .from(courseItems)
+        .where(eq(courseItems.requirementId, item.id))
+        .leftJoin(courses, and(eq(courseItems.type, "fixed"), eq(courses.id, courseItems.courseId)))
+
+        const courseType = coursesInRequirement[0]?.type;
+        if (!courseType) {
+          throw new Error("Failed to get course type");
         }
-      })
-      return {
-        ...template,
-        items
-      }
-    })
+
+        if (courseType === "fixed") {
+          return {
+            type: "requirement",
+            courseType: "fixed",
+            description: item.description,
+            courses: coursesInRequirement.map(course => course.code).join(", ")
+          }
+        } else {
+          return {
+            type: "requirement",
+            courseType: "free",
+            description: item.description,
+            courseCount: coursesInRequirement.length
+        }
+      } 
+    }})
+    
   } catch (error) {
     console.error("Failed to get template forms:", error);
     throw new Error("Failed to get template forms");
