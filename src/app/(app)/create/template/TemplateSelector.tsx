@@ -71,7 +71,7 @@ export function TemplateSelector({
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className="w-full justify-between"
+            className="w-full justify-between overflow-hidden"
           >
             {name
               ? templates.find((template) => template.name === name)?.name

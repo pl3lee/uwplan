@@ -37,8 +37,6 @@ export default async function CreateTemplatePage({ searchParams }: Props) {
   ]);
   const searchParamsResult = searchParamsSchema.parse(searchParamsResolved);
 
-  console.log(searchParamsResult);
-
   const courseOptions = courses.map((course) => ({
     id: course.id,
     code: course.code,
@@ -48,8 +46,6 @@ export default async function CreateTemplatePage({ searchParams }: Props) {
     searchParamsResult.templateId === "none"
       ? null
       : await getTemplateForm(searchParamsResult.templateId);
-
-  console.log(selectedTemplateForm);
 
   return (
     <div className="container mx-auto py-10">

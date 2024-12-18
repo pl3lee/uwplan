@@ -791,7 +791,6 @@ export async function toggleCourse(userId: string, courseItemId: string, selecte
       throw new Error(`Failed to get or create plan for user ${userId}`);
     }
 
-    console.log("Toggling course selection", userId, courseItemId, selected);
     await db
       .insert(selectedCourses)
       .values({
