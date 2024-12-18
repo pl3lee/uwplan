@@ -44,9 +44,17 @@ If not using DevContainer, you'll need:
 4. Set up GitHub OAuth by creating a new OAuth app in your [GitHub developer settings](https://github.com/settings/developers) and filling in the `AUTH_GITHUB_ID` and `AUTH_GITHUB_SECRET` in `.env`. For local development, the Homepage URL is `http://localhost:3000` and the Authorization callback URL is `http://localhost:3000/api/auth/callback/github`.
 5. Set up Google OAuth by going to [Google Cloud Console](https://console.cloud.google.com/), creating a new project or choose an existing one, setup OAuth consent screen, then create OAuth client ID in the credentials section. Add `http://localhost:3000` to Authorized JavaScript origins, and `http://localhost:3000/api/auth/callback/google` to Authorized redirect URIs. Copy the client ID and secret to `.env` as `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET`.
 6. Run `./start-database.sh` to start the PostgreSQL database in a Docker container. If this is the first time running the database, it should generate a password and change `DATABASE_URL` in `.env` for you.
-7. Run `npm run db:migrate` to run the database migrations, and run `npm run db:seed` to seed the database with initial data.
+7. Run `npm run db:seed-existing` to seed the database with initial data and migrations.
 8. Run `npm run dev` to start the development server. The application should now be running at `http://localhost:3000`.
 9. If you need to look at the database tables, you can use `npm run db:studio` to run Drizzle Studio, which would then be accessible at `https://local.drizzle.studio`.
+
+## Database Seeding
+
+If you want to seed the database with existing course data (e.g. for development), you can simply run `npm run db:seed-existing` without needing to run `npm run db:migrate` first. If you then want obtain fresh course data, you can run `npm run courses:update`.
+
+If you want to start with a database with fresh course data, you need to first run `npm run db:migrate` to create the tables, then run `npm run db:seed` to seed the database with fresh data.
+
+To export the database to an SQL file, you can run `npm run db:export` to generate a `data.sql` file. This file can then be used to import the database into another environment.
 
 ## Database Design
 

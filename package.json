@@ -10,6 +10,10 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
+    "db:seed-new": "tsx -r dotenv/config src/server/db/seed.ts",
+    "db:seed-existing": "docker exec -i uwplan-postgres psql -U postgres -d uwplan < data.sql",
+    "db:export": "docker exec uwplan-postgres pg_dump -U postgres uwplan > data.sql",
+    "courses:update": "tsx -r dotenv/config src/scripts/updateCourses.ts",
     "dev": "next dev --turbo",
     "lint": "next lint",
     "lint:fix": "next lint --fix",
@@ -18,8 +22,6 @@
     "typecheck": "tsc --noEmit",
     "format:write": "prettier --write \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
-    "db:seed": "tsx -r dotenv/config src/server/db/seed.ts",
-    "courses:update": "tsx -r dotenv/config src/scripts/updateCourses.ts",
     "test": "jest"
   },
   "dependencies": {
