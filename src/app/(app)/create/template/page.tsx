@@ -67,7 +67,11 @@ export default async function CreateTemplatePage({ searchParams }: Props) {
         </span>{" "}
         for creating academic plans.
       </p>
-      <TemplateForm courseOptions={courseOptions} templates={templates} />
+      <TemplateForm
+        courseOptions={courseOptions}
+        templates={templates}
+        clonedTemplateForm={selectedTemplateForm}
+      />
     </div>
   );
 }
