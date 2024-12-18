@@ -41,7 +41,6 @@ export async function toggleCourseAction(courseItemId: string, take: boolean) {
     if (!session?.user) {
       throw new Error('Not authenticated');
     }
-    console.log("courseItemId", courseItemId);
     await toggleCourse(session.user.id, courseItemId, take);
     revalidatePath('/select');
   } catch (error) {

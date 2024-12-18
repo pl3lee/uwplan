@@ -17,12 +17,16 @@ import {
   validateCreateTemplateFormCourseCodes,
 } from "@/lib/utils";
 import { createTemplateAction } from "@/server/actions";
+import { type BasicTemplates } from "@/server/db/queries";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { AnimatePresence, motion } from "framer-motion";
 import { ArrowDown, ArrowUp } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
-import { AnimatePresence, motion } from "framer-motion";
+import { TemplateSelector } from "./TemplateSelector";
 
 export const formSchema = z.object({
   name: z.string().min(1, { message: "Name is required" }),
@@ -59,11 +63,21 @@ export type CourseOption = {
 
 type TemplateFormProps = {
   courseOptions: CourseOption[];
+  templates: BasicTemplates;
+  clonedTemplateForm: z.infer<typeof formSchema> | null;
 };
 
 export type FormItem = z.infer<typeof formSchema>["items"][number];
 
-export function TemplateForm({ courseOptions }: TemplateFormProps) {
+export function TemplateForm({
+  courseOptions,
+  templates,
+  clonedTemplateForm,
+}: TemplateFormProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -72,6 +86,21 @@ export function TemplateForm({ courseOptions }: TemplateFormProps) {
       items: [],
     },
   });
+
+  useEffect(() => {
+    if (clonedTemplateForm) {
+      form.reset(clonedTemplateForm);
+    }
+  }, [clonedTemplateForm, form]);
+
+  // Add handler for template selection
+  const handleTemplateSelect = (templateId: string) => {
+    const current = new URLSearchParams(Array.from(searchParams.entries()));
+    current.set("templateId", templateId);
+    const search = current.toString();
+    const query = search ? `?${search}` : "";
+    router.push(`${pathname}${query}`);
+  };
 
   const { fields, append, remove, swap } = useFieldArray({
     control: form.control,
@@ -142,6 +171,7 @@ export function TemplateForm({ courseOptions }: TemplateFormProps) {
       await createTemplateAction(transformTemplateFormData(values));
       toast.success("Academic plan created successfully");
       form.reset();
+      router.push("/select");
     } catch (error) {
       if (error instanceof Error) {
         toast.error(error.message);
@@ -166,6 +196,13 @@ export function TemplateForm({ courseOptions }: TemplateFormProps) {
             <CardTitle>Academic Plan Details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="mb-4 flex flex-col gap-2">
+              <FormLabel>Start from template (optional)</FormLabel>
+              <TemplateSelector
+                templates={templates}
+                onSelect={handleTemplateSelect}
+              />
+            </div>
             <FormField
               control={form.control}
               name="name"

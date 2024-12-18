@@ -16,6 +16,7 @@ import {
 import { type Season } from "@/types/schedule";
 import { type CreateTemplateInput } from "@/types/template";
 import { and, eq, inArray, or } from "drizzle-orm";
+import { z } from "zod";
 
 // ============================================================================
 // Utility Functions
@@ -363,6 +364,108 @@ export async function getTemplateDetails(userId: string, templateId: string) {
   }
 }
 
+export const templateFormSchema = z.object({
+name: z.string().min(1, { message: "Name is required" }),
+description: z.string().optional(),
+items: z.array(
+  z.union([
+    z.object({
+      type: z.literal("instruction"),
+      description: z.string().min(1, { message: "Instruction is required" }),
+    }),
+    z.object({
+      type: z.literal("separator"),
+    }),
+    z.object({
+      type: z.literal("requirement"),
+      courseType: z.literal("fixed"),
+      description: z.string().min(1, { message: "Description is required" }),
+      courses: z.string().min(1),
+    }),
+    z.object({
+      type: z.literal("requirement"),
+      courseType: z.enum(["free"]),
+      description: z.string().min(1, { message: "Description is required" }),
+      count: z.number().min(1, { message: "Must have at least 1 course" }),
+    }),
+  ])
+),
+});
+
+/**
+ * Retrieves academic plan template, for use in create template form.
+ * @returns Template object
+ */
+export async function getTemplateForm(templateId: string) {
+  try {
+    const template = await db
+      .select()
+      .from(templates)
+      .where(eq(templates.id, templateId))
+      .limit(1)
+      .then((res) => res[0]);
+
+    const items = await db
+      .select()
+      .from(templateItems)
+      .where(eq(templateItems.templateId, templateId))
+      .orderBy(templateItems.orderIndex);
+
+    const transformedItems = await Promise.all(
+      items.map(async (item) => {
+        if (item.type === "instruction") {
+          return {
+            type: "instruction",
+            description: item.description ?? "",
+          };
+        }
+
+        if (item.type === "separator") {
+          return {
+            type: "separator",
+          };
+        }
+
+        const coursesInRequirement = await db
+          .select({
+            code: courses.code,
+            courseType: courseItems.type
+          })
+          .from(courseItems)
+          .where(eq(courseItems.requirementId, item.id))
+          .leftJoin(courses, eq(courses.id, courseItems.courseId));
+          
+        if (coursesInRequirement[0] && coursesInRequirement[0].courseType === "fixed") {
+          return {
+            type: "requirement",
+            courseType: "fixed",
+            description: item.description ?? "",
+            courses: coursesInRequirement.map(c => c.code).join(", "),
+          };
+        }
+
+        return {
+          type: "requirement",
+          courseType: "free",
+          description: item.description ?? "",
+          count: coursesInRequirement.length,
+        };
+      })
+    );
+
+    const rawForm = {
+      name: template?.name ?? "",
+      description: template?.description,
+      items: transformedItems,
+    };
+
+    return templateFormSchema.parse(rawForm);
+  } catch (error) {
+    console.error("Failed to get template form:", error);
+    throw new Error("Failed to get template form");
+  }
+}
+
 /**
  * Creates a new academic plan template
  * @param input - Template creation input data
@@ -688,7 +791,6 @@ export async function toggleCourse(userId: string, courseItemId: string, selecte
       throw new Error(`Failed to get or create plan for user ${userId}`);
     }
 
-    console.log("Toggling course selection", userId, courseItemId, selected);
     await db
       .insert(selectedCourses)
       .values({
@@ -1049,3 +1151,4 @@ export async function changeTermRange(userId: string, startTerm: Season, startYe
 
 export type SelectedCourses = Awaited<ReturnType<typeof getSelectedCourses>>;
 export type TermRange = Awaited<ReturnType<typeof getTermRange>>;
+export type BasicTemplates = Awaited<ReturnType<typeof getTemplates>>;

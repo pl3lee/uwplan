@@ -411,7 +411,6 @@ export function Scheduler({
               courseId: active.id.toString(),
             });
           }
-          console.log(over.id.toString());
           setOptimisticCoursesInSchedule({
             operation: "add",
             courseId: active.id.toString(),
