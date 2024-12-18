@@ -23,6 +23,13 @@ import { useFieldArray, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { AnimatePresence, motion } from "framer-motion";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export const formSchema = z.object({
   name: z.string().min(1, { message: "Name is required" }),
@@ -59,11 +66,15 @@ export type CourseOption = {
 
 type TemplateFormProps = {
   courseOptions: CourseOption[];
+  templateForms: any;
 };
 
 export type FormItem = z.infer<typeof formSchema>["items"][number];
 
-export function TemplateForm({ courseOptions }: TemplateFormProps) {
+export function TemplateForm({
+  courseOptions,
+  templateForms,
+}: TemplateFormProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -72,6 +83,26 @@ export function TemplateForm({ courseOptions }: TemplateFormProps) {
       items: [],
     },
   });
+
+  // Add handler for template selection
+  const handleTemplateSelect = (templateId: string) => {
+    const selectedTemplate = templateForms.find((t) => t.id === templateId);
+    if (selectedTemplate) {
+      selectedTemplate.items.map((item) => {
+        console.log(item);
+      });
+      form.reset({
+        name: `Copy of ${selectedTemplate.name}`,
+        description: selectedTemplate.description,
+        items: selectedTemplate.items.map((item) => ({
+          ...item,
+          count: item.courseType === "free" ? item.courseCount : undefined,
+          // Add orderIndex to match the template's structure
+          orderIndex: item.orderIndex,
+        })),
+      });
+    }
+  };
 
   const { fields, append, remove, swap } = useFieldArray({
     control: form.control,
@@ -166,6 +197,21 @@ export function TemplateForm({ courseOptions }: TemplateFormProps) {
             <CardTitle>Academic Plan Details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="mb-4">
+              <FormLabel>Start from template (optional)</FormLabel>
+              <Select onValueChange={handleTemplateSelect}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a template to copy..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {templateForms.map((template) => (
+                    <SelectItem key={template.id} value={template.id}>
+                      {template.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <FormField
               control={form.control}
               name="name"

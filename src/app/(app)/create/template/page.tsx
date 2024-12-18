@@ -22,7 +22,6 @@ export default async function CreateTemplatePage() {
   }));
 
   const templateForms = await getTemplateForms();
-  console.log(templateForms);
   return (
     <div className="container mx-auto py-10">
       <h1 className={styles.pageTitleText}>Create Academic Plan</h1>
@@ -39,7 +38,10 @@ export default async function CreateTemplatePage() {
         </span>{" "}
         for creating academic plans.
       </p>
-      <TemplateForm courseOptions={courseOptions} />
+      <TemplateForm
+        courseOptions={courseOptions}
+        templateForms={templateForms}
+      />
     </div>
   );
 }
