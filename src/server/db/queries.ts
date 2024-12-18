@@ -450,6 +450,58 @@ export async function getTemplateForms() {
   }
 }
 
+export async function getTemplateForm(templateId: string) {
+  try {
+    const items = await db
+    .select()
+    .from(templateItems)
+    .where(eq(templateItems.templateId, templateId))
+
+    const itemsWithCourses = await Promise.all(items.map(async (item) => {
+      if (item.type === "instruction" || item.type === "separator") {
+        return item
+      } else {
+        const coursesInRequirement = await db
+        .select({
+          type: courseItems.type,
+          code: courses.code,
+        })
+        .from(courseItems)
+        .where(eq(courseItems.requirementId, item.id))
+        .leftJoin(courses, eq(courses.id, courseItems.courseId))
+
+        return {
+          type: "requirement",
+          courseType: coursesInRequirement[0]?.type ?? "free", // Default to free if no type
+          description: item.description,
+          templateId: item.templateId,
+          orderIndex: item.orderIndex,
+          ...(coursesInRequirement[0]?.type === "fixed" 
+            ? { courses: coursesInRequirement.map(course => course.code).join(", ") }
+            : { courseCount: coursesInRequirement.length })
+        }
+    }}))
+    
+    const [template] = await db
+      .select({
+        name: templates.name,
+        description: templates.description,
+        id: templates.id,
+      })
+      .from(templates)
+      .where(eq(templates.id, templateId))
+      .$dynamic();
+
+    return {
+      ...template,
+      items: itemsWithCourses.sort((a, b) => a.orderIndex - b.orderIndex)
+    }
+  } catch (error) {
+    console.error("Failed to get template form:", error);
+    throw new Error("Failed to get template form");
+  }
+}
+
 /**
  * Creates a new academic plan template
  * @param input - Template creation input data
