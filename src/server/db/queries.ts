@@ -403,7 +403,7 @@ export async function getTemplateForms() {
     .select()
     .from(templateItems)
 
-    const itemsWithCourses = items.map(async (item) => {
+    const itemsWithCourses = await Promise.all(items.map(async (item) => {
       if (item.type === "instruction" || item.type === "separator") {
         return item
       } else {
@@ -414,30 +414,36 @@ export async function getTemplateForms() {
         })
         .from(courseItems)
         .where(eq(courseItems.requirementId, item.id))
-        .leftJoin(courses, and(eq(courseItems.type, "fixed"), eq(courses.id, courseItems.courseId)))
+        .leftJoin(courses, eq(courses.id, courseItems.courseId))
 
-        const courseType = coursesInRequirement[0]?.type;
-        if (!courseType) {
-          throw new Error("Failed to get course type");
+        return {
+          type: "requirement",
+          courseType: coursesInRequirement[0]?.type ?? "free", // Default to free if no type
+          description: item.description,
+          templateId: item.templateId,
+          orderIndex: item.orderIndex,
+          ...(coursesInRequirement[0]?.type === "fixed" 
+            ? { courses: coursesInRequirement.map(course => course.code).join(", ") }
+            : { courseCount: coursesInRequirement.length })
         }
-
-        if (courseType === "fixed") {
-          return {
-            type: "requirement",
-            courseType: "fixed",
-            description: item.description,
-            courses: coursesInRequirement.map(course => course.code).join(", ")
-          }
-        } else {
-          return {
-            type: "requirement",
-            courseType: "free",
-            description: item.description,
-            courseCount: coursesInRequirement.length
-        }
-      } 
-    }})
+    }}))
     
+    const allTemplates = await db
+      .select({
+        name: templates.name,
+        description: templates.description,
+        id: templates.id,
+      })
+      .from(templates)
+      .$dynamic();
+
+    // Map templates with their items after query
+    return allTemplates.map(template => ({
+      ...template,
+      items: itemsWithCourses.filter(
+        item => item.templateId === template.id
+      )
+    }));
   } catch (error) {
     console.error("Failed to get template forms:", error);
     throw new Error("Failed to get template forms");

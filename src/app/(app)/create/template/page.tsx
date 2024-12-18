@@ -1,7 +1,7 @@
 import styles from "@/styles/utils.module.css";
 import { auth } from "@/server/auth";
-import { getCoursesWithRatings } from "@/server/db/queries";
-import { TemplateForm } from "./TemplateForm";
+import { getCoursesWithRatings, getTemplateForms } from "@/server/db/queries";
+import { formSchema, TemplateForm } from "./TemplateForm";
 import { redirect } from "next/navigation";
 import { type Metadata } from "next";
 
@@ -21,6 +21,8 @@ export default async function CreateTemplatePage() {
     code: course.code,
   }));
 
+  const templateForms = await getTemplateForms();
+  console.log(templateForms);
   return (
     <div className="container mx-auto py-10">
       <h1 className={styles.pageTitleText}>Create Academic Plan</h1>
