@@ -6,7 +6,7 @@ export default function HomePage() {
   return (
     <div className="flex min-h-[calc(100vh-4rem)] flex-col items-center">
       {/* Hero Section */}
-      <div className="flex flex-col items-center justify-center space-y-4 px-4 py-24 text-center">
+      <div className="flex w-full flex-col items-center justify-center space-y-4 px-4 py-24 text-center">
         <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl">
           Welcome to UWPlan
         </h1>
@@ -21,6 +21,16 @@ export default function HomePage() {
           <Button variant="outline" size="lg" asChild>
             <a href="#features">Learn More</a>
           </Button>
+        </div>
+        {/* Demo Video */}
+        <div className="mt-8 aspect-video w-full max-w-6xl overflow-hidden rounded-lg shadow-xl">
+          <iframe
+            className="h-full w-full"
+            src="https://www.youtube.com/embed/CRkpptNLp0A?si=fmXVjn5Bw4oO6uFq&autoplay=1&mute=1&loop=1&playlist=CRkpptNLp0A&controls=0&rel=0&modestbranding=1&iv_load_policy=3&fs=0&playsinline=1"
+            title="UWPlan Demo"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          ></iframe>
         </div>
       </div>
 
