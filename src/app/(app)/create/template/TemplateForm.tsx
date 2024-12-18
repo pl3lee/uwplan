@@ -30,6 +30,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { BasicTemplates } from "@/server/db/queries";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { TemplateSelector } from "./TemplateSelector";
 
 export const formSchema = z.object({
   name: z.string().min(1, { message: "Name is required" }),
@@ -66,15 +69,16 @@ export type CourseOption = {
 
 type TemplateFormProps = {
   courseOptions: CourseOption[];
-  templateForms: any;
+  templates: BasicTemplates;
 };
 
 export type FormItem = z.infer<typeof formSchema>["items"][number];
 
-export function TemplateForm({
-  courseOptions,
-  templateForms,
-}: TemplateFormProps) {
+export function TemplateForm({ courseOptions, templates }: TemplateFormProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -86,22 +90,11 @@ export function TemplateForm({
 
   // Add handler for template selection
   const handleTemplateSelect = (templateId: string) => {
-    const selectedTemplate = templateForms.find((t) => t.id === templateId);
-    if (selectedTemplate) {
-      selectedTemplate.items.map((item) => {
-        console.log(item);
-      });
-      form.reset({
-        name: `Copy of ${selectedTemplate.name}`,
-        description: selectedTemplate.description,
-        items: selectedTemplate.items.map((item) => ({
-          ...item,
-          count: item.courseType === "free" ? item.courseCount : undefined,
-          // Add orderIndex to match the template's structure
-          orderIndex: item.orderIndex,
-        })),
-      });
-    }
+    const current = new URLSearchParams(Array.from(searchParams.entries()));
+    current.set("templateId", templateId);
+    const search = current.toString();
+    const query = search ? `?${search}` : "";
+    router.push(`${pathname}${query}`);
   };
 
   const { fields, append, remove, swap } = useFieldArray({
@@ -197,20 +190,12 @@ export function TemplateForm({
             <CardTitle>Academic Plan Details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="mb-4">
+            <div className="mb-4 flex flex-col gap-2">
               <FormLabel>Start from template (optional)</FormLabel>
-              <Select onValueChange={handleTemplateSelect}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a template to copy..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {templateForms.map((template) => (
-                    <SelectItem key={template.id} value={template.id}>
-                      {template.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <TemplateSelector
+                templates={templates}
+                onSelect={handleTemplateSelect}
+              />
             </div>
             <FormField
               control={form.control}

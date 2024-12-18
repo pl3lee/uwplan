@@ -366,7 +366,7 @@ export async function getTemplateDetails(userId: string, templateId: string) {
 
 
 /**
- * Retrieves all available academic plan templates, for use in create template form.
+ * Retrieves academic plan template, for use in create template form.
  * For reference, the template schema is
  * export const formSchema = z.object({
    name: z.string().min(1, { message: "Name is required" }),
@@ -395,61 +395,8 @@ export async function getTemplateDetails(userId: string, templateId: string) {
      ]),
    ),
  });
- * @returns Array of template objects
+ * @returns Template object
  */
-export async function getTemplateForms() {
-  try {
-    const items = await db
-    .select()
-    .from(templateItems)
-
-    const itemsWithCourses = await Promise.all(items.map(async (item) => {
-      if (item.type === "instruction" || item.type === "separator") {
-        return item
-      } else {
-        const coursesInRequirement = await db
-        .select({
-          type: courseItems.type,
-          code: courses.code,
-        })
-        .from(courseItems)
-        .where(eq(courseItems.requirementId, item.id))
-        .leftJoin(courses, eq(courses.id, courseItems.courseId))
-
-        return {
-          type: "requirement",
-          courseType: coursesInRequirement[0]?.type ?? "free", // Default to free if no type
-          description: item.description,
-          templateId: item.templateId,
-          orderIndex: item.orderIndex,
-          ...(coursesInRequirement[0]?.type === "fixed" 
-            ? { courses: coursesInRequirement.map(course => course.code).join(", ") }
-            : { courseCount: coursesInRequirement.length })
-        }
-    }}))
-    
-    const allTemplates = await db
-      .select({
-        name: templates.name,
-        description: templates.description,
-        id: templates.id,
-      })
-      .from(templates)
-      .$dynamic();
-
-    // Map templates with their items after query
-    return allTemplates.map(template => ({
-      ...template,
-      items: itemsWithCourses.filter(
-        item => item.templateId === template.id
-      )
-    }));
-  } catch (error) {
-    console.error("Failed to get template forms:", error);
-    throw new Error("Failed to get template forms");
-  }
-}
-
 export async function getTemplateForm(templateId: string) {
   try {
     const items = await db
@@ -1188,3 +1135,4 @@ export async function changeTermRange(userId: string, startTerm: Season, startYe
 
 export type SelectedCourses = Awaited<ReturnType<typeof getSelectedCourses>>;
 export type TermRange = Awaited<ReturnType<typeof getTermRange>>;
+export type BasicTemplates = Awaited<ReturnType<typeof getTemplates>>;
