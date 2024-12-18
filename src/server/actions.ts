@@ -81,7 +81,11 @@ export async function createTemplateAction(template: CreateTemplateInput) {
     }
   } catch (error) {
     console.error("Failed to create academic plan", error);
-    throw error
+    if (error instanceof Error) {
+      return { error: { message: error.message }}
+    } else {
+      return { error: { message: 'Failed to create academic plan' }}
+    }
   }
 }
 
@@ -106,8 +110,12 @@ export async function deleteTemplateAction(templateId: string) {
     revalidatePath('/admin');
     revalidatePath('/manage/template');
   } catch (error) {
-    console.error("Failed to delete template", error);
-    throw error
+    console.error("Failed to delete academic plan", error);
+    if (error instanceof Error) {
+      return { error: { message: error.message }}
+    } else {
+      return { error: { message: 'Failed to delete academic plan' }}
+    }
   }
 
 }
@@ -134,8 +142,12 @@ export async function renameTemplateAction(templateId: string, name: string, des
     revalidatePath('/admin');
     revalidatePath('/manage/template');
   } catch (error) {
-    console.error("Failed to rename template", error);
-    throw error
+    console.error("Failed to rename academic plan", error);
+    if (error instanceof Error) {
+      return { error: { message: error.message }}
+    } else {
+      return { error: { message: 'Failed to rename academic plan' }}
+    }
   }
 }
 

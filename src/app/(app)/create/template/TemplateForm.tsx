@@ -168,7 +168,13 @@ export function TemplateForm({
       }
 
       // Transform data for createTemplateAction
-      await createTemplateAction(transformTemplateFormData(values));
+      const error = await createTemplateAction(
+        transformTemplateFormData(values),
+      );
+      if (error) {
+        toast.error(error.error.message);
+        return;
+      }
       toast.success("Academic plan created successfully");
       form.reset();
       router.push("/select");

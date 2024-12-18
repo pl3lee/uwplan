@@ -22,7 +22,11 @@ export function DeleteTemplateButton({ templateId }: { templateId: string }) {
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      await deleteTemplateAction(templateId);
+      const error = await deleteTemplateAction(templateId);
+      if (error) {
+        toast.error(error.error.message);
+        return;
+      }
       toast.success("Academic plan deleted");
     } catch (error) {
       console.error("Error deleting template:", error);

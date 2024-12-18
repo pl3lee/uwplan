@@ -60,7 +60,15 @@ export function RenameTemplateButton({
 
     setIsRenaming(true);
     try {
-      await renameTemplateAction(templateId, data.name, data.description);
+      const error = await renameTemplateAction(
+        templateId,
+        data.name,
+        data.description,
+      );
+      if (error) {
+        toast.error(error.error.message);
+        return;
+      }
       toast.success("Academic plan renamed");
       setOpen(false);
     } catch (error) {
