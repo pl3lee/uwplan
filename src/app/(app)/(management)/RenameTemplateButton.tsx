@@ -62,7 +62,7 @@ export function RenameTemplateButton({
     try {
       const error = await renameTemplateAction(
         templateId,
-        data.name,
+        data.name.trim(),
         data.description,
       );
       if (error) {
