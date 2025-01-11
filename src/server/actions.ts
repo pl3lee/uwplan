@@ -100,12 +100,20 @@ export async function deleteTemplateAction(templateId: string) {
     if (!template) {
       throw new Error('Template not found');
     }
-    if (role !== 'admin' && !template.createdBy) {
+
+    // admin
+    if (role === 'admin') {
+      await deleteTemplate(templateId);
+      revalidatePath('/admin');
+      revalidatePath('/manage/template');
+      return;
+    }
+
+    // Non-admin can only modify their own templates
+    if (!template.createdBy || template.createdBy !== session.user.id) {
       throw new Error('Not authorized');
     }
-    if (template.createdBy && template.createdBy !== session.user.id) {
-      throw new Error('Not authorized');
-    }
+
     await deleteTemplate(templateId);
     revalidatePath('/admin');
     revalidatePath('/manage/template');
@@ -132,12 +140,19 @@ export async function renameTemplateAction(templateId: string, name: string, des
     if (existingTemplate && existingTemplate.id !== templateId) {
       throw new Error('Academic plan name already exists');
     }
-    if (role !== 'admin' && !template.createdBy) {
+    // admin
+    if (role === 'admin') {
+      await renameTemplate(templateId, name, description);
+      revalidatePath('/admin');
+      revalidatePath('/manage/template');
+      return;
+    }
+
+    // Non-admin can only modify their own templates
+    if (!template.createdBy || template.createdBy !== session.user.id) {
       throw new Error('Not authorized');
     }
-    if (template.createdBy && template.createdBy !== session.user.id) {
-      throw new Error('Not authorized');
-    }
+
     await renameTemplate(templateId, name, description);
     revalidatePath('/admin');
     revalidatePath('/manage/template');
