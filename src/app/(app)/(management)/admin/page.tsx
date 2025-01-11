@@ -29,7 +29,9 @@ export default async function AdminPage() {
       <h1 className={styles.pageTitleText}>Admin page</h1>
 
       <div className="mt-8">
-        <h2 className="mb-4 text-2xl font-bold">Users</h2>
+        <h2 className="mb-4 text-2xl font-bold">
+          Users {users.length > 0 ? `(${users.length})` : ""}
+        </h2>
         <div className="rounded-md border">
           <Table>
             <TableHeader>
@@ -53,7 +55,9 @@ export default async function AdminPage() {
       </div>
 
       <div className="mt-8">
-        <h2 className="mb-4 text-2xl font-bold">Templates</h2>
+        <h2 className="mb-4 text-2xl font-bold">
+          Templates {templates.length > 0 ? `(${templates.length})` : ""}
+        </h2>
         <div className="flex flex-col gap-2">
           {templates.map((template: Template) => (
             <TemplateCard template={template} key={template.id} />
