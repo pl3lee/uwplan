@@ -166,7 +166,7 @@ export async function getTemplateWithName(name: string) {
     const [template] = await db
       .select()
       .from(templates)
-      .where(eq(templates.name, name));
+      .where(eq(templates.name, name.trim()));
     return template;
   } catch (error) {
     console.error("Failed to get templates with name:", error);
@@ -183,7 +183,7 @@ export async function templateNameExists(name: string) {
     const [template] = await db
       .select()
       .from(templates)
-      .where(eq(templates.name, name))
+      .where(eq(templates.name, name.trim()))
       .limit(1);
     if (template) {
       return true;

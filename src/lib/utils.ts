@@ -87,7 +87,7 @@ export function getTemplateFormItemTitle(field: FormItem, index: number) {
 
 export function transformTemplateFormData(data: z.infer<typeof formSchema>) {
   return {
-    name: data.name,
+    name: data.name.trim(),
     description: data.description,
     items: data.items.map((item, index) => {
       if (item.type === "instruction") {

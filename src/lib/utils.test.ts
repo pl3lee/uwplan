@@ -158,6 +158,20 @@ describe('transformTemplateFormData', () => {
     });
   });
 
+  it('should strip out white space for name', () => {
+    const formData = {
+      name: "Test Template ",
+      description: "Test Description ",
+      items: []
+    };
+    const result = transformTemplateFormData(formData);
+    expect(result).toEqual({
+      name: "Test Template",
+      description: "Test Description ",
+      items: []
+    });
+  });
+
   it('should transform instruction items', () => {
     const formData = {
       name: "Test",
