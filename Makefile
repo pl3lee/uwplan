@@ -45,15 +45,6 @@ check-ui-dist:
 # Safe Go build that ensures UI is built first
 go-build-safe: check-ui-dist go-build
 
-# Docker commands
-docker-build:
-	docker build -t uwplan .
-
-docker-run:
-	docker run -d -p 8080:8080 --name uwplan uwplan
-
-docker-stop:
-	docker stop uwplan || true
-	docker rm uwplan || true
-
-docker-dev: docker-stop docker-build docker-run
+# Dev docker compose
+dev-db:
+	docker compose -f docker-compose.dev.yaml up -d
