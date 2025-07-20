@@ -1,15 +1,21 @@
 package main
 
 import (
+	"database/sql"
 	"embed"
 	"fmt"
 	"io/fs"
+	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
+	"github.com/pl3lee/uwplan/internal/repository/user"
 )
 
 //go:embed ui/dist
@@ -52,7 +58,7 @@ func uiRouter() http.Handler {
 	return r
 }
 
-func apiRouter() http.Handler {
+func apiRouter(appConfig AppConfig) http.Handler {
 	r := chi.NewRouter()
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("ok"))
@@ -60,7 +66,26 @@ func apiRouter() http.Handler {
 	return r
 }
 
+type AppConfig struct {
+	UserRepo *user.Queries
+}
+
 func main() {
+	if err := godotenv.Load(); err != nil {
+		log.Printf("Cannot read .env file, this is normal when running in a docker container: %v\n", err)
+	}
+	dbUrl := os.Getenv("DATABASE_URL")
+	if dbUrl == "" {
+		log.Fatal("DATABASE_URL not set")
+	}
+	db, err := sql.Open("postgres", dbUrl)
+	if err != nil {
+		log.Fatalf("cannot open database: %v", err)
+	}
+	userRepo := user.New(db)
+	appCfg := AppConfig{
+		UserRepo: userRepo,
+	}
 	r := chi.NewRouter()
 
 	r.Use(middleware.RequestID)
@@ -68,7 +93,7 @@ func main() {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
-	r.Mount("/api", apiRouter())
+	r.Mount("/api", apiRouter(appCfg))
 	r.Mount("/", uiRouter())
 
 	fmt.Println("Server starting on :8080")

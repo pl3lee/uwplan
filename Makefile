@@ -4,7 +4,7 @@ ifneq (,$(wildcard ./.env))
     export
 endif
 
-.PHONY: build dev clean ui-build ui-dev go-build run docker-build docker-run docker-stop
+.PHONY: build dev clean ui-build ui-dev go-build run docker-build docker-run docker-stop migrate migrate-down generate
 
 # Default target
 all: build
@@ -62,5 +62,5 @@ migrate:
 migrate-down:
 	cd sql/schema && goose postgres "$(DATABASE_URL)" down
 
-sqlc-generate:
+generate:
 	sqlc generate
