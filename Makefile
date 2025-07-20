@@ -1,3 +1,9 @@
+# Include .env file if it exists
+ifneq (,$(wildcard ./.env))
+    include .env
+    export
+endif
+
 .PHONY: build dev clean ui-build ui-dev go-build run docker-build docker-run docker-stop
 
 # Default target
@@ -48,3 +54,13 @@ go-build-safe: check-ui-dist go-build
 # Dev docker compose
 dev-db:
 	docker compose -f docker-compose.dev.yaml up -d
+
+# Migrate
+migrate:
+	cd sql/schema && goose postgres "$(DATABASE_URL)" up
+
+migrate-down:
+	cd sql/schema && goose postgres "$(DATABASE_URL)" down
+
+sqlc-generate:
+	sqlc generate
