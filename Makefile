@@ -4,7 +4,7 @@ ifneq (,$(wildcard ./.env))
     export
 endif
 
-.PHONY: build dev clean ui-build ui-dev go-build run docker-build docker-run docker-stop migrate migrate-down generate
+.PHONY: build dev clean ui-build ui-dev go-build go-build-docker run docker-build docker-run docker-stop migrate migrate-down generate
 
 # Default target
 all: build
@@ -22,7 +22,11 @@ ui-dev:
 
 # Build Go binary (requires ui-build to be run first)
 go-build:
-	go build -o uwplan main.go
+	go build -o uwplan .
+
+# Build Go binary for Docker (cross-compile for Linux)
+go-build-docker:
+	CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o uwplan .
 
 # Run the Go server (requires build to be run first)
 run:

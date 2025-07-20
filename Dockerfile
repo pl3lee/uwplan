@@ -11,20 +11,23 @@ RUN npm run build
 # Build stage for Go
 FROM golang:1.24-alpine AS go-builder
 
+# Install make
+RUN apk add --no-cache make
+
 WORKDIR /app
 
-# Copy go mod files
+# Copy go mod files first (for better caching)
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy source code
-COPY main.go ./
+# Copy all Go source code
+COPY . ./
 
-# Copy built UI from previous stage
+# Copy built UI from previous stage (this will overwrite any existing ui/dist)
 COPY --from=ui-builder /app/ui/dist ./ui/dist
 
-# Build Go binary
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o uwplan main.go
+# Build Go binary using make
+RUN make go-build-docker
 
 # Final runtime stage
 FROM alpine:latest
