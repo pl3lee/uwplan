@@ -7,4 +7,5 @@ sql:
       go:
         out: "internal/repository/user"
         package: "user"
+        emit_interface: true
 

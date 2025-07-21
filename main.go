@@ -15,6 +15,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+	"github.com/pl3lee/uwplan/internal/auth"
 	"github.com/pl3lee/uwplan/internal/repository/user"
 )
 
@@ -60,20 +61,49 @@ func uiRouter() http.Handler {
 
 func apiRouter(appConfig AppConfig) http.Handler {
 	r := chi.NewRouter()
+
+	// Health check
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("ok"))
 	})
+
+	// Mount auth routes
+	authConfig := auth.AuthConfig{
+		UserRepo:           appConfig.UserRepo,
+		BaseURL:            appConfig.BaseURL,
+		GoogleClientID:     appConfig.GoogleID,
+		GoogleClientSecret: appConfig.GoogleSecret,
+	}
+	authRouter := auth.NewRouter(authConfig)
+	r.Mount("/auth", authRouter.Routes())
+
 	return r
 }
 
 type AppConfig struct {
-	UserRepo *user.Queries
+	UserRepo     user.Querier
+	BaseURL      string
+	GoogleID     string
+	GoogleSecret string
 }
 
 func main() {
 	if err := godotenv.Load(); err != nil {
 		log.Printf("Cannot read .env file, this is normal when running in a docker container: %v\n", err)
 	}
+	baseURL := os.Getenv("BASE_URL")
+	if baseURL == "" {
+		log.Fatal("BASE_URL not set")
+	}
+	googleID := os.Getenv("GOOGLE_CLIENT_ID")
+	if googleID == "" {
+		log.Fatal("GOOGLE_CLIENT_ID not set")
+	}
+	googleSecret := os.Getenv("GOOGLE_CLIENT_SECRET")
+	if googleSecret == "" {
+		log.Fatal("GOOGLE_CLIENT_SECRET not set")
+	}
+
 	dbUrl := os.Getenv("DATABASE_URL")
 	if dbUrl == "" {
 		log.Fatal("DATABASE_URL not set")
@@ -84,7 +114,10 @@ func main() {
 	}
 	userRepo := user.New(db)
 	appCfg := AppConfig{
-		UserRepo: userRepo,
+		UserRepo:     userRepo,
+		BaseURL:      baseURL,
+		GoogleID:     googleID,
+		GoogleSecret: googleSecret,
 	}
 	r := chi.NewRouter()
 
