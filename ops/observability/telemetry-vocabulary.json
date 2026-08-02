@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "service": {
+    "name": "uwplan",
+    "nameResourceAttribute": "service.name",
+    "releaseResourceAttribute": "service.version"
+  },
+  "log": {
+    "serviceAttribute": "service",
+    "releaseAttribute": "release_digest",
+    "validationAttribute": "validation_id",
+    "traceAttribute": "trace_id"
+  },
+  "span": {
+    "validationAttribute": "uwplan.validation.id"
+  },
+  "metrics": {
+    "healthRequestsOtel": "uwplan.health.requests",
+    "healthRequestsPrometheus": "uwplan_health_requests_total",
+    "healthDurationOtel": "uwplan.health.duration",
+    "probeSuccess": "probe_success",
+    "probeStatus": "probe_http_status_code",
+    "probeDuration": "probe_duration_seconds"
+  },
+  "labels": {
+    "probeInstance": "instance",
+    "serviceVersion": "service_version"
+  }
+}

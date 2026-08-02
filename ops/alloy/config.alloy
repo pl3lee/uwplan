@@ -3,9 +3,112 @@ logging {
 	format = "json"
 }
 
+otelcol.auth.headers "remote" {
+	header {
+		key   = "Authorization"
+		value = "Bearer " + sys.env("UWPLAN_REMOTE_OTLP_TOKEN")
+	}
+}
+
+otelcol.receiver.otlp "uwplan" {
+	grpc {
+		endpoint = "0.0.0.0:4317"
+	}
+
+	http {
+		endpoint = "0.0.0.0:4318"
+	}
+
+	output {
+		metrics = [otelcol.processor.batch.uwplan.input]
+		traces  = [otelcol.processor.batch.uwplan.input]
+	}
+}
+
+otelcol.processor.batch "uwplan" {
+	output {
+		metrics = [otelcol.exporter.otlp.remote.input]
+		traces  = [otelcol.exporter.otlp.remote.input]
+	}
+}
+
+otelcol.exporter.otlp "remote" {
+	client {
+		endpoint = sys.env("UWPLAN_REMOTE_OTLP_ENDPOINT")
+		auth     = otelcol.auth.headers.remote.handler
+	}
+}
+
+loki.source.syslog "uwplan" {
+	listener {
+		address  = "0.0.0.0:1514"
+		protocol = "udp"
+		labels   = { service = "uwplan" }
+	}
+
+	forward_to = [loki.process.uwplan.receiver]
+}
+
+loki.process "uwplan" {
+	stage.json {
+		expressions = {
+			release_digest = "release_digest",
+			service        = "service",
+		}
+	}
+
+	stage.labels {
+		values = {
+			release_digest = "",
+			service        = "",
+		}
+	}
+
+	forward_to = [loki.write.remote.receiver]
+}
+
+loki.write "remote" {
+	endpoint {
+		url = sys.env("UWPLAN_REMOTE_LOKI_URL")
+
+		authorization {
+			type        = "Bearer"
+			credentials = sys.env("UWPLAN_REMOTE_LOKI_TOKEN")
+		}
+	}
+}
+
+prometheus.exporter.blackbox "uwplan_readiness" {
+	config = "{ modules: { https_ready: { prober: http, timeout: 5s, http: { method: GET, valid_status_codes: [200], fail_if_not_ssl: true, preferred_ip_protocol: ip4 } } } }"
+
+	target {
+		name    = "uwplan"
+		address = sys.env("UWPLAN_EXTERNAL_READINESS_URL")
+		module  = "https_ready"
+	}
+}
+
+prometheus.scrape "uwplan_readiness" {
+	targets         = prometheus.exporter.blackbox.uwplan_readiness.targets
+	forward_to      = [prometheus.remote_write.remote.receiver]
+	scrape_interval = "60s"
+}
+
 prometheus.exporter.self "uwplan_alloy" {}
 
 prometheus.scrape "uwplan_alloy" {
-	targets    = prometheus.exporter.self.uwplan_alloy.targets
-	forward_to = []
+	targets         = prometheus.exporter.self.uwplan_alloy.targets
+	forward_to      = [prometheus.remote_write.remote.receiver]
+	scrape_interval = "60s"
+}
+
+prometheus.remote_write "remote" {
+	endpoint {
+		url = sys.env("UWPLAN_REMOTE_PROMETHEUS_URL")
+
+		authorization {
+			type        = "Bearer"
+			credentials = sys.env("UWPLAN_REMOTE_PROMETHEUS_TOKEN")
+		}
+	}
 }

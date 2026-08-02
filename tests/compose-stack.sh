@@ -16,6 +16,7 @@ work_directory="$(mktemp -d)"
 neighbor_name="${PROJECT_NAME}-neighbor"
 caddy_name="${PROJECT_NAME}-caddy"
 app_environment="${work_directory}/app.env"
+alloy_environment="${work_directory}/alloy.env"
 postgres_password_file="${work_directory}/postgres-password"
 migration_success_log="${work_directory}/migration-success.log"
 migration_failure_log="${work_directory}/migration-failure.log"
@@ -24,6 +25,7 @@ root_certificate="${work_directory}/caddy-root.crt"
 compose() {
   UWPLAN_IMAGE="$UWPLAN_IMAGE" \
   UWPLAN_ENV_FILE="$app_environment" \
+  UWPLAN_ALLOY_ENV_FILE="$alloy_environment" \
   POSTGRES_PASSWORD_FILE="$postgres_password_file" \
   RELEASE_DIGEST="$RELEASE_DIGEST" \
   RELEASE_REVISION="$RELEASE_REVISION" \
@@ -38,6 +40,8 @@ assert_app_health() {
     | grep --fixed-strings '/api/live'
   docker inspect --format '{{.State.Health.Status}}' "$app_container" \
     | grep --fixed-strings healthy
+  docker inspect --format '{{.HostConfig.LogConfig.Type}} {{index .HostConfig.LogConfig.Config "syslog-format"}}' "$app_container" \
+    | grep --fixed-strings 'syslog rfc5424micro'
 }
 
 cleanup() {
@@ -61,6 +65,16 @@ AUTH_TRUST_HOST=true
 DATABASE_URL=postgresql://uwplan_app:${DB_PASSWORD}@db:5432/uwplan
 EOF
 chmod 600 "$app_environment"
+cat > "$alloy_environment" <<EOF
+UWPLAN_REMOTE_OTLP_ENDPOINT=127.0.0.1:4317
+UWPLAN_REMOTE_OTLP_TOKEN=ci-otlp-token
+UWPLAN_REMOTE_LOKI_URL=http://127.0.0.1:9/loki/api/v1/push
+UWPLAN_REMOTE_LOKI_TOKEN=ci-loki-token
+UWPLAN_REMOTE_PROMETHEUS_URL=http://127.0.0.1:9/api/v1/push
+UWPLAN_REMOTE_PROMETHEUS_TOKEN=ci-prometheus-token
+UWPLAN_EXTERNAL_READINESS_URL=https://localhost:${CADDY_HTTPS_PORT}/api/ready
+EOF
+chmod 600 "$alloy_environment"
 
 docker pull "$CADDY_IMAGE" >/dev/null
 docker run --rm \
