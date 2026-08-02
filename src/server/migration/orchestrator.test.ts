@@ -17,7 +17,26 @@ function reachGoNoGo(migration: MigrationOrchestrator) {
   passGate(migration);
 }
 
+function acceptRuntimeDecision(migration: MigrationOrchestrator) {
+  expect(
+    migration.execute({
+      type: "record-runtime-decision",
+      decision: {
+        schemaVersion: 1,
+        outcome: "accept",
+        accepted: true,
+        repeatSoak: false,
+        minimumHostMemoryBytes: null,
+        observationCount: 1_440,
+        reasons: [],
+      },
+      evidence: { resourceDecision: "sha256:sanitized" },
+    }).ok,
+  ).toBe(true);
+}
+
 function recordGo(migration: MigrationOrchestrator) {
+  acceptRuntimeDecision(migration);
   expect(
     migration.execute({
       type: "record-go",
@@ -137,6 +156,7 @@ describe("migration orchestration", () => {
       expect(migration.state.phase).toBe(phase);
       expect(migration.execute({ type: "pass-gate", evidence }).ok).toBe(true);
     }
+    acceptRuntimeDecision(migration);
     expect(
       migration.execute({
         type: "record-go",
@@ -184,6 +204,7 @@ describe("migration orchestration", () => {
       { type: "pass-gate", target: "operator" },
       { type: "pass-gate", target: "operator" },
       { type: "pass-gate", target: "operator" },
+      { type: "record-runtime-decision", target: "operator" },
       { type: "record-go", target: "operator" },
       { type: "pass-gate", target: "edge" },
       { type: "pass-gate", target: "racknerd" },
@@ -237,6 +258,7 @@ describe("migration orchestration", () => {
       { type: "pass-gate", target: "operator" },
       { type: "pass-gate", target: "operator" },
       { type: "pass-gate", target: "operator" },
+      { type: "record-runtime-decision", target: "operator" },
       { type: "record-go", target: "operator" },
       { type: "pass-gate", target: "edge" },
       { type: "pass-gate", target: "racknerd" },
@@ -334,6 +356,7 @@ describe("migration orchestration", () => {
       { type: "pass-gate", target: "operator" },
       { type: "pass-gate", target: "operator" },
       { type: "pass-gate", target: "operator" },
+      { type: "record-runtime-decision", target: "operator" },
       { type: "record-go", target: "operator" },
       { type: "pass-gate", target: "edge" },
       { type: "pass-gate", target: "racknerd" },
@@ -364,6 +387,25 @@ describe("migration orchestration", () => {
     });
 
     expect(result.exitCode).toBe(1);
+    expect(migration.state.phase).toBe("go-no-go");
+  });
+
+  it("rejects GO until the resource decision has been accepted", () => {
+    const migration = createMigrationOrchestrator();
+    reachGoNoGo(migration);
+
+    const result = migration.execute({
+      type: "record-go",
+      operator: "pl3lee",
+      evidence: { acceptancePackage: "sha256:accepted" },
+    });
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        exitCode: 1,
+        error: "GO requires an accepted runtime decision",
+      }),
+    );
     expect(migration.state.phase).toBe("go-no-go");
   });
 
@@ -399,6 +441,96 @@ describe("migration orchestration", () => {
         terminalOutcome: "rehearsal-remediation",
       }),
     );
+  });
+
+  it("consumes an accepted runtime decision into sanitized migration evidence", () => {
+    const migration = createMigrationOrchestrator();
+    reachGoNoGo(migration);
+
+    const result = migration.execute({
+      type: "record-runtime-decision",
+      decision: {
+        schemaVersion: 1,
+        outcome: "accept",
+        accepted: true,
+        repeatSoak: false,
+        minimumHostMemoryBytes: null,
+        observationCount: 1_440,
+        reasons: [],
+      },
+      evidence: { resourceDecision: "sha256:sanitized" },
+    });
+
+    expect(result.ok).toBe(true);
+    expect(migration.state.phase).toBe("go-no-go");
+    expect(migration.getEvidence().records.at(-1)).toEqual(
+      expect.objectContaining({
+        event: "record-runtime-decision",
+        status: "accepted",
+        details: {
+          evidence: "provided",
+          outcome: "accept",
+          accepted: true,
+          repeatSoak: false,
+          minimumHostMemoryBytes: null,
+          observationCount: 1_440,
+          reasonCount: 0,
+        },
+      }),
+    );
+  });
+
+  it("enforces a resize-and-repeat-soak runtime decision", () => {
+    const migration = createMigrationOrchestrator();
+    reachGoNoGo(migration);
+
+    const result = migration.execute({
+      type: "record-runtime-decision",
+      decision: {
+        schemaVersion: 1,
+        outcome: "resize-repeat-soak",
+        accepted: false,
+        repeatSoak: true,
+        minimumHostMemoryBytes: 2 * 1024 ** 3,
+        observationCount: 12,
+        reasons: [{ code: "resource-restart" }],
+      },
+      evidence: { resourceDecision: "sha256:sanitized" },
+    });
+
+    expect(result.ok).toBe(true);
+    expect(migration.state).toEqual(
+      expect.objectContaining({
+        phase: "rehearsal-remediation",
+        terminalOutcome: "rehearsal-remediation",
+      }),
+    );
+    expect(migration.infrastructure.requests.at(-1)).toEqual({
+      type: "record-runtime-decision",
+      target: "operator",
+    });
+  });
+
+  it("rejects a forged resize decision that requires less than 2 GiB", () => {
+    const migration = createMigrationOrchestrator();
+    reachGoNoGo(migration);
+
+    const result = migration.execute({
+      type: "record-runtime-decision",
+      decision: {
+        schemaVersion: 1,
+        outcome: "resize-repeat-soak",
+        accepted: false,
+        repeatSoak: true,
+        minimumHostMemoryBytes: 1024 ** 3,
+        observationCount: 1,
+        reasons: [{ code: "oom" }],
+      },
+      evidence: { resourceDecision: "sha256:sanitized" },
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(migration.state.phase).toBe("go-no-go");
   });
 
   it("rejects authenticated DigitalOcean validation before its write epoch", () => {

@@ -1,0 +1,18 @@
+[Unit]
+Description=UWPlan app-only liveness watchdog
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+ExecStart=/usr/bin/node /opt/uwplan/current/ops/recovery/watchdog.mjs
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/uwplan-watchdog
+
+[Install]
+WantedBy=multi-user.target

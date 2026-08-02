@@ -48,11 +48,30 @@ export interface InfrastructureOperation {
   readonly target: "racknerd" | "digitalocean" | "edge" | "operator";
 }
 
+export interface RuntimeDecisionReport {
+  readonly schemaVersion: 1;
+  readonly outcome:
+    | "accept"
+    | "investigate"
+    | "block-cutover"
+    | "resize-repeat-soak";
+  readonly accepted: boolean;
+  readonly repeatSoak: boolean;
+  readonly minimumHostMemoryBytes: number | null;
+  readonly observationCount: number;
+  readonly reasons: readonly { readonly code: string }[];
+}
+
 export type MigrationCommand =
   | { type: "pass-gate"; evidence: Record<string, unknown> }
   | {
       type: "fail-gate";
       reason: string;
+      evidence: Record<string, unknown>;
+    }
+  | {
+      type: "record-runtime-decision";
+      decision: RuntimeDecisionReport;
       evidence: Record<string, unknown>;
     }
   | {
@@ -235,6 +254,14 @@ function evidenceSafeDetails(
     evidence: hasEvidence(command.evidence) ? "provided" : "missing",
   };
   if (command.type === "record-go") details.operator = command.operator;
+  if (command.type === "record-runtime-decision") {
+    details.outcome = command.decision.outcome;
+    details.accepted = command.decision.accepted;
+    details.repeatSoak = command.decision.repeatSoak;
+    details.minimumHostMemoryBytes = command.decision.minimumHostMemoryBytes;
+    details.observationCount = command.decision.observationCount;
+    details.reasonCount = command.decision.reasons.length;
+  }
   if (
     command.type === "declare-digitalocean-write-epoch" ||
     command.type === "declare-racknerd-write-epoch" ||
@@ -287,6 +314,7 @@ export function createMigrationOrchestrator(
   ];
   let activeCommand: MigrationCommand | undefined;
   let phaseBeforeCommand: MigrationPhase = state.phase;
+  let runtimeDecisionAccepted = false;
 
   const appendEvidence = (
     status: EvidenceRecord["status"],
@@ -415,6 +443,50 @@ export function createMigrationOrchestrator(
         return succeed();
       }
 
+      if (command.type === "record-runtime-decision") {
+        const { decision } = command;
+        const outcomes = new Set<RuntimeDecisionReport["outcome"]>([
+          "accept",
+          "investigate",
+          "block-cutover",
+          "resize-repeat-soak",
+        ]);
+        if (state.phase !== "go-no-go") {
+          return fail("Runtime acceptance belongs at the go/no-go gate");
+        }
+        if (!hasEvidence(command.evidence)) {
+          return fail("Runtime decision evidence is required");
+        }
+        if (
+          decision.schemaVersion !== 1 ||
+          !outcomes.has(decision.outcome) ||
+          !Number.isSafeInteger(decision.observationCount) ||
+          decision.observationCount < 1 ||
+          !Array.isArray(decision.reasons) ||
+          decision.accepted !== (decision.outcome === "accept") ||
+          decision.repeatSoak !== (decision.outcome === "resize-repeat-soak") ||
+          (decision.outcome === "resize-repeat-soak" &&
+            (typeof decision.minimumHostMemoryBytes !== "number" ||
+              !Number.isSafeInteger(decision.minimumHostMemoryBytes) ||
+              decision.minimumHostMemoryBytes < 2 * 1024 ** 3)) ||
+          (decision.outcome !== "resize-repeat-soak" &&
+            decision.minimumHostMemoryBytes !== null)
+        ) {
+          return fail("Runtime decision report is invalid");
+        }
+        request(command);
+        if (!decision.accepted) {
+          state = {
+            ...state,
+            phase: "rehearsal-remediation",
+            terminalOutcome: "rehearsal-remediation",
+          };
+        } else {
+          runtimeDecisionAccepted = true;
+        }
+        return succeed();
+      }
+
       if (command.type === "recover-unchanged-racknerd") {
         if (state.digitalOceanWriteEpoch) {
           return fail(
@@ -444,6 +516,9 @@ export function createMigrationOrchestrator(
           return fail("GO requires the pl3lee operator");
         if (!command.evidence.acceptancePackage) {
           return fail("GO requires a complete acceptance package");
+        }
+        if (!runtimeDecisionAccepted) {
+          return fail("GO requires an accepted runtime decision");
         }
         request(command);
         state = { ...state, phase: "maintenance" };
