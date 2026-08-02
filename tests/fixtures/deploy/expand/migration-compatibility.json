@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "migrations": {
+    "0010_expand_only.sql": {
+      "kind": "expand-only",
+      "sha256": "8eddad2dde4c381071d9aac0029ada7ac7e6ee5f3af77b553053eea5774d575b"
+    }
+  }
+}

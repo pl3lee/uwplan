@@ -1,0 +1,4 @@
+Cmnd_Alias UWPLAN_COMPOSE_HELPER = /usr/local/libexec/uwplan-deploy/compose-adapter.mjs migrate *, \
+  /usr/local/libexec/uwplan-deploy/compose-adapter.mjs recreate-app *, \
+  /usr/local/libexec/uwplan-deploy/compose-adapter.mjs wait-ready *
+uwplan-deploy ALL=(root) NOPASSWD: UWPLAN_COMPOSE_HELPER

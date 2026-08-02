@@ -65,7 +65,7 @@ services:
     profiles: [migration]
     init: true
     restart: "no"
-    command: ["node", "/app/ops/migrate.mjs"]
+    command: ["node", "/app/ops/deploy/migrate-release.mjs"]
     depends_on:
       db:
         condition: service_healthy

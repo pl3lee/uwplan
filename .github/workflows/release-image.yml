@@ -89,3 +89,47 @@ jobs:
           path: release-manifest.json
           if-no-files-found: error
           retention-days: 30
+
+  deploy:
+    needs: release
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+    steps:
+      - name: Join the private deployment network with an ephemeral identity
+        uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:uwplan-ci-deployer
+
+      - name: Install the restricted deployment credential
+        env:
+          DEPLOY_KEY: ${{ secrets.UWPLAN_DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.UWPLAN_DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -d -m 0700 "$RUNNER_TEMP/uwplan-ssh"
+          install -m 0600 /dev/null "$RUNNER_TEMP/uwplan-ssh/id_ed25519"
+          install -m 0600 /dev/null "$RUNNER_TEMP/uwplan-ssh/known_hosts"
+          printf '%s\n' "$DEPLOY_KEY" > "$RUNNER_TEMP/uwplan-ssh/id_ed25519"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$RUNNER_TEMP/uwplan-ssh/known_hosts"
+
+      - name: Admit the immutable release through the forced command
+        env:
+          DEPLOY_DIGEST: ${{ needs.release.outputs.manifest_digest }}
+          DEPLOY_HOST: ${{ vars.UWPLAN_DEPLOY_HOST }}
+          DEPLOY_REVISION: ${{ github.sha }}
+        run: |
+          if [[ ! "$DEPLOY_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "Refusing to deploy an invalid manifest digest" >&2
+            exit 1
+          fi
+          ssh \
+            -i "$RUNNER_TEMP/uwplan-ssh/id_ed25519" \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -o "UserKnownHostsFile=$RUNNER_TEMP/uwplan-ssh/known_hosts" \
+            "uwplan-deploy@$DEPLOY_HOST" \
+            "deploy $DEPLOY_DIGEST $DEPLOY_REVISION"
