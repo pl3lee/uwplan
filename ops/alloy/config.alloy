@@ -36,6 +36,10 @@ otelcol.exporter.otlp "remote" {
 	client {
 		endpoint = sys.env("UWPLAN_REMOTE_OTLP_ENDPOINT")
 		auth     = otelcol.auth.headers.remote.handler
+
+		tls {
+			insecure = true
+		}
 	}
 }
 
@@ -90,8 +94,17 @@ prometheus.exporter.blackbox "uwplan_readiness" {
 
 prometheus.scrape "uwplan_readiness" {
 	targets         = prometheus.exporter.blackbox.uwplan_readiness.targets
-	forward_to      = [prometheus.remote_write.remote.receiver]
+	forward_to      = [prometheus.relabel.uwplan_readiness.receiver]
 	scrape_interval = "60s"
+}
+
+prometheus.relabel "uwplan_readiness" {
+	forward_to = [prometheus.remote_write.remote.receiver]
+
+	rule {
+		target_label = "instance"
+		replacement  = sys.env("UWPLAN_EXTERNAL_READINESS_URL")
+	}
 }
 
 prometheus.exporter.self "uwplan_alloy" {}
