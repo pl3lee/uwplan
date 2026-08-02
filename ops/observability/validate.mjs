@@ -147,7 +147,7 @@ function loadConfiguration() {
 const pollIntervalMs = Number(
   process.env.UWPLAN_VALIDATION_POLL_INTERVAL_MS ?? "5000",
 );
-const timeoutMs = Number(process.env.UWPLAN_VALIDATION_TIMEOUT_MS ?? "300000");
+const timeoutMs = Number(process.env.UWPLAN_VALIDATION_TIMEOUT_MS ?? "600000");
 if (
   !Number.isSafeInteger(pollIntervalMs) ||
   pollIntervalMs < 1 ||
