@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "runId": "20260802T210000000Z",
+  "desktopChrome": {
+    "complete": true,
+    "provider": "google",
+    "signIns": 2,
+    "writePersisted": true
+  },
+  "physicalIphoneSafari": {
+    "complete": true,
+    "provider": "github",
+    "signIns": 2,
+    "writePersisted": true
+  },
+  "crossProvider": {
+    "complete": true,
+    "primary": "google",
+    "attempted": "github",
+    "result": "OAuthAccountNotLinked"
+  }
+}

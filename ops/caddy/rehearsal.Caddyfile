@@ -1,0 +1,23 @@
+(uwplan_rehearsal_backend) {
+	reverse_proxy {$UWPLAN_REHEARSAL_BACKEND:127.0.0.1:5001} {
+		health_uri /api/live
+		health_status 200
+	}
+}
+
+{$UWPLAN_REHEARSAL_SITE:v2.uwplan.com} {
+	{$UWPLAN_REHEARSAL_TLS_DIRECTIVE:}
+
+	@readiness path /api/ready
+	handle @readiness {
+		import uwplan_rehearsal_backend
+	}
+
+	handle {
+		basic_auth {
+			{$UWPLAN_REHEARSAL_BASIC_USER} {$UWPLAN_REHEARSAL_BASIC_PASSWORD_HASH}
+		}
+		request_header -Authorization
+		import uwplan_rehearsal_backend
+	}
+}

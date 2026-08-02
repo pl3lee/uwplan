@@ -51,6 +51,11 @@ The operational timeout defaults to ten minutes and cannot be configured below f
 
 Production Caddy reaches the backend on `127.0.0.1:5000` and uses normal automatic HTTPS when the test-only variables are unset. The disposable integration test changes the site addresses and sets the complete optional `UWPLAN_CADDY_TLS_DIRECTIVE` to `tls internal`; production leaves it empty until the separately approved origin-certificate work installs explicit TLS configuration.
 
+The OAuth rehearsal is a separate profile, app environment, loopback port, and
+Caddy site. Follow `ops/auth-rehearsal/README.md`; never attach its disposable
+candidate database or dedicated provider credentials to the normal `app`
+service.
+
 ## Restricted production releases
 
 A push to `production` checks the source, builds and publishes one image, and then passes only the returned `sha256:` manifest digest and source revision to the DigitalOcean host. The runner joins Tailscale as the ephemeral `tag:uwplan-ci-deployer` identity. Tailnet policy should allow that tag to reach only the deployment host's SSH port. The repository's `production` environment provides the OAuth credentials, pinned SSH host key, restricted private key, and `UWPLAN_DEPLOY_HOST` variable.

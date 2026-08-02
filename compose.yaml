@@ -60,6 +60,41 @@ services:
     networks:
       - runtime
 
+  rehearsal-app:
+    profiles: [rehearsal]
+    env_file:
+      - path: ${UWPLAN_REHEARSAL_ENV_FILE:-/dev/null}
+        required: true
+    environment:
+      RELEASE_DIGEST: ${RELEASE_DIGEST:?Set RELEASE_DIGEST to the deployed manifest digest}
+      RELEASE_REVISION: ${RELEASE_REVISION:?Set RELEASE_REVISION to the source revision}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://alloy:4318
+      OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: http://alloy:4318/v1/metrics
+      OTEL_METRIC_EXPORT_INTERVAL: "10000"
+    image: ${UWPLAN_IMAGE:?Set UWPLAN_IMAGE to an immutable application image reference}
+    init: true
+    restart: unless-stopped
+    mem_limit: 256m
+    ports:
+      - target: 5000
+        published: "5001"
+        host_ip: 127.0.0.1
+        protocol: tcp
+    depends_on:
+      db:
+        condition: service_healthy
+      alloy:
+        condition: service_healthy
+    stop_grace_period: 30s
+    networks:
+      - runtime
+    logging:
+      driver: syslog
+      options:
+        syslog-address: udp://127.0.0.1:1514
+        syslog-format: rfc5424micro
+        tag: uwplan-rehearsal
+
   db:
     image: docker.io/library/postgres:16.14-bookworm@sha256:92620daddcd947f8d5ab5ba66e848702fe443d87fed30c4cea8e389fd78dfc55
     command:

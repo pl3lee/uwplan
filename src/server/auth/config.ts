@@ -12,8 +12,7 @@ import {
   schedules,
   userTermRanges,
 } from "@/server/db/schema";
-import Google from "next-auth/providers/google";
-import GitHub from "next-auth/providers/github";
+import { oauthProviders } from "./providers";
 
 /**
  * Module augmentation for `next-auth` types. Allows us to add custom properties to the `session`
@@ -43,8 +42,7 @@ declare module "next-auth" {
  */
 export const authConfig = {
   providers: [
-    Google,
-    GitHub,
+    ...oauthProviders,
     /**
      * ...add more providers here.
      *
