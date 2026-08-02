@@ -87,5 +87,6 @@ process.stdout.write(
     mutations,
     allowDangerousEmailAccountLinking:
       github.options?.allowDangerousEmailAccountLinking,
+    githubScopes: github.authorization?.params?.scope,
   })}\n`,
 );

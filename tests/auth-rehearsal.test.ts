@@ -137,6 +137,7 @@ describe("isolated authentication rehearsal", () => {
         schedules: 0,
       },
       allowDangerousEmailAccountLinking: false,
+      githubScopes: "read:user user:email",
     });
   });
 

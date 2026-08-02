@@ -26,15 +26,18 @@ the verifier file are fingerprints only. Generate them from the production
 secret store without copying plaintext production credentials to the
 rehearsal host. The verifier rejects any matching rehearsal credential.
 
-Create dedicated provider applications with only these values:
+Create dedicated provider applications with only these values and scopes:
 
-| Provider | Homepage/origin         | Callback                                         |
-| -------- | ----------------------- | ------------------------------------------------ |
-| Google   | `https://v2.uwplan.com` | `https://v2.uwplan.com/api/auth/callback/google` |
-| GitHub   | `https://v2.uwplan.com` | `https://v2.uwplan.com/api/auth/callback/github` |
+| Provider | Homepage/origin         | Callback                                         | Required scopes        |
+| -------- | ----------------------- | ------------------------------------------------ | ---------------------- |
+| Google   | `https://v2.uwplan.com` | `https://v2.uwplan.com/api/auth/callback/google` | `openid email profile` |
+| GitHub   | `https://v2.uwplan.com` | `https://v2.uwplan.com/api/auth/callback/github` | `read:user user:email` |
 
-Add only the named rehearsal identities. Do not copy production client IDs,
-client secrets, Auth.js secrets, cookies, sessions, or provider grants.
+Do not grant additional scopes. Add only the named rehearsal identities. The
+GitHub identity may be an existing account, but it must authorize only the
+dedicated rehearsal OAuth app for this exercise. Do not copy production client
+IDs, client secrets, Auth.js secrets, cookies, sessions, or provider grants,
+and do not connect the rehearsal app to a production database.
 
 Generate the Basic Auth hash without writing the plaintext password to the
 application environment:
@@ -75,8 +78,20 @@ test "$(curl --silent --output /dev/null --write-out '%{http_code}' \
 
 ## 3. Complete the named browser matrix
 
-Use exactly two fresh, non-production sign-in accounts configured in the
-protected verifier file: one Google account and one GitHub account.
+Use exactly two sign-in identities configured in the protected verifier file:
+one Google rehearsal identity and one GitHub identity. The GitHub identity may
+be the tester's existing GitHub account; a separate GitHub account is not
+required. The OAuth application and its credentials remain dedicated to the
+rehearsal regardless of which GitHub identity signs in.
+
+Before starting, verify that the selected GitHub email does not already belong
+to a user in the disposable candidate when the intended acceptance path is a
+successful GitHub sign-in. An email collision exercises Auth.js's fail-closed
+`OAuthAccountNotLinked` path instead of the success path. That behavior is
+secure and covered automatically, but it does not satisfy the manual GitHub
+sign-in/write check; use an identity/candidate combination that can exercise
+the intended path. Perform this check through a protected database session and
+do not print the email or matching row into evidence.
 
 1. Desktop Chrome: sign in with the Google identity, sign out, and sign in a
    second time. Create exactly one additional schedule whose name is
@@ -92,7 +107,9 @@ Google/GitHub attempt through Auth.js core with the actual UWPlan provider
 policy and proves `OAuthAccountNotLinked` occurs before any user, account,
 plan, or schedule mutation.
 
-Do not use real student identities or inspect restored user rows in a browser.
+Do not use a real student Google identity or inspect restored user rows in a
+browser. If an existing GitHub account is used, revoke its grant to the
+dedicated rehearsal OAuth app after evidence is accepted.
 
 ## 4. Verify and retain sanitized evidence
 
