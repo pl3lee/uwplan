@@ -198,7 +198,10 @@ describe("fail-closed maintenance Worker", () => {
       }),
       harness.env,
     );
-    const firstCookie = (first.headers.get("set-cookie") ?? "").split(";")[0];
+    const firstSetCookie = first.headers.get("set-cookie");
+    if (!firstSetCookie) throw new Error("bootstrap response omitted cookie");
+    const firstCookie = firstSetCookie.split(";")[0];
+    if (!firstCookie) throw new Error("bootstrap response cookie is empty");
 
     const rotatedBootstrap = "d".repeat(48);
     harness.env.BOOTSTRAP_GENERATION = "generation-2";
