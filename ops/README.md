@@ -8,7 +8,8 @@ The Compose environment must provide:
 - `RELEASE_DIGEST` and `RELEASE_REVISION`: the identity returned by readiness;
 - `UWPLAN_ENV_FILE`: a mode-`0600` file containing application secrets and `DATABASE_URL`; and
 - `UWPLAN_ALLOY_ENV_FILE`: a root-owned mode-`0600` observability file based on `ops/observability/alloy.env.example`;
-- `POSTGRES_PASSWORD_FILE`: a mode-`0600` file containing only the database password.
+- `POSTGRES_PASSWORD_FILE`: a mode-`0600` file containing only the `uwplan_app` password; and
+- `POSTGRES_ADMIN_PASSWORD_FILE`: a separate mode-`0600` file containing only the PostgreSQL administrator password. It must not equal the app password.
 
 Start the dependencies, run the release's one-shot migration, then admit the app:
 
@@ -77,7 +78,12 @@ chmod 0644 /opt/uwplan/current/ops/deploy/protocol.mjs
 visudo -cf /etc/sudoers.d/uwplan-deploy
 ```
 
-`/etc/uwplan/runtime.env` is root-owned mode `0600` and contains only the protected `UWPLAN_ENV_FILE`, `UWPLAN_ALLOY_ENV_FILE`, and `POSTGRES_PASSWORD_FILE` paths. `/var/lib/uwplan-runtime/release.env` is written root-owned mode `0600`. The helper uses fixed production paths (`/opt/uwplan/current/compose.yaml`, `/etc/uwplan/runtime.env`, `/var/lib/uwplan-runtime/release.env`, and loopback readiness); environment overrides and injected Docker runners work only when the helper is executed outside its installed production path under the explicit disposable test seam.
+`/etc/uwplan/runtime.env` is root-owned mode `0600` and contains only the protected `UWPLAN_ENV_FILE`, `UWPLAN_ALLOY_ENV_FILE`, `POSTGRES_PASSWORD_FILE`, and `POSTGRES_ADMIN_PASSWORD_FILE` paths. `/var/lib/uwplan-runtime/release.env` is written root-owned mode `0600`. The helper uses fixed production paths (`/opt/uwplan/current/compose.yaml`, `/etc/uwplan/runtime.env`, `/var/lib/uwplan-runtime/release.env`, and loopback readiness); environment overrides and injected Docker runners work only when the helper is executed outside its installed production path under the explicit disposable test seam.
+
+The database initializes `postgres` with the administrator secret and creates
+`uwplan_app` separately with LOGIN, NOSUPERUSER, NOCREATEDB, NOCREATEROLE,
+NOREPLICATION, and NOBYPASSRLS. Candidate moves and their disposable fixture
+are documented in `ops/database/README.md`.
 
 Validate the installation before enabling the key:
 

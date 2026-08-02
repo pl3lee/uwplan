@@ -174,5 +174,10 @@ jobs:
           COMPOSE_PROJECT_NAME: uwplan-ci-${{ github.run_id }}-${{ github.run_attempt }}
         run: bash tests/compose-stack.sh
 
+      - name: Move a disposable PostgreSQL fixture into a fresh candidate
+        env:
+          COMPOSE_PROJECT_NAME: uwplan-db-candidate-${{ github.run_id }}-${{ github.run_attempt }}
+        run: bash tests/database-candidate.sh uwplan-ci:deterministic-a
+
       - name: Prove the previous release against candidate-forward schema
         run: bash tests/deploy-schema-forward.sh uwplan-ci:deterministic-a

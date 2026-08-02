@@ -38,6 +38,28 @@ services:
         syslog-format: rfc5424micro
         tag: uwplan
 
+  candidate-app:
+    profiles: [candidate]
+    env_file:
+      - path: ${UWPLAN_CANDIDATE_ENV_FILE:-/dev/null}
+        required: true
+    environment:
+      RELEASE_DIGEST: ${RELEASE_DIGEST:?Set RELEASE_DIGEST to the deployed manifest digest}
+      RELEASE_REVISION: ${RELEASE_REVISION:?Set RELEASE_REVISION to the source revision}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://alloy:4318
+      OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: http://alloy:4318/v1/metrics
+      OTEL_METRIC_EXPORT_INTERVAL: "10000"
+    image: ${UWPLAN_IMAGE:?Set UWPLAN_IMAGE to an immutable application image reference}
+    init: true
+    restart: "no"
+    mem_limit: 256m
+    depends_on:
+      db:
+        condition: service_healthy
+    stop_grace_period: 30s
+    networks:
+      - runtime
+
   db:
     image: docker.io/library/postgres:16.14-bookworm@sha256:92620daddcd947f8d5ab5ba66e848702fe443d87fed30c4cea8e389fd78dfc55
     command:
@@ -54,12 +76,14 @@ services:
     mem_limit: 160m
     environment:
       POSTGRES_DB: uwplan
-      POSTGRES_USER: uwplan_app
-      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_admin_password
     secrets:
       - postgres_password
+      - postgres_admin_password
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./ops/database/init-app-role.sh:/docker-entrypoint-initdb.d/10-uwplan-app-role.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready --username=uwplan_app --dbname=uwplan"]
       interval: 5s
@@ -119,6 +143,8 @@ services:
 secrets:
   postgres_password:
     file: ${POSTGRES_PASSWORD_FILE:?Set POSTGRES_PASSWORD_FILE to the protected PostgreSQL password file}
+  postgres_admin_password:
+    file: ${POSTGRES_ADMIN_PASSWORD_FILE:?Set POSTGRES_ADMIN_PASSWORD_FILE to the protected PostgreSQL administrator password file}
 
 volumes:
   postgres_data:

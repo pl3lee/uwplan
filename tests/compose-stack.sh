@@ -8,6 +8,7 @@ readonly CADDY_IMAGE="docker.io/library/caddy:2.11.4-alpine@sha256:5f5c8640aae01
 readonly RELEASE_DIGEST="sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
 readonly RELEASE_REVISION="compose-contract-test"
 readonly DB_PASSWORD="ci-compose-database-secret-must-not-leak"
+readonly DB_ADMIN_PASSWORD="ci-compose-admin-secret-must-not-leak"
 readonly BAD_DB_PASSWORD="ci-compose-invalid-secret-must-not-leak"
 readonly CADDY_HTTPS_PORT="18443"
 readonly CADDY_WWW_PORT="18444"
@@ -18,6 +19,7 @@ caddy_name="${PROJECT_NAME}-caddy"
 app_environment="${work_directory}/app.env"
 alloy_environment="${work_directory}/alloy.env"
 postgres_password_file="${work_directory}/postgres-password"
+postgres_admin_password_file="${work_directory}/postgres-admin-password"
 migration_success_log="${work_directory}/migration-success.log"
 migration_failure_log="${work_directory}/migration-failure.log"
 root_certificate="${work_directory}/caddy-root.crt"
@@ -27,6 +29,7 @@ compose() {
   UWPLAN_ENV_FILE="$app_environment" \
   UWPLAN_ALLOY_ENV_FILE="$alloy_environment" \
   POSTGRES_PASSWORD_FILE="$postgres_password_file" \
+  POSTGRES_ADMIN_PASSWORD_FILE="$postgres_admin_password_file" \
   RELEASE_DIGEST="$RELEASE_DIGEST" \
   RELEASE_REVISION="$RELEASE_REVISION" \
     docker compose --project-name "$PROJECT_NAME" --file "$COMPOSE_FILE" "$@"
@@ -55,6 +58,8 @@ docker info >/dev/null
 chmod 700 "$work_directory"
 printf '%s' "$DB_PASSWORD" > "$postgres_password_file"
 chmod 600 "$postgres_password_file"
+printf '%s' "$DB_ADMIN_PASSWORD" > "$postgres_admin_password_file"
+chmod 600 "$postgres_admin_password_file"
 cat > "$app_environment" <<EOF
 AUTH_GITHUB_ID=compose-github-id
 AUTH_GITHUB_SECRET=compose-github-secret
