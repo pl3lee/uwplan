@@ -1,0 +1,11 @@
+logging {
+	level  = "info"
+	format = "json"
+}
+
+prometheus.exporter.self "uwplan_alloy" {}
+
+prometheus.scrape "uwplan_alloy" {
+	targets    = prometheus.exporter.self.uwplan_alloy.targets
+	forward_to = []
+}

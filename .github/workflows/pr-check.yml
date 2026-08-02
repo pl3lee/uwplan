@@ -165,3 +165,9 @@ jobs:
             echo "Database credential sentinel leaked from the container" >&2
             exit 1
           fi
+
+      - name: Exercise the Compose stack through host Caddy
+        env:
+          UWPLAN_IMAGE: uwplan-ci:deterministic-a
+          COMPOSE_PROJECT_NAME: uwplan-ci-${{ github.run_id }}-${{ github.run_attempt }}
+        run: bash tests/compose-stack.sh

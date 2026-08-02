@@ -34,6 +34,12 @@ ENV RELEASE_REVISION=${RELEASE_REVISION}
 COPY --from=builder --chown=node:node /app/public ./public
 COPY --from=builder --chown=node:node /app/.next/standalone ./
 COPY --from=builder --chown=node:node /app/.next/static ./.next/static
+COPY --from=builder --chown=node:node /app/drizzle ./drizzle
+COPY --from=builder --chown=node:node /app/ops/migrate.mjs ./ops/migrate.mjs
+# Next's standalone trace only includes modules reached by the web server. Keep
+# the runtime migrator's two production dependencies in the same release image.
+COPY --from=dependencies --chown=node:node /app/node_modules/drizzle-orm ./node_modules/drizzle-orm
+COPY --from=dependencies --chown=node:node /app/node_modules/postgres ./node_modules/postgres
 
 USER node
 EXPOSE 5000
