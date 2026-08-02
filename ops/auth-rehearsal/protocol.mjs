@@ -4,8 +4,7 @@ import { createHash } from "node:crypto";
 import { readFileSync, statSync } from "node:fs";
 
 const runIdPattern = /^[0-9]{8}T[0-9]{9}Z$/;
-const candidateDatabasePattern =
-  /^uwplan_candidate_[0-9]{8}T[0-9]{9}Z$/;
+const candidateDatabasePattern = /^uwplan_candidate_[0-9]{8}T[0-9]{9}Z$/;
 const sha256Pattern = /^[0-9a-f]{64}$/;
 const basicUserPattern = /^[A-Za-z0-9_.-]{1,64}$/;
 
@@ -139,35 +138,19 @@ export function validateRehearsalConfiguration(
   const identities = {
     google: {
       email: requireValue(operatorEnvironment, "UWPLAN_GOOGLE_TEST_EMAIL"),
-      marker: requireValue(
-        operatorEnvironment,
-        "UWPLAN_GOOGLE_WRITE_MARKER",
-      ),
+      marker: requireValue(operatorEnvironment, "UWPLAN_GOOGLE_WRITE_MARKER"),
       provider: "google",
     },
     github: {
       email: requireValue(operatorEnvironment, "UWPLAN_GITHUB_TEST_EMAIL"),
-      marker: requireValue(
-        operatorEnvironment,
-        "UWPLAN_GITHUB_WRITE_MARKER",
-      ),
+      marker: requireValue(operatorEnvironment, "UWPLAN_GITHUB_WRITE_MARKER"),
       provider: "github",
-    },
-    crossProvider: {
-      email: requireValue(
-        operatorEnvironment,
-        "UWPLAN_CROSS_PROVIDER_TEST_EMAIL",
-      ),
-      provider: requireValue(
-        operatorEnvironment,
-        "UWPLAN_CROSS_PROVIDER_PRIMARY",
-        /^(google|github)$/,
-      ),
     },
   };
   const emails = Object.values(identities).map(({ email }) => email);
   if (
-    new Set(emails.map((email) => email.toLowerCase())).size !== emails.length ||
+    new Set(emails.map((email) => email.toLowerCase())).size !==
+      emails.length ||
     emails.some((email) => !/^\S+@\S+\.\S+$/.test(email)) ||
     identities.google.marker === "Default" ||
     identities.github.marker === "Default" ||
@@ -210,7 +193,11 @@ function assertIdentity(name, actual, expected) {
   }
 }
 
-export function validateRehearsalEvidence(configuration, snapshot, attestation) {
+export function validateRehearsalEvidence(
+  configuration,
+  snapshot,
+  attestation,
+) {
   if (
     snapshot?.schemaVersion !== 1 ||
     snapshot.database?.name !== configuration.database ||
@@ -227,14 +214,6 @@ export function validateRehearsalEvidence(configuration, snapshot, attestation) 
     provider: "github",
     marker: configuration.identities.github.marker,
   });
-  assertIdentity("cross-provider", snapshot.identities?.crossProvider, {
-    provider: configuration.identities.crossProvider.provider,
-  });
-
-  const crossAttempted =
-    configuration.identities.crossProvider.provider === "google"
-      ? "github"
-      : "google";
   if (
     attestation?.schemaVersion !== 1 ||
     attestation.runId !== configuration.runId ||
@@ -245,12 +224,7 @@ export function validateRehearsalEvidence(configuration, snapshot, attestation) 
     attestation.physicalIphoneSafari?.complete !== true ||
     attestation.physicalIphoneSafari?.signIns !== 2 ||
     attestation.physicalIphoneSafari?.writePersisted !== true ||
-    attestation.physicalIphoneSafari?.provider !== "github" ||
-    attestation.crossProvider?.complete !== true ||
-    attestation.crossProvider?.primary !==
-      configuration.identities.crossProvider.provider ||
-    attestation.crossProvider?.attempted !== crossAttempted ||
-    attestation.crossProvider?.result !== "OAuthAccountNotLinked"
+    attestation.physicalIphoneSafari?.provider !== "github"
   ) {
     throw new Error("browser/provider acceptance evidence is incomplete");
   }
@@ -273,7 +247,7 @@ export function validateRehearsalEvidence(configuration, snapshot, attestation) 
     oauth: {
       google: "two-sign-in-idempotent",
       github: "two-sign-in-idempotent",
-      crossProvider: "rejected-without-link-or-duplicate",
+      crossProvider: "covered-by-automated-fail-closed-policy-test",
     },
     browsers: {
       desktopChrome: "write-persisted",
@@ -282,9 +256,6 @@ export function validateRehearsalEvidence(configuration, snapshot, attestation) 
     identityProofSha256: {
       google: sha256(configuration.identities.google.email.toLowerCase()),
       github: sha256(configuration.identities.github.email.toLowerCase()),
-      crossProvider: sha256(
-        configuration.identities.crossProvider.email.toLowerCase(),
-      ),
     },
   };
 }

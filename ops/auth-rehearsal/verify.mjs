@@ -112,10 +112,6 @@ async function databaseSnapshot(configuration) {
       identities: {
         google: await identitySnapshot(sql, configuration.identities.google),
         github: await identitySnapshot(sql, configuration.identities.github),
-        crossProvider: await identitySnapshot(
-          sql,
-          configuration.identities.crossProvider,
-        ),
       },
     };
   } finally {

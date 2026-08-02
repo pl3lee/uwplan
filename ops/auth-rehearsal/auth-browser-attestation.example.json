@@ -12,11 +12,5 @@
     "provider": "github",
     "signIns": 2,
     "writePersisted": true
-  },
-  "crossProvider": {
-    "complete": true,
-    "primary": "google",
-    "attempted": "github",
-    "result": "OAuthAccountNotLinked"
   }
 }

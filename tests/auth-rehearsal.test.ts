@@ -7,6 +7,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parse } from "yaml";
@@ -45,8 +46,6 @@ function environments() {
     UWPLAN_GOOGLE_WRITE_MARKER: "chrome-persistence-proof",
     UWPLAN_GITHUB_TEST_EMAIL: "github@example.invalid",
     UWPLAN_GITHUB_WRITE_MARKER: "iphone-persistence-proof",
-    UWPLAN_CROSS_PROVIDER_TEST_EMAIL: "cross@example.invalid",
-    UWPLAN_CROSS_PROVIDER_PRIMARY: "google",
     UWPLAN_PRODUCTION_AUTH_SECRET_SHA256: sha256("production-auth-secret"),
     UWPLAN_PRODUCTION_AUTH_GOOGLE_ID_SHA256: sha256("production-google-id"),
     UWPLAN_PRODUCTION_AUTH_GOOGLE_SECRET_SHA256: sha256(
@@ -85,7 +84,6 @@ function acceptedSnapshot() {
     identities: {
       google: identity("google", true),
       github: identity("github", true),
-      crossProvider: identity("google", false),
     },
   };
 }
@@ -106,18 +104,38 @@ function acceptedAttestation() {
       signIns: 2,
       writePersisted: true,
     },
-    crossProvider: {
-      complete: true,
-      primary: "google",
-      attempted: "github",
-      result: "OAuthAccountNotLinked",
-    },
   };
 }
 
 describe("isolated authentication rehearsal", () => {
   it("pins both OAuth providers to fail-closed email linking", () => {
     expect(oauthProviderSecurityOptions).toEqual({
+      allowDangerousEmailAccountLinking: false,
+    });
+  });
+
+  it("rejects an automated same-email cross-provider attempt before mutation", () => {
+    const result = spawnSync(
+      process.execPath,
+      [
+        join(
+          process.cwd(),
+          "tests/fixtures/auth-rehearsal/cross-provider-proof.mjs",
+        ),
+      ],
+      { encoding: "utf8" },
+    );
+    expect(result.status).toBe(0);
+    expect(result.stderr).toBe("");
+    expect(JSON.parse(result.stdout)).toEqual({
+      error: "OAuthAccountNotLinked",
+      mutations: {
+        users: 0,
+        accounts: 0,
+        sessions: 0,
+        plans: 0,
+        schedules: 0,
+      },
       allowDangerousEmailAccountLinking: false,
     });
   });
@@ -171,7 +189,7 @@ describe("isolated authentication rehearsal", () => {
     ).toThrow("credential is not dedicated: AUTH_SECRET");
   });
 
-  it("accepts exact idempotency, cross-provider, write, and browser evidence", () => {
+  it("accepts exactly two providers' idempotency, write, and browser evidence", () => {
     const { rehearsal, operator } = environments();
     const configuration = validateRehearsalConfiguration(rehearsal, operator);
     expect(
@@ -202,11 +220,6 @@ describe("isolated authentication rehearsal", () => {
       "duplicate default schedule",
       ["identities", "github", "schedules", "default"],
       2,
-    ],
-    [
-      "linked cross-provider account",
-      ["identities", "crossProvider", "accounts", "github"],
-      1,
     ],
   ])("rejects %s evidence", (_name, path, value) => {
     const { rehearsal, operator } = environments();
