@@ -15,6 +15,24 @@ candidate identity, creates `uwplan_candidate_<UTC run id>` from `template0`
 with the source encoding and locale, restores as `uwplan_app` in one
 transaction with exit-on-error, and runs `ANALYZE`.
 
+Before the candidate application may boot, `integrity.sh` derives source and
+candidate manifests from repeatable-read snapshots and `integrity.mjs`
+compares them. The contract requires exact PostgreSQL versions, the pinned
+utility-image digest, locale/encoding, extensions, non-default tablespaces,
+normalized schema, Drizzle ledger count/max-id/hash, every ordinary-table
+count/content hash, and every sequence definition/value/`is_called` state. It
+also rejects unvalidated constraints, invalid indexes, unsafe database/object
+ownership, or elevated `uwplan_app` attributes.
+
+Table rows pass directly from `COPY` into SHA-256; neither row serialization
+nor row values are written to evidence, stdout, or stderr. Evidence contains
+only identities, counts, digests, gate names, and the candidate/run identity.
+The host writes a mode-`0600` acceptance marker only after every gate passes,
+and `boot-candidate` refuses to run without that matching marker. A restore or
+integrity failure writes a terminal rejection marker, keeps the candidate app
+offline, and requires a new UTC run/candidate identity instead of repairing a
+failed candidate in place.
+
 ## Protected host configuration
 
 Install the repository at `/opt/uwplan/current` on both hosts and create a
@@ -50,12 +68,15 @@ UWPLAN_DB_TARGET_HOST=migration-target \
 node ops/database/move-candidate.mjs 20260802T193000000Z
 ```
 
-Success prints one sanitized JSON record. A checksum difference, non-listable
-archive, reused database identity, restore error, unsafe role attributes, or
-failed application readiness exits nonzero without emitting credentials.
+Success prints one sanitized JSON record. A corruption/checksum difference,
+version or locale drift, schema/ledger/table/sequence mismatch, invalid
+constraint/index, unsafe ownership or role attributes, reused identity,
+restore error, or failed application readiness exits nonzero without emitting
+credentials or row values.
 
-`tests/database-candidate-command.test.ts` proves the SSH orchestration and
-fail-closed gates with a fake transport. `tests/database-candidate.sh` uses two
-disposable PostgreSQL instances and the built application image to prove the
-snapshot, archive, restore, credential separation, fixture data, and readiness
-path without production data or hosts.
+`tests/database-integrity.test.ts` and
+`tests/database-candidate-command.test.ts` prove the exact comparison and SSH
+failure matrix with fake infrastructure. `tests/database-candidate.sh` uses
+two disposable PostgreSQL 16 instances and the built application image to
+prove synchronized capture, exact privacy-safe integrity, restore, credential
+separation, fixture data, and readiness without production data or hosts.

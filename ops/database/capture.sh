@@ -9,6 +9,8 @@ readonly ARCHIVE_PARTIAL="${EVIDENCE_DIRECTORY}/source.dump.partial"
 readonly ARCHIVE_PATH="${EVIDENCE_DIRECTORY}/source.dump"
 readonly MANIFEST_PARTIAL="${EVIDENCE_DIRECTORY}/source-manifest.json.partial"
 readonly MANIFEST_PATH="${EVIDENCE_DIRECTORY}/source-manifest.json"
+readonly INTEGRITY_PARTIAL="${EVIDENCE_DIRECTORY}/source-integrity.json.partial"
+readonly INTEGRITY_PATH="${EVIDENCE_DIRECTORY}/source-integrity.json"
 readonly DUMP_WARNINGS="${EVIDENCE_DIRECTORY}/pg-dump.stderr"
 readonly SNAPSHOT_INPUT="${EVIDENCE_DIRECTORY}/snapshot.input"
 readonly SNAPSHOT_OUTPUT="${EVIDENCE_DIRECTORY}/snapshot.output"
@@ -26,7 +28,7 @@ rm -f "$ARCHIVE_PARTIAL" "$MANIFEST_PARTIAL"
 
 snapshot_pid=""
 cleanup() {
-  rm -f "$ARCHIVE_PARTIAL" "$MANIFEST_PARTIAL" "$DUMP_WARNINGS"
+  rm -f "$ARCHIVE_PARTIAL" "$MANIFEST_PARTIAL" "$INTEGRITY_PARTIAL" "$DUMP_WARNINGS"
   if [[ -n "$snapshot_pid" ]]; then
     printf 'ROLLBACK;\n\\q\n' >&3 2>/dev/null || true
     exec 3>&- 4<&- || true
@@ -84,13 +86,18 @@ pg_restore --list "$ARCHIVE_PARTIAL" >/dev/null
 archive_sha256="$(sha256sum "$ARCHIVE_PARTIAL" | awk '{print $1}')"
 [[ "$archive_sha256" =~ ^[0-9a-f]{64}$ ]]
 
-printf '{"schemaVersion":1,"runId":"%s","snapshotId":"%s","utilityVersionNum":"160014","archive":{"format":"custom","sha256":"%s","complete":true,"owners":false,"privileges":false,"filters":false,"clusterGlobals":false,"listable":true},"source":{"database":"%s","serverVersionNum":"%s","encoding":"%s","collation":"%s","ctype":"%s"}}\n' \
+/integrity.sh "$RUN_ID" "$PGDATABASE" "$snapshot_id" "$EVIDENCE_DIRECTORY" \
+  >"$INTEGRITY_PARTIAL"
+integrity="$(cat "$INTEGRITY_PARTIAL")"
+
+printf '{"schemaVersion":1,"runId":"%s","snapshotId":"%s","utilityVersionNum":"160014","archive":{"format":"custom","sha256":"%s","complete":true,"owners":false,"privileges":false,"filters":false,"clusterGlobals":false,"listable":true},"source":{"database":"%s","serverVersionNum":"%s","encoding":"%s","collation":"%s","ctype":"%s"},"integrity":%s}\n' \
   "$RUN_ID" "$snapshot_id" "$archive_sha256" "$PGDATABASE" \
-  "$source_version" "$source_encoding" "$source_collation" "$source_ctype" \
+  "$source_version" "$source_encoding" "$source_collation" "$source_ctype" "$integrity" \
   >"$MANIFEST_PARTIAL"
 
-chmod 600 "$ARCHIVE_PARTIAL" "$MANIFEST_PARTIAL"
+chmod 600 "$ARCHIVE_PARTIAL" "$MANIFEST_PARTIAL" "$INTEGRITY_PARTIAL"
 mv "$ARCHIVE_PARTIAL" "$ARCHIVE_PATH"
+mv "$INTEGRITY_PARTIAL" "$INTEGRITY_PATH"
 mv "$MANIFEST_PARTIAL" "$MANIFEST_PATH"
 
 printf 'COMMIT;\n\\q\n' >&3

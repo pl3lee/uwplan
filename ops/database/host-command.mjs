@@ -18,6 +18,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { pipeline } from "node:stream/promises";
 import { POSTGRES_UTILITY_IMAGE } from "./protocol.mjs";
+import { compareIntegrity, isIntegrityManifest } from "./integrity.mjs";
 
 const production = process.env.NODE_ENV !== "test";
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
@@ -128,10 +129,14 @@ function utility(action, runId, environmentPath, extra = []) {
       network,
       "--env-file",
       environmentPath,
+      "--env",
+      `UWPLAN_DB_UTILITY_IMAGE=${POSTGRES_UTILITY_IMAGE}`,
       "--volume",
       `${directory}:/evidence`,
       "--volume",
       `${script}:/${action}.sh:ro`,
+      "--volume",
+      `${join(scriptDirectory, "integrity.sh")}:/integrity.sh:ro`,
       POSTGRES_UTILITY_IMAGE,
       "/bin/bash",
       `/${action}.sh`,
@@ -169,7 +174,9 @@ function loadManifest(directory) {
     Number(manifest?.source?.serverVersionNum) > 160014 ||
     !safeValuePattern.test(manifest?.source?.encoding ?? "") ||
     !safeValuePattern.test(manifest?.source?.collation ?? "") ||
-    !safeValuePattern.test(manifest?.source?.ctype ?? "")
+    !safeValuePattern.test(manifest?.source?.ctype ?? "") ||
+    !isIntegrityManifest(manifest?.integrity) ||
+    manifest.integrity.runId !== manifest.runId
   ) {
     fail("source manifest failed validation");
   }
@@ -379,7 +386,71 @@ switch (action) {
     process.stdout.write(output);
     break;
   }
+  case "validate-integrity": {
+    const candidateDatabase = arguments_[0] ?? "";
+    if (!candidatePattern.test(candidateDatabase))
+      fail("invalid candidate identity", 64);
+    const manifest = loadManifest(directory);
+    const acceptancePath = join(directory, "integrity-accepted.json");
+    const rejectionPath = join(directory, "candidate-rejected.json");
+    if (existsSync(rejectionPath))
+      fail("failed candidate identity cannot be retried");
+    rmSync(acceptancePath, { force: true });
+    writeFileSync(
+      rejectionPath,
+      `${JSON.stringify({ schemaVersion: 1, runId, candidateDatabase, status: "validation-in-progress" })}\n`,
+      { mode: 0o600 },
+    );
+    chmodSync(rejectionPath, 0o600);
+    const candidate = JSON.parse(
+      utility("integrity", runId, targetEnvironment, [candidateDatabase, "-"]),
+    );
+    const result = compareIntegrity(manifest.integrity, candidate);
+    const evidence = {
+      schemaVersion: 1,
+      event: "database.candidate-integrity",
+      runId,
+      candidateDatabase,
+      status: result.status,
+      failedGates: result.failedGates,
+      sourceArchiveSha256: manifest.archive.sha256,
+      sourceSchemaSha256: manifest.integrity.schemaSha256,
+      candidateSchemaSha256: candidate.schemaSha256,
+      ordinaryTableCount: candidate.tables?.length ?? 0,
+      sequenceCount: candidate.sequences?.length ?? 0,
+    };
+    const evidencePath = join(directory, "candidate-integrity.json");
+    writeFileSync(evidencePath, `${JSON.stringify(evidence)}\n`, {
+      mode: 0o600,
+    });
+    chmodSync(evidencePath, 0o600);
+    if (result.status === "accepted") {
+      writeFileSync(acceptancePath, `${JSON.stringify(evidence)}\n`, {
+        mode: 0o600,
+      });
+      chmodSync(acceptancePath, 0o600);
+      rmSync(rejectionPath, { force: true });
+    } else {
+      writeFileSync(rejectionPath, `${JSON.stringify(evidence)}\n`, {
+        mode: 0o600,
+      });
+      chmodSync(rejectionPath, 0o600);
+    }
+    process.stdout.write(`${JSON.stringify(evidence)}\n`);
+    break;
+  }
   case "boot-candidate": {
+    const acceptancePath = join(directory, "integrity-accepted.json");
+    if (!existsSync(acceptancePath))
+      fail("candidate has no accepted integrity evidence");
+    const acceptance = JSON.parse(readFileSync(acceptancePath, "utf8"));
+    if (
+      acceptance.status !== "accepted" ||
+      acceptance.runId !== runId ||
+      acceptance.candidateDatabase !== arguments_[0]
+    ) {
+      fail("candidate integrity evidence does not match its identity");
+    }
     const result = bootCandidate(runId, arguments_[0] ?? "");
     process.stdout.write(`${JSON.stringify(result)}\n`);
     break;

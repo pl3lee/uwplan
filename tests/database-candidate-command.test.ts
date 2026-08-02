@@ -19,7 +19,12 @@ const archiveSha256 =
   "56e4ad93e7ca743c19ff2734ebbe40bdb47d20d5efddf0cf12b66e427903621a";
 
 function harness(
-  options: { badReceiveHash?: boolean; unready?: boolean } = {},
+  options: {
+    badReceiveHash?: boolean;
+    corruptCapture?: boolean;
+    failedIntegrityGates?: string[];
+    unready?: boolean;
+  } = {},
 ) {
   const root = mkdtempSync(join(tmpdir(), "uwplan-db-command-"));
   const log = join(root, "ssh.jsonl");
@@ -41,8 +46,9 @@ const manifest = {
   snapshotId: "00000003-0000001B-1",
   utilityVersionNum: "160014",
   utilityImage: ${JSON.stringify(utilityImage)},
-  archive: { format: "custom", sha256: ${JSON.stringify(archiveSha256)}, complete: true, owners: false, privileges: false, filters: false, clusterGlobals: false, listable: true },
-  source: { database: "fixture", serverVersionNum: "160014", encoding: "UTF8", collation: "C", ctype: "C" }
+  archive: { format: "custom", sha256: ${JSON.stringify(archiveSha256)}, complete: true, owners: false, privileges: false, filters: false, clusterGlobals: false, listable: ${options.corruptCapture ? "false" : "true"} },
+  source: { database: "fixture", serverVersionNum: "160014", encoding: "UTF8", collation: "C", ctype: "C" },
+  integrity: { fixture: true }
 };
 if (action === "capture") process.stdout.write(JSON.stringify(manifest));
 else if (action === "receive-manifest") {
@@ -57,6 +63,16 @@ else if (action === "receive-archive") {
   archiveSha256: ${JSON.stringify(archiveSha256)}, restored: true, singleTransaction: true,
   exitOnError: true, analyzed: true, databaseOwner: "uwplan_app",
   appRole: { login: true, superuser: false, createdb: false, createrole: false, replication: false, bypassRls: false }
+}));
+else if (action === "validate-integrity") process.stdout.write(JSON.stringify({
+  schemaVersion: 1, event: "database.candidate-integrity", runId,
+  candidateDatabase: extra[0],
+  status: ${options.failedIntegrityGates?.length ? '"rejected"' : '"accepted"'},
+  failedGates: ${JSON.stringify(options.failedIntegrityGates ?? [])},
+  sourceArchiveSha256: ${JSON.stringify(archiveSha256)},
+  sourceSchemaSha256: ${JSON.stringify("a".repeat(64))},
+  candidateSchemaSha256: ${JSON.stringify("a".repeat(64))},
+  ordinaryTableCount: 17, sequenceCount: 1
 }));
 else if (action === "boot-candidate") process.stdout.write(JSON.stringify({
   schemaVersion: 1, runId, candidateDatabase: extra[0], applicationBooted: true,
@@ -111,6 +127,11 @@ describe("database candidate move command", () => {
           archiveSha256,
           transfer: "ssh",
           candidateDatabase: `uwplan_candidate_${runId}`,
+          integrity: "accepted",
+          sourceSchemaSha256: "a".repeat(64),
+          candidateSchemaSha256: "a".repeat(64),
+          ordinaryTableCount: 17,
+          sequenceCount: 1,
           applicationRole: "uwplan_app",
           readiness: "ready",
         }),
@@ -133,6 +154,7 @@ describe("database candidate move command", () => {
       ]);
       expect(requested.slice(4)).toEqual([
         ["migration-target", "restore"],
+        ["migration-target", "validate-integrity"],
         ["migration-target", "boot-candidate"],
       ]);
       for (const operation of operations) {
@@ -198,6 +220,50 @@ describe("database candidate move command", () => {
       });
       expect(result.status).toBe(64);
       expect(result.stderr).toContain("must be valid");
+    } finally {
+      test.cleanup();
+    }
+  });
+
+  it("rejects a corrupt source capture before transfer", () => {
+    const test = harness({ corruptCapture: true });
+    try {
+      const result = test.run();
+      expect(result.status).toBe(1);
+      expect(result.stderr).toBe(
+        "source capture did not satisfy the archive contract\n",
+      );
+      expect(test.operations().map(({ action }) => action)).toEqual([
+        "capture",
+      ]);
+    } finally {
+      test.cleanup();
+    }
+  });
+
+  it.each([
+    "version",
+    "tool-image",
+    "locale",
+    "extensions",
+    "tablespaces",
+    "schema",
+    "ledger",
+    "tables",
+    "sequences",
+    "constraints",
+    "indexes",
+    "ownership",
+    "application-role",
+  ])("keeps a candidate offline when the %s gate fails", (gate) => {
+    const test = harness({ failedIntegrityGates: [gate] });
+    try {
+      const result = test.run();
+      expect(result.status).toBe(1);
+      expect(result.stderr).toBe(`candidate integrity rejected: ${gate}\n`);
+      expect(test.operations().map(({ action }) => action)).not.toContain(
+        "boot-candidate",
+      );
     } finally {
       test.cleanup();
     }

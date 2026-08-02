@@ -168,6 +168,25 @@ try {
     );
   }
 
+  const integrity = JSON.parse(
+    await collect(
+      ssh(targetHost, "validate-integrity", restore.candidateDatabase),
+    ),
+  );
+  if (
+    integrity.runId !== runId ||
+    integrity.candidateDatabase !== restore.candidateDatabase ||
+    integrity.status !== "accepted" ||
+    !Array.isArray(integrity.failedGates) ||
+    integrity.failedGates.length !== 0 ||
+    integrity.sourceArchiveSha256 !== capture.archive.sha256
+  ) {
+    const gates = Array.isArray(integrity.failedGates)
+      ? integrity.failedGates.join(",")
+      : "manifest";
+    throw new Error(`candidate integrity rejected: ${gates}`);
+  }
+
   const readiness = JSON.parse(
     await collect(ssh(targetHost, "boot-candidate", restore.candidateDatabase)),
   );
@@ -192,6 +211,11 @@ try {
       archiveSha256: capture.archive.sha256,
       transfer: "ssh",
       candidateDatabase: restore.candidateDatabase,
+      integrity: "accepted",
+      sourceSchemaSha256: integrity.sourceSchemaSha256,
+      candidateSchemaSha256: integrity.candidateSchemaSha256,
+      ordinaryTableCount: integrity.ordinaryTableCount,
+      sequenceCount: integrity.sequenceCount,
       applicationRole: "uwplan_app",
       readiness: "ready",
       release: readiness.release,

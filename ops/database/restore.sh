@@ -11,6 +11,7 @@ readonly SOURCE_CTYPE="${5:?Pass the source ctype}"
 readonly EXPECTED_SHA256="${6:?Pass the expected archive SHA-256}"
 readonly EVIDENCE_DIRECTORY="${7:-/evidence}"
 readonly ARCHIVE_PATH="${EVIDENCE_DIRECTORY}/source.dump"
+readonly REJECTION_PATH="${EVIDENCE_DIRECTORY}/candidate-rejected.json"
 
 [[ "$RUN_ID" =~ ^[0-9]{8}T[0-9]{9}Z$ ]]
 [[ "$CANDIDATE_DATABASE" =~ ^uwplan_candidate_[0-9]{8}T[0-9]{9}Z$ ]]
@@ -47,6 +48,22 @@ if psql --no-psqlrc --quiet --tuples-only --no-align \
   exit 1
 fi
 
+if [[ -e "$REJECTION_PATH" ]]; then
+  echo "failed candidate identity cannot be retried" >&2
+  exit 1
+fi
+
+restore_failed=1
+cleanup() {
+  if [[ "$restore_failed" == 1 ]]; then
+    dropdb --if-exists "$CANDIDATE_DATABASE" >/dev/null 2>&1 || true
+    printf '{"schemaVersion":1,"runId":"%s","candidateDatabase":"%s","status":"restore-failed"}\n' \
+      "$RUN_ID" "$CANDIDATE_DATABASE" >"$REJECTION_PATH"
+    chmod 600 "$REJECTION_PATH"
+  fi
+}
+trap cleanup EXIT
+
 createdb \
   --template=template0 \
   --owner=uwplan_app \
@@ -54,14 +71,6 @@ createdb \
   --lc-collate="$SOURCE_COLLATION" \
   --lc-ctype="$SOURCE_CTYPE" \
   "$CANDIDATE_DATABASE"
-
-restore_failed=1
-cleanup() {
-  if [[ "$restore_failed" == 1 ]]; then
-    dropdb --if-exists "$CANDIDATE_DATABASE" >/dev/null 2>&1 || true
-  fi
-}
-trap cleanup EXIT
 
 pg_restore \
   --dbname="$CANDIDATE_DATABASE" \

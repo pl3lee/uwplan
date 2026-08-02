@@ -25,6 +25,7 @@ admin_password_file="${work_directory}/admin-password"
 capture_evidence="${work_directory}/capture.json"
 restore_evidence="${work_directory}/restore.json"
 readiness_evidence="${work_directory}/readiness.json"
+integrity_evidence="${work_directory}/integrity.json"
 
 compose() {
   COMPOSE_PROJECT_NAME="$PROJECT_NAME" \
@@ -150,12 +151,21 @@ target_host restore "$RUN_ID" >"$restore_evidence"
 
 candidate_database="$(jq --raw-output '.candidateDatabase' "$restore_evidence")"
 [[ "$candidate_database" == "uwplan_candidate_${RUN_ID}" ]]
+target_host validate-integrity "$RUN_ID" "$candidate_database" >"$integrity_evidence"
+jq -e --arg candidate "$candidate_database" '
+  .status == "accepted" and
+  .failedGates == [] and
+  .candidateDatabase == $candidate and
+  .sourceSchemaSha256 == .candidateSchemaSha256 and
+  .ordinaryTableCount > 0 and
+  .sequenceCount > 0
+' "$integrity_evidence" >/dev/null
 docker run --rm --network "$NETWORK" \
   --env "PGPASSWORD=$APP_PASSWORD" \
   "$POSTGRES_IMAGE" psql --host db --username uwplan_app --dbname "$candidate_database" \
   --tuples-only --no-align --command \
   "select email from \"user\" where id = 'candidate-fixture-user'" \
-  | grep --fixed-strings candidate@example.invalid
+  | grep --fixed-strings candidate@example.invalid >/dev/null
 
 if docker run --rm --network "$NETWORK" \
   --env "PGPASSWORD=$APP_PASSWORD" \
@@ -175,14 +185,19 @@ jq -e --arg candidate "$candidate_database" '
 ' "$readiness_evidence" >/dev/null
 
 if grep --fixed-strings --quiet "$SOURCE_PASSWORD" \
-  "$capture_evidence" "$restore_evidence" "$readiness_evidence"; then
+  "$capture_evidence" "$restore_evidence" "$integrity_evidence" "$readiness_evidence"; then
   echo "Database candidate evidence leaked the source credential" >&2
   exit 1
 fi
 if grep --fixed-strings --quiet "$APP_PASSWORD" \
-  "$capture_evidence" "$restore_evidence" "$readiness_evidence"; then
+  "$capture_evidence" "$restore_evidence" "$integrity_evidence" "$readiness_evidence"; then
   echo "Database candidate evidence leaked the app credential" >&2
   exit 1
 fi
+if grep --fixed-strings --quiet candidate@example.invalid \
+  "$capture_evidence" "$restore_evidence" "$integrity_evidence" "$readiness_evidence"; then
+  echo "Database candidate evidence leaked a source row value" >&2
+  exit 1
+fi
 
-echo "Snapshot capture, SSH-shaped transfer, fresh restore, role isolation, and candidate readiness passed"
+echo "Snapshot capture, exact privacy-safe integrity, fresh restore, role isolation, and candidate readiness passed"

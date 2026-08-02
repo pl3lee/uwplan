@@ -13,6 +13,7 @@ const expectedArguments = new Map([
   ["stream-archive", 0],
   ["receive-archive", 1],
   ["restore", 0],
+  ["validate-integrity", 1],
   ["boot-candidate", 1],
 ]);
 
@@ -22,7 +23,7 @@ if (
   arguments_.length !== expectedArguments.get(action) ||
   !/^[0-9]{8}T[0-9]{9}Z$/.test(runId) ||
   (action === "receive-archive" && !/^[0-9a-f]{64}$/.test(arguments_[0])) ||
-  (action === "boot-candidate" &&
+  ((action === "boot-candidate" || action === "validate-integrity") &&
     !/^uwplan_candidate_[0-9]{8}T[0-9]{9}Z$/.test(arguments_[0]))
 ) {
   process.stderr.write("database migration SSH command rejected\n");
