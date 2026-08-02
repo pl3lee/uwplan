@@ -1,17 +1,21 @@
 import { fetchCourses } from "@/lib/uwflow";
+import {
+  writeApplicationError,
+  writeStructuredLog,
+} from "@/lib/structured-log";
 
 async function main() {
   try {
     await fetchCourses();
-    console.log("Course update completed successfully!");
+    writeStructuredLog("info", "course-update.completed");
     process.exit(0);
   } catch (error) {
-    console.error("Failed to update courses:", error);
+    writeApplicationError("course-update.failed", error);
     process.exit(1);
   }
 }
 
 main().catch((error) => {
-  console.error("Unhandled error:", error);
+  writeApplicationError("course-update.unhandled", error);
   process.exit(1);
 });

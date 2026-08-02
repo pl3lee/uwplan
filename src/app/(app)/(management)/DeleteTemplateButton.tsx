@@ -13,6 +13,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { deleteTemplateAction } from "@/server/actions";
+import { writeApplicationError } from "@/lib/structured-log";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -29,7 +30,7 @@ export function DeleteTemplateButton({ templateId }: { templateId: string }) {
       }
       toast.success("Academic plan deleted");
     } catch (error) {
-      console.error("Error deleting template:", error);
+      writeApplicationError("academic-plan.delete.failed", error);
       toast.error("Error deleting academic plan");
     } finally {
       setIsDeleting(false);

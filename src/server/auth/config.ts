@@ -1,5 +1,6 @@
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { type DefaultSession, type NextAuthConfig } from "next-auth";
+import { writeApplicationError } from "@/lib/structured-log";
 
 import { db } from "@/server/db";
 import {
@@ -76,28 +77,31 @@ export const authConfig = {
       }
 
       try {
-        const result = await db.insert(plans).values({
-          userId: user.id,
-        }).returning({
-          id: plans.id,
-        })
+        const result = await db
+          .insert(plans)
+          .values({
+            userId: user.id,
+          })
+          .returning({
+            id: plans.id,
+          });
         const planId = result?.[0]?.id;
         if (!planId) {
           throw new Error("Failed to create plan for new user");
         }
         await db.insert(schedules).values({
           name: "Default",
-          planId
-        })
+          planId,
+        });
         await db.insert(userTermRanges).values({
           userId: user.id,
           startTerm: "Fall",
           startYear: new Date().getFullYear(),
           endTerm: "Fall",
           endYear: new Date().getFullYear() + 5,
-        })
+        });
       } catch (error) {
-        console.error("Failed to create plan or schedule for new user:", error);
+        writeApplicationError("auth.user-provisioning.failed", error);
         throw error;
       }
     },

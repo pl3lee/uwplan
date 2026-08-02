@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { exportScheduleToCSV } from "@/server/actions";
+import { writeApplicationError } from "@/lib/structured-log";
 import { Download } from "lucide-react";
 import { useState } from "react";
 
@@ -26,7 +27,7 @@ export function ExportButton({ scheduleId }: { scheduleId: string }) {
       window.URL.revokeObjectURL(url);
       a.remove();
     } catch (error) {
-      console.error("Failed to export schedule:", error);
+      writeApplicationError("schedule.export.failed", error);
     } finally {
       setIsExporting(false);
     }

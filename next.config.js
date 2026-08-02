@@ -5,6 +5,12 @@
 import "./src/env.js";
 
 /** @type {import("next").NextConfig} */
-const config = {};
+const config = {
+  output: "standalone",
+  generateBuildId: async () => {
+    const revision = process.env.RELEASE_REVISION ?? "";
+    return /^[a-zA-Z0-9._-]{1,128}$/.test(revision) ? revision : "development";
+  },
+};
 
 export default config;

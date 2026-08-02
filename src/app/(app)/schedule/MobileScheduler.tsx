@@ -19,6 +19,7 @@ import {
   removeCourseFromScheduleAction,
 } from "@/server/actions";
 import { type Term, type TermCourseInstance } from "@/types/schedule";
+import { writeApplicationError } from "@/lib/structured-log";
 import { Info } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -128,7 +129,7 @@ function CourseCard({
                 }
               } catch (e) {
                 toast.error("Failed to update course term");
-                console.error(e);
+                writeApplicationError("schedule-course.change.failed", e);
               } finally {
                 setPending(false);
               }

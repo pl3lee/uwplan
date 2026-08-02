@@ -1,5 +1,9 @@
 import { db } from "@/server/db";
 import { courses } from "@/server/db/schema";
+import {
+  writeApplicationError,
+  writeStructuredLog,
+} from "@/lib/structured-log";
 
 type UWFlowCourseResponse = {
   data: {
@@ -31,21 +35,22 @@ type UWFlowCourseDetailResponse = {
 };
 
 // Add a new type for the course with details
-type CourseWithDetails = UWFlowCourseResponse["data"]["course_search_index"][0] & {
-  description: string;
-  antireqs: string;
-  prereqs: string;
-  coreqs: string;
-};
+type CourseWithDetails =
+  UWFlowCourseResponse["data"]["course_search_index"][0] & {
+    description: string;
+    antireqs: string;
+    prereqs: string;
+    coreqs: string;
+  };
 
 // Helper function to wait between requests
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Helper function to retry failed requests
 async function retry<T>(
   fn: () => Promise<T>,
   retries = 3,
-  delayMs = 1000
+  delayMs = 1000,
 ): Promise<T> {
   try {
     return await fn();
@@ -58,7 +63,9 @@ async function retry<T>(
   }
 }
 
-async function fetchCourseDetails(code: string): Promise<UWFlowCourseDetailResponse['data']['course'][0] | null> {
+async function fetchCourseDetails(
+  code: string,
+): Promise<UWFlowCourseDetailResponse["data"]["course"][0] | null> {
   return retry(async () => {
     const res = await fetch("https://uwflow.com/graphql", {
       method: "POST",
@@ -69,13 +76,15 @@ async function fetchCourseDetails(code: string): Promise<UWFlowCourseDetailRespo
       body: JSON.stringify({
         operationName: "getCourse",
         variables: { code },
-        query: "query getCourse($code: String) { course(where: {code: {_eq: $code}}) { id code name description antireqs prereqs coreqs __typename }}",
+        query:
+          "query getCourse($code: String) { course(where: {code: {_eq: $code}}) { id code name description antireqs prereqs coreqs __typename }}",
       }),
     });
 
     if (!res.ok) return null;
 
-    const data: UWFlowCourseDetailResponse = (await res.json()) as UWFlowCourseDetailResponse;
+    const data: UWFlowCourseDetailResponse =
+      (await res.json()) as UWFlowCourseDetailResponse;
     return data.data.course[0] ?? null;
   });
 }
@@ -84,21 +93,24 @@ async function fetchCourseDetails(code: string): Promise<UWFlowCourseDetailRespo
 async function processBatch<T, R>(
   items: T[],
   batchSize: number,
-  processFn: (item: T) => Promise<R | null>
+  processFn: (item: T) => Promise<R | null>,
 ): Promise<R[]> {
   const results = [];
   for (let i = 0; i < items.length; i += batchSize) {
     const batch = items.slice(i, i + batchSize);
-    console.log(`Processing batch ${i / batchSize + 1} of ${Math.ceil(items.length / batchSize)}...`);
+    writeStructuredLog("info", "course-import.batch.started", {
+      batch: i / batchSize + 1,
+      total_batches: Math.ceil(items.length / batchSize),
+    });
     const batchResults = await Promise.all(
       batch.map(async (item) => {
         try {
           return await processFn(item);
         } catch (error) {
-          console.error(`Failed to process item:`, error);
+          writeApplicationError("course-import.item.failed", error);
           return null;
         }
-      })
+      }),
     );
     results.push(...batchResults.filter(Boolean));
     // Wait between batches to avoid overloading the API
@@ -108,7 +120,7 @@ async function processBatch<T, R>(
 }
 
 export async function fetchUWFlowData(): Promise<CourseWithDetails[]> {
-  console.log("Fetching courses from UWFlow...");
+  writeStructuredLog("info", "course-import.fetch.started");
   const res = await fetch("https://uwflow.com/graphql", {
     method: "POST",
     headers: {
@@ -118,7 +130,8 @@ export async function fetchUWFlowData(): Promise<CourseWithDetails[]> {
     body: JSON.stringify({
       operationName: "exploreAll",
       variables: {},
-      query: "query exploreAll { course_search_index { ...CourseSearch __typename } } fragment CourseSearch on course_search_index { course_id name code useful ratings liked easy __typename }",
+      query:
+        "query exploreAll { course_search_index { ...CourseSearch __typename } } fragment CourseSearch on course_search_index { course_id name code useful ratings liked easy __typename }",
     }),
   });
 
@@ -126,8 +139,11 @@ export async function fetchUWFlowData(): Promise<CourseWithDetails[]> {
     throw new Error(`Failed to fetch from UWFlow: ${res.statusText}`);
   }
 
-  const { data }: UWFlowCourseResponse = (await res.json()) as UWFlowCourseResponse;
-  console.log(`Fetched ${data.course_search_index.length} courses, fetching details...`);
+  const { data }: UWFlowCourseResponse =
+    (await res.json()) as UWFlowCourseResponse;
+  writeStructuredLog("info", "course-import.fetch.completed", {
+    course_count: data.course_search_index.length,
+  });
 
   // Process courses in smaller batches with proper typing
   const coursesWithDetails = await processBatch(
@@ -137,12 +153,12 @@ export async function fetchUWFlowData(): Promise<CourseWithDetails[]> {
       const details = await fetchCourseDetails(course.code.toLowerCase());
       return {
         ...course,
-        description: details?.description ?? '',
-        antireqs: details?.antireqs ?? '',
-        prereqs: details?.prereqs ?? '',
-        coreqs: details?.coreqs ?? '',
+        description: details?.description ?? "",
+        antireqs: details?.antireqs ?? "",
+        prereqs: details?.prereqs ?? "",
+        coreqs: details?.coreqs ?? "",
       };
-    }
+    },
   );
 
   return coursesWithDetails;
@@ -182,11 +198,11 @@ export async function insertUWFlowCourses(courseData: CourseWithDetails[]) {
               prereqs: course.prereqs,
               coreqs: course.coreqs,
             },
-          })
-      )
+          }),
+      ),
     );
   }
-  console.log("Successfully updated course database!");
+  writeStructuredLog("info", "course-import.database.updated");
 }
 
 export async function fetchCourses() {
@@ -194,6 +210,6 @@ export async function fetchCourses() {
     const courseData = await fetchUWFlowData();
     await insertUWFlowCourses(courseData);
   } catch (e) {
-    console.error(e);
+    writeApplicationError("course-import.failed", e);
   }
 }

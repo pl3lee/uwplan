@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Check, ChevronsUpDown } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { writeApplicationError } from "@/lib/structured-log";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -54,7 +55,7 @@ export function TemplateSelector({ templates, selectedTemplates }: Props) {
       );
     } catch (error) {
       toast.error("Failed to toggle academic plan");
-      console.error(error);
+      writeApplicationError("academic-plan.toggle.failed", error);
     }
   };
 
@@ -89,7 +90,10 @@ export function TemplateSelector({ templates, selectedTemplates }: Props) {
                         await handleToggleTemplate(template.id);
                       } catch (error) {
                         toast.error("Failed to toggle academic plan");
-                        console.error(error);
+                        writeApplicationError(
+                          "academic-plan.toggle.failed",
+                          error,
+                        );
                       }
                     }}
                   >

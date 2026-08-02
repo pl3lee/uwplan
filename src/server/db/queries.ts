@@ -17,6 +17,10 @@ import { type Season } from "@/types/schedule";
 import { type CreateTemplateInput } from "@/types/template";
 import { and, eq, inArray, or } from "drizzle-orm";
 import { z } from "zod";
+import {
+  writeApplicationError,
+  writeStructuredLog,
+} from "@/lib/structured-log";
 
 // ============================================================================
 // Utility Functions
@@ -27,7 +31,10 @@ import { z } from "zod";
  * @param course - Object containing course data
  * @returns True if course has valid code and name
  */
-function isValidCourse(course: { code: string | null; name: string | null; }): course is { code: string; name: string; } {
+function isValidCourse(course: {
+  code: string | null;
+  name: string | null;
+}): course is { code: string; name: string } {
   return course.code !== null && course.name !== null;
 }
 
@@ -41,11 +48,9 @@ function isValidCourse(course: { code: string | null; name: string | null; }): c
  */
 export async function getUsers() {
   try {
-    return await db
-      .select()
-      .from(users)
+    return await db.select().from(users);
   } catch (error) {
-    console.error("Failed to get users:", error);
+    writeApplicationError("database.query.failed", error);
     throw new Error("Failed to get users");
   }
 }
@@ -70,10 +75,10 @@ export async function getRole(userId: string) {
     }
     return role.role;
   } catch (error) {
-    console.error("Failed to get role:", error);
+    writeApplicationError("database.query.failed", error);
     throw new Error("Failed to get role");
   }
-};
+}
 
 // ============================================================================
 // Plan Management
@@ -105,7 +110,7 @@ export async function getUserPlan(userId: string) {
 
     return newPlan;
   } catch (error) {
-    console.error("Failed to get or create user plan:", error);
+    writeApplicationError("database.query.failed", error);
     throw new Error("Failed to get or create user plan");
   }
 }
@@ -130,7 +135,7 @@ export async function getTemplates() {
       .from(templates)
       .orderBy(templates.name);
   } catch (error) {
-    console.error("Failed to get templates:", error);
+    writeApplicationError("database.query.failed", error);
     throw new Error("Failed to get templates");
   }
 }
@@ -150,9 +155,9 @@ export async function getTemplate(templateId: string) {
     if (!template) {
       throw new Error(`Template with ID ${templateId} not found`);
     }
-    return template
+    return template;
   } catch (error) {
-    console.error("Failed to get template:", error);
+    writeApplicationError("database.query.failed", error);
     throw new Error("Failed to get template");
   }
 }
@@ -169,7 +174,7 @@ export async function getTemplateWithName(name: string) {
       .where(eq(templates.name, name.trim()));
     return template;
   } catch (error) {
-    console.error("Failed to get templates with name:", error);
+    writeApplicationError("database.query.failed", error);
     throw new Error("Failed to get templates with name");
   }
 }
@@ -191,7 +196,7 @@ export async function templateNameExists(name: string) {
       return false;
     }
   } catch (error) {
-    console.error("Failed to check if template name exists:", error);
+    writeApplicationError("database.query.failed", error);
     throw new Error("Failed to check if template name exists");
   }
 }
@@ -215,7 +220,7 @@ export async function getUserSelectedTemplates(userId: string) {
       .where(eq(plans.userId, userId))
       .innerJoin(templates, eq(templates.id, planTemplates.templateId));
   } catch (error) {
-    console.error("Failed to get user selected templates:", error);
+    writeApplicationError("database.query.failed", error);
     throw new Error("Failed to get user selected templates");
   }
 }
@@ -231,7 +236,7 @@ export async function getTemplatesCreatedByUser(userId: string) {
       .from(templates)
       .where(eq(templates.createdBy, userId));
   } catch (error) {
-    console.error("Failed to get templates created by user:", error);
+    writeApplicationError("database.query.failed", error);
     throw new Error("Failed to get templates created by user");
   }
 }
@@ -246,18 +251,14 @@ export async function getTemplateDetails(userId: string, templateId: string) {
   try {
     const [[template], items] = await Promise.all([
       // Get template
-      db
-        .select()
-        .from(templates)
-        .where(eq(templates.id, templateId))
-        .limit(1),
+      db.select().from(templates).where(eq(templates.id, templateId)).limit(1),
       // Get template items
       db
         .select()
         .from(templateItems)
         .where(eq(templateItems.templateId, templateId))
-        .orderBy(templateItems.orderIndex)
-    ])
+        .orderBy(templateItems.orderIndex),
+    ]);
 
     if (!template) return null;
 
@@ -281,10 +282,15 @@ export async function getTemplateDetails(userId: string, templateId: string) {
           coreqs: courses.coreqs,
         })
         .from(courseItems)
-        .where(and(
-          inArray(courseItems.requirementId, items.map(item => item.id)),
-          eq(courseItems.type, "fixed"),
-        ))
+        .where(
+          and(
+            inArray(
+              courseItems.requirementId,
+              items.map((item) => item.id),
+            ),
+            eq(courseItems.type, "fixed"),
+          ),
+        )
         .innerJoin(courses, eq(courses.id, courseItems.courseId)),
       // Get free course items and their filled courses if any
       db
@@ -304,25 +310,33 @@ export async function getTemplateDetails(userId: string, templateId: string) {
           coreqs: courses.coreqs,
         })
         .from(courseItems)
-        .where(and(
-          inArray(courseItems.requirementId, items.map(item => item.id)),
-          eq(courseItems.type, "free")
-        ))
-        .leftJoin(freeCourses, and(
-          eq(freeCourses.courseItemId, courseItems.id),
-          eq(freeCourses.userId, userId)
-        ))
-        .leftJoin(courses, eq(courses.id, freeCourses.filledCourseId))
-    ])
+        .where(
+          and(
+            inArray(
+              courseItems.requirementId,
+              items.map((item) => item.id),
+            ),
+            eq(courseItems.type, "free"),
+          ),
+        )
+        .leftJoin(
+          freeCourses,
+          and(
+            eq(freeCourses.courseItemId, courseItems.id),
+            eq(freeCourses.userId, userId),
+          ),
+        )
+        .leftJoin(courses, eq(courses.id, freeCourses.filledCourseId)),
+    ]);
 
     // Combine the data and filter out invalid courses
     return {
       ...template,
-      items: items.map(item => ({
+      items: items.map((item) => ({
         ...item,
         fixedCourses: fixedCourseItems
-          .filter(c => c.templateItemId === item.id && isValidCourse(c))
-          .map(c => ({
+          .filter((c) => c.templateItemId === item.id && isValidCourse(c))
+          .map((c) => ({
             courseItemId: c.courseItemId,
             course: {
               id: c.courseId,
@@ -336,60 +350,63 @@ export async function getTemplateDetails(userId: string, templateId: string) {
               antireqs: c.antireqs,
               prereqs: c.prereqs,
               coreqs: c.coreqs,
-            }
+            },
           })),
         freeCourses: freeCourseItems
-          .filter(c => c.templateItemId === item.id)
-          .map(c => ({
+          .filter((c) => c.templateItemId === item.id)
+          .map((c) => ({
             courseItemId: c.courseItemId,
-            course: c.filledCourseId && isValidCourse(c) ? {
-              id: c.filledCourseId,
-              code: c.code,
-              name: c.name,
-              usefulRating: c.usefulRating,
-              likedRating: c.likedRating,
-              easyRating: c.easyRating,
-              numRatings: c.numRatings,
-              description: c.description ?? '',
-              antireqs: c.antireqs ?? '',
-              prereqs: c.prereqs ?? '',
-              coreqs: c.coreqs ?? '',
-            } : null
-          }))
-      }))
+            course:
+              c.filledCourseId && isValidCourse(c)
+                ? {
+                    id: c.filledCourseId,
+                    code: c.code,
+                    name: c.name,
+                    usefulRating: c.usefulRating,
+                    likedRating: c.likedRating,
+                    easyRating: c.easyRating,
+                    numRatings: c.numRatings,
+                    description: c.description ?? "",
+                    antireqs: c.antireqs ?? "",
+                    prereqs: c.prereqs ?? "",
+                    coreqs: c.coreqs ?? "",
+                  }
+                : null,
+          })),
+      })),
     };
   } catch (error) {
-    console.error("Failed to get template details:", error);
+    writeApplicationError("database.query.failed", error);
     throw new Error("Failed to get template details");
   }
 }
 
 export const templateFormSchema = z.object({
-name: z.string().min(1, { message: "Name is required" }),
-description: z.string().optional(),
-items: z.array(
-  z.union([
-    z.object({
-      type: z.literal("instruction"),
-      description: z.string().min(1, { message: "Instruction is required" }),
-    }),
-    z.object({
-      type: z.literal("separator"),
-    }),
-    z.object({
-      type: z.literal("requirement"),
-      courseType: z.literal("fixed"),
-      description: z.string().min(1, { message: "Description is required" }),
-      courses: z.string().min(1),
-    }),
-    z.object({
-      type: z.literal("requirement"),
-      courseType: z.enum(["free"]),
-      description: z.string().min(1, { message: "Description is required" }),
-      count: z.number().min(1, { message: "Must have at least 1 course" }),
-    }),
-  ])
-),
+  name: z.string().min(1, { message: "Name is required" }),
+  description: z.string().optional(),
+  items: z.array(
+    z.union([
+      z.object({
+        type: z.literal("instruction"),
+        description: z.string().min(1, { message: "Instruction is required" }),
+      }),
+      z.object({
+        type: z.literal("separator"),
+      }),
+      z.object({
+        type: z.literal("requirement"),
+        courseType: z.literal("fixed"),
+        description: z.string().min(1, { message: "Description is required" }),
+        courses: z.string().min(1),
+      }),
+      z.object({
+        type: z.literal("requirement"),
+        courseType: z.enum(["free"]),
+        description: z.string().min(1, { message: "Description is required" }),
+        count: z.number().min(1, { message: "Must have at least 1 course" }),
+      }),
+    ]),
+  ),
 });
 
 /**
@@ -429,18 +446,21 @@ export async function getTemplateForm(templateId: string) {
         const coursesInRequirement = await db
           .select({
             code: courses.code,
-            courseType: courseItems.type
+            courseType: courseItems.type,
           })
           .from(courseItems)
           .where(eq(courseItems.requirementId, item.id))
           .leftJoin(courses, eq(courses.id, courseItems.courseId));
-          
-        if (coursesInRequirement[0] && coursesInRequirement[0].courseType === "fixed") {
+
+        if (
+          coursesInRequirement[0] &&
+          coursesInRequirement[0].courseType === "fixed"
+        ) {
           return {
             type: "requirement",
             courseType: "fixed",
             description: item.description ?? "",
-            courses: coursesInRequirement.map(c => c.code).join(", "),
+            courses: coursesInRequirement.map((c) => c.code).join(", "),
           };
         }
 
@@ -450,7 +470,7 @@ export async function getTemplateForm(templateId: string) {
           description: item.description ?? "",
           count: coursesInRequirement.length,
         };
-      })
+      }),
     );
 
     const rawForm = {
@@ -461,7 +481,7 @@ export async function getTemplateForm(templateId: string) {
 
     return templateFormSchema.parse(rawForm);
   } catch (error) {
-    console.error("Failed to get template form:", error);
+    writeApplicationError("database.query.failed", error);
     throw new Error("Failed to get template form");
   }
 }
@@ -472,7 +492,10 @@ export async function getTemplateForm(templateId: string) {
  * @param userId - ID of the user creating the template
  * @returns Created template object
  */
-export async function createTemplate(input: CreateTemplateInput, userId: string | null) {
+export async function createTemplate(
+  input: CreateTemplateInput,
+  userId: string | null,
+) {
   try {
     return await db.transaction(async (tx) => {
       // Insert the template first
@@ -498,13 +521,14 @@ export async function createTemplate(input: CreateTemplateInput, userId: string 
           .values({
             templateId: template.id,
             type: item.type,
-            description: 'description' in item ? item.description ?? null : null,
+            description:
+              "description" in item ? (item.description ?? null) : null,
             orderIndex: item.orderIndex,
           })
           .returning({
             id: templateItems.id,
           });
-        if ((insertedTemplateItem.length !== 1) || !insertedTemplateItem[0]) {
+        if (insertedTemplateItem.length !== 1 || !insertedTemplateItem[0]) {
           tx.rollback();
           throw new Error("Failed to create template item");
         }
@@ -512,7 +536,11 @@ export async function createTemplate(input: CreateTemplateInput, userId: string 
         if (item.type === "requirement") {
           if (item.courseType == "fixed") {
             for (const courseCode of item.courses) {
-              const [course] = await db.select({ id: courses.id }).from(courses).where(eq(courses.code, courseCode)).limit(1);
+              const [course] = await db
+                .select({ id: courses.id })
+                .from(courses)
+                .where(eq(courses.code, courseCode))
+                .limit(1);
               const courseId = course?.id;
               if (!courseId) {
                 tx.rollback();
@@ -523,11 +551,11 @@ export async function createTemplate(input: CreateTemplateInput, userId: string 
                 .values({
                   requirementId: templateItemId,
                   courseId,
-                  type: item.courseType
+                  type: item.courseType,
                 })
                 .returning();
               if (insertedCourse.length !== 1) {
-                tx.rollback()
+                tx.rollback();
                 throw new Error("Failed to create course item");
               }
             }
@@ -538,21 +566,20 @@ export async function createTemplate(input: CreateTemplateInput, userId: string 
                 .insert(courseItems)
                 .values({
                   requirementId: templateItemId,
-                  type: item.courseType
+                  type: item.courseType,
                 })
                 .returning();
               if (insertedCourse.length !== 1) {
-                tx.rollback()
+                tx.rollback();
                 throw new Error("Failed to create course item");
               }
             }
           }
         }
-
       }
     });
   } catch (error) {
-    console.error("Failed to create template:", error);
+    writeApplicationError("database.mutation.failed", error);
     throw new Error("Failed to create template");
   }
 }
@@ -563,11 +590,9 @@ export async function createTemplate(input: CreateTemplateInput, userId: string 
  */
 export async function deleteTemplate(templateId: string) {
   try {
-    await db
-      .delete(templates)
-      .where(eq(templates.id, templateId));
+    await db.delete(templates).where(eq(templates.id, templateId));
   } catch (error) {
-    console.error("Failed to delete template:", error);
+    writeApplicationError("database.mutation.failed", error);
     throw new Error("Failed to delete template");
   }
 }
@@ -576,14 +601,18 @@ export async function deleteTemplate(templateId: string) {
  * Renames a template, including its description
  * @param templateId - ID of the template to delete
  */
-export async function renameTemplate(templateId: string, name: string, description: string) {
+export async function renameTemplate(
+  templateId: string,
+  name: string,
+  description: string,
+) {
   try {
     await db
       .update(templates)
       .set({ name, description })
       .where(eq(templates.id, templateId));
   } catch (error) {
-    console.error("Failed to rename template:", error);
+    writeApplicationError("database.mutation.failed", error);
     throw new Error("Failed to rename template");
   }
 }
@@ -607,10 +636,9 @@ export async function addTemplateToPlan(planId: string, templateId: string) {
       })
       .onConflictDoNothing();
   } catch (error) {
-    console.error("Failed to add template to plan:", error);
+    writeApplicationError("database.mutation.failed", error);
     throw new Error("Failed to add template to plan");
   }
-
 }
 
 /**
@@ -618,33 +646,43 @@ export async function addTemplateToPlan(planId: string, templateId: string) {
  * @param planId - ID of the plan
  * @param templateId - ID of the template
  */
-export async function removeTemplateFromPlan(planId: string, templateId: string) {
+export async function removeTemplateFromPlan(
+  planId: string,
+  templateId: string,
+) {
   try {
     await db.transaction(async (tx) => {
       const courseItemsInTemplate = tx
         .select({ id: courseItems.id })
         .from(courseItems)
-        .innerJoin(templateItems, eq(templateItems.id, courseItems.requirementId))
-        .where(eq(templateItems.templateId, templateId))
+        .innerJoin(
+          templateItems,
+          eq(templateItems.id, courseItems.requirementId),
+        )
+        .where(eq(templateItems.templateId, templateId));
 
       await Promise.all([
         tx
           .delete(planTemplates)
-          .where(and(
-            eq(planTemplates.planId, planId),
-            eq(planTemplates.templateId, templateId)
-          )),
+          .where(
+            and(
+              eq(planTemplates.planId, planId),
+              eq(planTemplates.templateId, templateId),
+            ),
+          ),
         tx
           .update(selectedCourses)
           .set({ selected: false })
-          .where(and(
-            eq(selectedCourses.planId, planId),
-            inArray(selectedCourses.courseItemId, courseItemsInTemplate)
-          ))
-      ])
+          .where(
+            and(
+              eq(selectedCourses.planId, planId),
+              inArray(selectedCourses.courseItemId, courseItemsInTemplate),
+            ),
+          ),
+      ]);
     });
   } catch (error) {
-    console.error("Failed to remove template from plan:", error);
+    writeApplicationError("database.mutation.failed", error);
     throw new Error("Failed to remove template from plan");
   }
 }
@@ -654,7 +692,11 @@ export async function removeTemplateFromPlan(planId: string, templateId: string)
  * @param userId - ID of the user
  * @param templateId - ID of the template to toggle
  */
-export async function toggleUserTemplate(userId: string, templateId: string, take: boolean) {
+export async function toggleUserTemplate(
+  userId: string,
+  templateId: string,
+  take: boolean,
+) {
   try {
     const userPlan = await getUserPlan(userId);
     if (!userPlan) {
@@ -669,7 +711,7 @@ export async function toggleUserTemplate(userId: string, templateId: string, tak
       await addTemplateToPlan(planId, templateId);
     }
   } catch (error) {
-    console.error("Failed to toggle user template:", error);
+    writeApplicationError("database.mutation.failed", error);
     throw new Error("Failed to toggle user template");
   }
 }
@@ -691,17 +733,18 @@ export async function getUserTemplatesWithCourses(userId: string) {
       })
       .from(planTemplates)
       .where(eq(planTemplates.planId, userPlan.id))
-      .innerJoin(templates, eq(templates.id, planTemplates.templateId))
-
+      .innerJoin(templates, eq(templates.id, planTemplates.templateId));
 
     // Get details for each template
     const templateDetails = await Promise.all(
-      selectedTemplates.map(t => getTemplateDetails(userId, t.templateId))
+      selectedTemplates.map((t) => getTemplateDetails(userId, t.templateId)),
     );
 
-    return templateDetails.filter((t): t is NonNullable<typeof t> => t !== null);
+    return templateDetails.filter(
+      (t): t is NonNullable<typeof t> => t !== null,
+    );
   } catch (error) {
-    console.error("Failed to get user templates with courses:", error);
+    writeApplicationError("database.query.failed", error);
     throw new Error("Failed to get user templates with courses");
   }
 }
@@ -735,7 +778,7 @@ export async function getCoursesWithRatings() {
 
     return coursesResults.filter(isValidCourse);
   } catch (error) {
-    console.error("Failed to get courses with ratings:", error);
+    writeApplicationError("database.query.failed", error);
     throw new Error("Failed to get courses with ratings");
   }
 }
@@ -759,21 +802,38 @@ export async function getSelectedCourses(userId: string) {
         courseDescription: courses.description,
         courseAntireqs: courses.antireqs,
         coursePrereqs: courses.prereqs,
-        courseCoreqs: courses.coreqs
+        courseCoreqs: courses.coreqs,
       })
       .from(selectedCourses)
-      .where(and(eq(selectedCourses.planId, userPlan.id), eq(selectedCourses.selected, true)))
+      .where(
+        and(
+          eq(selectedCourses.planId, userPlan.id),
+          eq(selectedCourses.selected, true),
+        ),
+      )
       .innerJoin(courseItems, eq(courseItems.id, selectedCourses.courseItemId))
-      .leftJoin(freeCourses, and(
-        eq(freeCourses.courseItemId, courseItems.id),
-        eq(freeCourses.userId, userId)
-      ))
-      .leftJoin(courses, or(
-        and(eq(courseItems.type, "fixed"), eq(courses.id, courseItems.courseId)),
-        and(eq(courseItems.type, "free"), eq(courses.id, freeCourses.filledCourseId))
-      ));
+      .leftJoin(
+        freeCourses,
+        and(
+          eq(freeCourses.courseItemId, courseItems.id),
+          eq(freeCourses.userId, userId),
+        ),
+      )
+      .leftJoin(
+        courses,
+        or(
+          and(
+            eq(courseItems.type, "fixed"),
+            eq(courses.id, courseItems.courseId),
+          ),
+          and(
+            eq(courseItems.type, "free"),
+            eq(courses.id, freeCourses.filledCourseId),
+          ),
+        ),
+      );
   } catch (error) {
-    console.error("Failed to get selected courses:", error);
+    writeApplicationError("database.query.failed", error);
     throw new Error("Failed to get selected courses");
   }
 }
@@ -784,7 +844,11 @@ export async function getSelectedCourses(userId: string) {
  * @param courseItemId - ID of the course item
  * @param selected - Whether to select or deselect the course
  */
-export async function toggleCourse(userId: string, courseItemId: string, selected: boolean) {
+export async function toggleCourse(
+  userId: string,
+  courseItemId: string,
+  selected: boolean,
+) {
   try {
     const userPlan = await getUserPlan(userId);
     if (!userPlan) {
@@ -803,7 +867,7 @@ export async function toggleCourse(userId: string, courseItemId: string, selecte
         set: { selected },
       });
   } catch (error) {
-    console.error("Failed to toggle course:", error);
+    writeApplicationError("database.mutation.failed", error);
     throw new Error("Failed to toggle course");
   }
 }
@@ -826,14 +890,25 @@ export async function removeCourseSelection(userId: string, courseId: string) {
         courseItemId: courseItems.id,
       })
       .from(courseItems)
-      .leftJoin(freeCourses, and(
-        eq(freeCourses.courseItemId, courseItems.id),
-        eq(freeCourses.userId, userId)
-      ))
-      .where(or(
-        and(eq(courseItems.type, "fixed"), eq(courseItems.courseId, courseId)),
-        and(eq(courseItems.type, "free"), eq(freeCourses.filledCourseId, courseId))
-      ));
+      .leftJoin(
+        freeCourses,
+        and(
+          eq(freeCourses.courseItemId, courseItems.id),
+          eq(freeCourses.userId, userId),
+        ),
+      )
+      .where(
+        or(
+          and(
+            eq(courseItems.type, "fixed"),
+            eq(courseItems.courseId, courseId),
+          ),
+          and(
+            eq(courseItems.type, "free"),
+            eq(freeCourses.filledCourseId, courseId),
+          ),
+        ),
+      );
 
     // find all user schedules
     const userSchedules = db
@@ -841,32 +916,32 @@ export async function removeCourseSelection(userId: string, courseId: string) {
         id: schedules.id,
       })
       .from(schedules)
-      .where(eq(schedules.planId, userPlan.id))
-
+      .where(eq(schedules.planId, userPlan.id));
 
     await db.transaction(async (tx) => {
       await Promise.all([
         // Remove selections for all instances of this course
         tx
           .delete(selectedCourses)
-          .where(and(
-            eq(selectedCourses.planId, userPlan.id),
-            inArray(
-              selectedCourses.courseItemId,
-              courseItemsToUnselect
-            )
-          )),
+          .where(
+            and(
+              eq(selectedCourses.planId, userPlan.id),
+              inArray(selectedCourses.courseItemId, courseItemsToUnselect),
+            ),
+          ),
         // Remove course from all user schedules
         tx
           .delete(scheduleCourses)
-          .where(and(
-            inArray(scheduleCourses.scheduleId, userSchedules),
-            eq(scheduleCourses.courseId, courseId)
-          ))
-      ])
-    })
+          .where(
+            and(
+              inArray(scheduleCourses.scheduleId, userSchedules),
+              eq(scheduleCourses.courseId, courseId),
+            ),
+          ),
+      ]);
+    });
   } catch (e) {
-    console.error("Failed to remove course selection", e);
+    writeApplicationError("database.mutation.failed", e);
     throw new Error("Failed to remove course selection");
   }
 }
@@ -877,16 +952,22 @@ export async function removeCourseSelection(userId: string, courseId: string) {
  * @param courseItemId - ID of the course item
  * @param filledCourseId - ID of the selected course or null to clear selection
  */
-export async function updateFreeCourse(userId: string, courseItemId: string, filledCourseId: string | null) {
+export async function updateFreeCourse(
+  userId: string,
+  courseItemId: string,
+  filledCourseId: string | null,
+) {
   try {
     if (filledCourseId === null) {
       // Delete the free course from table
       await db
         .delete(freeCourses)
-        .where(and(
-          eq(freeCourses.userId, userId),
-          eq(freeCourses.courseItemId, courseItemId)
-        ));
+        .where(
+          and(
+            eq(freeCourses.userId, userId),
+            eq(freeCourses.courseItemId, courseItemId),
+          ),
+        );
     } else {
       // Insert or update the free course selection
       await db
@@ -894,7 +975,7 @@ export async function updateFreeCourse(userId: string, courseItemId: string, fil
         .values({
           userId,
           courseItemId,
-          filledCourseId
+          filledCourseId,
         })
         .onConflictDoUpdate({
           target: [freeCourses.userId, freeCourses.courseItemId],
@@ -902,7 +983,7 @@ export async function updateFreeCourse(userId: string, courseItemId: string, fil
         });
     }
   } catch (error) {
-    console.error("Failed to update free course:", error);
+    writeApplicationError("database.mutation.failed", error);
     throw new Error("Failed to update free course");
   }
 }
@@ -927,11 +1008,11 @@ export async function getSchedules(userId: string) {
         name: schedules.name,
       })
       .from(schedules)
-      .where(eq(schedules.planId, userPlan.id))
+      .where(eq(schedules.planId, userPlan.id));
 
     return userSchedules;
   } catch (error) {
-    console.error("Failed to get schedules:", error);
+    writeApplicationError("database.query.failed", error);
     throw new Error("Failed to get schedules");
   }
 }
@@ -952,13 +1033,13 @@ export async function getScheduleCourses(scheduleId: string) {
         courseDescription: courses.description,
         courseAntireqs: courses.antireqs,
         coursePrereqs: courses.prereqs,
-        courseCoreqs: courses.coreqs
+        courseCoreqs: courses.coreqs,
       })
       .from(scheduleCourses)
       .where(eq(scheduleCourses.scheduleId, scheduleId))
       .innerJoin(courses, eq(courses.id, scheduleCourses.courseId));
   } catch (error) {
-    console.error("Failed to get schedule courses:", error);
+    writeApplicationError("database.query.failed", error);
     throw new Error("Failed to get schedule courses");
   }
 }
@@ -975,14 +1056,12 @@ export async function createSchedule(userId: string, name: string) {
       throw new Error(`Failed to get plan for user ${userId}`);
     }
 
-    await db
-      .insert(schedules)
-      .values({
-        planId: userPlan.id,
-        name,
-      });
+    await db.insert(schedules).values({
+      planId: userPlan.id,
+      name,
+    });
   } catch (error) {
-    console.error("Failed to create schedule:", error);
+    writeApplicationError("database.mutation.failed", error);
     throw new Error("Failed to create schedule");
   }
 }
@@ -993,11 +1072,9 @@ export async function createSchedule(userId: string, name: string) {
  */
 export async function deleteSchedule(scheduleId: string) {
   try {
-    await db
-      .delete(schedules)
-      .where(eq(schedules.id, scheduleId));
+    await db.delete(schedules).where(eq(schedules.id, scheduleId));
   } catch (error) {
-    console.error("Failed to delete schedule:", error);
+    writeApplicationError("database.mutation.failed", error);
     throw new Error("Failed to delete schedule");
   }
 }
@@ -1014,7 +1091,7 @@ export async function changeScheduleName(scheduleId: string, name: string) {
       .set({ name })
       .where(eq(schedules.id, scheduleId));
   } catch (error) {
-    console.error("Failed to change schedule name:", error);
+    writeApplicationError("database.mutation.failed", error);
     throw new Error("Failed to change schedule name");
   }
 }
@@ -1025,7 +1102,11 @@ export async function changeScheduleName(scheduleId: string, name: string) {
  * @param courseId - ID of the course
  * @param term - Term to add the course to
  */
-export async function addCourseToSchedule(scheduleId: string, courseId: string, term: string) {
+export async function addCourseToSchedule(
+  scheduleId: string,
+  courseId: string,
+  term: string,
+) {
   try {
     await db
       .insert(scheduleCourses)
@@ -1039,7 +1120,7 @@ export async function addCourseToSchedule(scheduleId: string, courseId: string, 
         set: { term },
       });
   } catch (error) {
-    console.error("Failed to add course to schedule:", error);
+    writeApplicationError("database.mutation.failed", error);
     throw new Error("Failed to add course to schedule");
   }
 }
@@ -1049,16 +1130,21 @@ export async function addCourseToSchedule(scheduleId: string, courseId: string, 
  * @param scheduleId - ID of the schedule
  * @param courseId - ID of the course
  */
-export async function removeCourseFromSchedule(scheduleId: string, courseId: string) {
+export async function removeCourseFromSchedule(
+  scheduleId: string,
+  courseId: string,
+) {
   try {
     await db
       .delete(scheduleCourses)
-      .where(and(
-        eq(scheduleCourses.scheduleId, scheduleId),
-        eq(scheduleCourses.courseId, courseId)
-      ));
+      .where(
+        and(
+          eq(scheduleCourses.scheduleId, scheduleId),
+          eq(scheduleCourses.courseId, courseId),
+        ),
+      );
   } catch (error) {
-    console.error("Failed to remove course from schedule:", error);
+    writeApplicationError("database.mutation.failed", error);
     throw new Error("Failed to remove course from schedule");
   }
 }
@@ -1079,15 +1165,14 @@ export async function validateScheduleId(userId: string, scheduleId: string) {
     const [schedule] = await db
       .select()
       .from(schedules)
-      .where(and(
-        eq(schedules.id, scheduleId),
-        eq(schedules.planId, userPlan.id)
-      ))
+      .where(
+        and(eq(schedules.id, scheduleId), eq(schedules.planId, userPlan.id)),
+      )
       .limit(1);
 
     return !!schedule;
   } catch (error) {
-    console.error("Failed to validate schedule access:", error);
+    writeApplicationError("database.query.failed", error);
     throw new Error("Failed to validate schedule access");
   }
 }
@@ -1110,12 +1195,12 @@ export async function getTermRange(userId: string) {
       .where(eq(userTermRanges.userId, userId))
       .limit(1);
     if (!termRange) {
-      console.error(`Failed to get term range for user ${userId}`);
+      writeStructuredLog("error", "term-range.lookup.failed");
       throw new Error(`Failed to get term range for user ${userId}`);
     }
     return termRange;
   } catch (error) {
-    console.error("Failed to get term range:", error);
+    writeApplicationError("database.query.failed", error);
     throw new Error("Failed to get term range");
   }
 }
@@ -1128,7 +1213,13 @@ export async function getTermRange(userId: string) {
  * @param endTerm - Ending term season
  * @param endYear - Ending year
  */
-export async function changeTermRange(userId: string, startTerm: Season, startYear: number, endTerm: Season, endYear: number) {
+export async function changeTermRange(
+  userId: string,
+  startTerm: Season,
+  startYear: number,
+  endTerm: Season,
+  endYear: number,
+) {
   try {
     await db
       .update(userTermRanges)
@@ -1140,7 +1231,7 @@ export async function changeTermRange(userId: string, startTerm: Season, startYe
       })
       .where(eq(userTermRanges.userId, userId));
   } catch (error) {
-    console.error("Failed to change term range:", error);
+    writeApplicationError("database.mutation.failed", error);
     throw new Error("Failed to change term range");
   }
 }

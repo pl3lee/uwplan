@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { cn, generateTerms } from "@/lib/utils";
+import { writeApplicationError } from "@/lib/structured-log";
 import {
   addCourseToScheduleAction,
   changeScheduleNameAction,
@@ -102,7 +103,7 @@ function AddScheduleDialog() {
       setOpen(false);
       toast.success("Schedule created");
     } catch (error) {
-      console.error("Failed to create schedule", error);
+      writeApplicationError("schedule.create.failed", error);
       toast.error("Failed to create schedule");
     } finally {
       setIsLoading(false);
@@ -170,7 +171,7 @@ function RenameScheduleDialog({
       setOpen(false);
       toast.success("Schedule renamed");
     } catch (error) {
-      console.error("Failed to rename schedule", error);
+      writeApplicationError("schedule.rename.failed", error);
       toast.error("Failed to rename schedule");
     } finally {
       setIsLoading(false);
@@ -362,7 +363,7 @@ export function Scheduler({
         newEnd.year,
       );
     } catch (error) {
-      console.error("Failed to change term range", error);
+      writeApplicationError("term-range.change.failed", error);
     }
   };
 
@@ -390,7 +391,7 @@ export function Scheduler({
           active.id.toString(),
         );
       } catch (error) {
-        console.error("Failed to remove course from term", error);
+        writeApplicationError("schedule-course.remove.failed", error);
       }
     } else {
       try {
@@ -423,7 +424,7 @@ export function Scheduler({
           over.id.toString(),
         );
       } catch (error) {
-        console.error("Failed to add course to term", error);
+        writeApplicationError("schedule-course.add.failed", error);
       }
     }
   };
@@ -464,7 +465,7 @@ export function Scheduler({
                         : "/schedule",
                     );
                   } catch (error) {
-                    console.error("Failed to delete schedule", error);
+                    writeApplicationError("schedule.delete.failed", error);
                     toast.error("Failed to delete schedule");
                   }
                 }}

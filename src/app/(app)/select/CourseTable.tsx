@@ -12,6 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { normalizeCourseCode, formatRating } from "@/lib/utils";
+import { writeApplicationError } from "@/lib/structured-log";
 import { toggleCourseAction, updateFreeCourseAction } from "@/server/actions";
 import { type Course, type FreeCourse } from "@/types/course";
 import { ArrowDown, ArrowUp, ArrowUpDown, Check, X } from "lucide-react";
@@ -243,7 +244,7 @@ export function CourseTable({
                         checked as boolean,
                       );
                     } catch (error) {
-                      console.error(error);
+                      writeApplicationError("course.toggle.failed", error);
                       toast.error("Failed to toggle course selection");
                     } finally {
                       setToggleLoading(null);
@@ -298,7 +299,7 @@ export function CourseTable({
                         checked as boolean,
                       );
                     } catch (error) {
-                      console.error(error);
+                      writeApplicationError("free-course.update.failed", error);
                       toast.error("Failed to toggle course selection");
                     } finally {
                       setToggleLoading(null);
@@ -342,7 +343,10 @@ export function CourseTable({
                           filledCourseId,
                         );
                       } catch (error) {
-                        console.error(error);
+                        writeApplicationError(
+                          "free-course.update.failed",
+                          error,
+                        );
                         toast.error("Failed to update free course");
                       }
                     }}

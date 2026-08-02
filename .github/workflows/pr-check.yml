@@ -11,7 +11,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
       - name: Cache node modules
         uses: actions/cache@v4
         with:
@@ -28,7 +28,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
       - name: Cache node modules
         uses: actions/cache@v4
         with:
@@ -46,7 +46,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
       - name: Cache node modules
         uses: actions/cache@v4
         with:
@@ -56,3 +56,112 @@ jobs:
             ${{ runner.os }}-node-
       - run: npm ci
       - run: SKIP_ENV_VALIDATION=1 npm run build
+
+  image:
+    needs: [lint, test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Derive reproducible build timestamp
+        id: source
+        run: echo "epoch=$(git show -s --format=%ct HEAD)" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Clean deterministic Docker image A (loaded, non-pushed)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          build-args: |
+            RELEASE_REVISION=${{ github.sha }}
+            SOURCE_DATE_EPOCH=${{ steps.source.outputs.epoch }}
+          no-cache: true
+          outputs: type=docker,rewrite-timestamp=true
+          platforms: linux/amd64
+          provenance: false
+          sbom: false
+          tags: uwplan-ci:deterministic-a
+
+      - name: Clean deterministic Docker image B (loaded, non-pushed)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          build-args: |
+            RELEASE_REVISION=${{ github.sha }}
+            SOURCE_DATE_EPOCH=${{ steps.source.outputs.epoch }}
+          no-cache: true
+          outputs: type=docker,rewrite-timestamp=true
+          platforms: linux/amd64
+          provenance: false
+          sbom: false
+          tags: uwplan-ci:deterministic-b
+
+      - name: Compare reproducible image content digests
+        run: |
+          FIRST_DIGEST=$(docker image inspect --format '{{.Id}}' uwplan-ci:deterministic-a)
+          SECOND_DIGEST=$(docker image inspect --format '{{.Id}}' uwplan-ci:deterministic-b)
+          if [[ "$FIRST_DIGEST" != "$SECOND_DIGEST" ]]; then
+            echo "Equivalent clean builds produced different image digests" >&2
+            echo "first=$FIRST_DIGEST" >&2
+            echo "second=$SECOND_DIGEST" >&2
+            exit 1
+          fi
+          echo "Verified deterministic image digest: $FIRST_DIGEST" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Probe the production container and redacted logs
+        env:
+          EXPECTED_DIGEST: sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+          RELEASE_REVISION: ${{ github.sha }}
+        run: |
+          CONTAINER=uwplan-pr-health
+          DB_SENTINEL=ci-database-secret-must-not-leak
+          LIVE_BODY="$RUNNER_TEMP/uwplan-live.json"
+          READY_BODY="$RUNNER_TEMP/uwplan-ready.json"
+          CONTAINER_LOG="$RUNNER_TEMP/uwplan-container.log"
+          cleanup() {
+            docker logs "$CONTAINER" > "$CONTAINER_LOG" 2>&1 || true
+            docker rm --force "$CONTAINER" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          docker run --detach --name "$CONTAINER" --platform linux/amd64 \
+            --publish 127.0.0.1::5000 \
+            --env AUTH_GITHUB_ID=test-github-id \
+            --env AUTH_GITHUB_SECRET=test-github-secret \
+            --env AUTH_GOOGLE_ID=test-google-id \
+            --env AUTH_GOOGLE_SECRET=test-google-secret \
+            --env AUTH_SECRET=test-auth-secret \
+            --env "DATABASE_URL=postgresql://uwplan:${DB_SENTINEL}@127.0.0.1:1/uwplan" \
+            --env "RELEASE_DIGEST=$EXPECTED_DIGEST" \
+            --env "RELEASE_REVISION=$RELEASE_REVISION" \
+            uwplan-ci:deterministic-a
+
+          HOST_PORT=$(docker port "$CONTAINER" 5000/tcp | awk -F: '{print $NF}')
+          LIVE_CODE=""
+          for attempt in {1..30}; do
+            LIVE_CODE=$(curl --silent --show-error --output "$LIVE_BODY" \
+              --write-out '%{http_code}' "http://127.0.0.1:${HOST_PORT}/api/live" || true)
+            [[ "$LIVE_CODE" == "200" ]] && break
+            sleep 1
+          done
+          [[ "$LIVE_CODE" == "200" ]]
+          jq -e '. == {status: "live"}' "$LIVE_BODY"
+
+          READY_CODE=$(curl --silent --show-error --output "$READY_BODY" \
+            --write-out '%{http_code}' "http://127.0.0.1:${HOST_PORT}/api/ready")
+          [[ "$READY_CODE" == "503" ]]
+          jq -e --arg digest "$EXPECTED_DIGEST" --arg revision "$RELEASE_REVISION" '
+            .status == "unready" and
+            .release == {digest: $digest, revision: $revision} and
+            .dependencies == {database: "unavailable"}
+          ' "$READY_BODY"
+
+          sleep 1
+          docker logs "$CONTAINER" > "$CONTAINER_LOG" 2>&1
+          grep --fixed-strings '"event":"health.request"' "$CONTAINER_LOG"
+          if grep --fixed-strings --quiet "$DB_SENTINEL" \
+            "$LIVE_BODY" "$READY_BODY" "$CONTAINER_LOG"; then
+            echo "Database credential sentinel leaked from the container" >&2
+            exit 1
+          fi

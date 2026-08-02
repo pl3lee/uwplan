@@ -9,6 +9,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatRating } from "@/lib/utils";
+import { writeApplicationError } from "@/lib/structured-log";
 import { removeCourseSelectionAction } from "@/server/actions";
 import { type Course } from "@/types/course";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
@@ -203,7 +204,10 @@ export function SelectedCoursesTable({ fixedCourses }: CourseTableProps) {
                       await removeCourseSelectionAction(course.id);
                       toast.success("Course removed successfully");
                     } catch (error) {
-                      console.error(error);
+                      writeApplicationError(
+                        "course-selection.remove.failed",
+                        error,
+                      );
                       toast.error("Failed to remove course");
                     }
                   }}
