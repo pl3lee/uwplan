@@ -13,7 +13,7 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { pipeline } from "node:stream/promises";
@@ -103,15 +103,29 @@ function run(command, args, options = {}) {
     env: options.env ?? process.env,
     maxBuffer: 16 * 1024 * 1024,
   });
-  if (result.error) fail(`required command failed to start: ${command}`);
+  if (result.error) {
+    if (options.throwOnFailure) {
+      throw new Error(options.failureMessage ?? "candidate command failed");
+    }
+    fail(`required command failed to start: ${command}`);
+  }
   if (result.status !== 0) {
+    if (options.throwOnFailure) {
+      throw new Error(options.failureMessage ?? "candidate command failed");
+    }
     if (result.stderr) process.stderr.write(result.stderr);
     fail(options.failureMessage ?? "database candidate operation failed");
   }
   return result.stdout ?? "";
 }
 
-function utility(action, runId, environmentPath, extra = []) {
+function utility(
+  action,
+  runId,
+  environmentPath,
+  extra = [],
+  databaseOverride = "",
+) {
   requireProtectedFile(environmentPath);
   const environment = readEnvironment(environmentPath);
   const network = environment.UWPLAN_DB_DOCKER_NETWORK;
@@ -131,6 +145,7 @@ function utility(action, runId, environmentPath, extra = []) {
       environmentPath,
       "--env",
       `UWPLAN_DB_UTILITY_IMAGE=${POSTGRES_UTILITY_IMAGE}`,
+      ...(databaseOverride ? ["--env", `PGDATABASE=${databaseOverride}`] : []),
       "--volume",
       `${directory}:/evidence`,
       "--volume",
@@ -146,6 +161,23 @@ function utility(action, runId, environmentPath, extra = []) {
     ],
     { failureMessage: `${action} failed` },
   );
+}
+
+function requireAcceptedCandidate(runId, candidateDatabase) {
+  if (!candidatePattern.test(candidateDatabase))
+    fail("invalid candidate identity", 64);
+  const acceptancePath = join(runDirectory(runId), "integrity-accepted.json");
+  if (!existsSync(acceptancePath))
+    fail("candidate has no accepted integrity evidence");
+  const acceptance = JSON.parse(readFileSync(acceptancePath, "utf8"));
+  if (
+    acceptance.status !== "accepted" ||
+    acceptance.runId !== runId ||
+    acceptance.candidateDatabase !== candidateDatabase
+  ) {
+    fail("candidate integrity evidence does not match its identity");
+  }
+  return acceptance;
 }
 
 function sha256(path) {
@@ -198,7 +230,7 @@ async function receive(path, expectedSha256) {
   return actualSha256;
 }
 
-function candidateEnvironment(runId, candidateDatabase) {
+function candidateEnvironment(runId, candidateDatabase, extra = {}) {
   requireProtectedFile(runtimeEnvironment);
   const runtime = readEnvironment(runtimeEnvironment);
   const applicationPath = runtime.UWPLAN_ENV_FILE;
@@ -220,10 +252,57 @@ function candidateEnvironment(runId, candidateDatabase) {
     return `DATABASE_URL=${url.toString()}`;
   });
   if (!found) fail("application environment has no DATABASE_URL");
+  for (const [key, value] of Object.entries(extra)) {
+    if (
+      !/^[A-Z][A-Z0-9_]*$/.test(key) ||
+      typeof value !== "string" ||
+      value.includes("\n")
+    ) {
+      fail("invalid candidate-only application environment");
+    }
+    rewritten.push(`${key}=${value}`);
+  }
   const path = join(runDirectory(runId), "candidate-app.env");
   writeFileSync(path, `${rewritten.join("\n")}\n`, { mode: 0o600 });
   chmodSync(path, 0o600);
   return { path, runtime };
+}
+
+function validateReadiness(body, release) {
+  if (
+    body.status !== "ready" ||
+    body.dependencies?.database !== "available" ||
+    !/^sha256:[0-9a-f]{64}$/.test(release.RELEASE_DIGEST ?? "") ||
+    !/^[A-Za-z0-9_.-]{1,128}$/.test(release.RELEASE_REVISION ?? "") ||
+    body.release?.digest !== release.RELEASE_DIGEST ||
+    body.release?.revision !== release.RELEASE_REVISION
+  ) {
+    throw new Error(
+      "candidate readiness release identity did not match protected state",
+    );
+  }
+}
+
+function removeCandidate(environment, path) {
+  const removal = spawnSync(
+    dockerBinary,
+    [
+      "compose",
+      "--project-name",
+      composeProject,
+      "--file",
+      composeFile,
+      "rm",
+      "--force",
+      "--stop",
+      "candidate-app",
+    ],
+    { env: environment, stdio: "ignore" },
+  );
+  rmSync(path, { force: true });
+  if (removal.error || removal.status !== 0) {
+    fail("candidate app cleanup failed");
+  }
 }
 
 function bootCandidate(runId, candidateDatabase) {
@@ -251,6 +330,7 @@ function bootCandidate(runId, candidateDatabase) {
       ],
       {
         env: environment,
+        throwOnFailure: true,
         ...options,
       },
     );
@@ -274,6 +354,7 @@ function bootCandidate(runId, candidateDatabase) {
       { failureMessage: "candidate readiness failed" },
     );
     const body = JSON.parse(readiness);
+    validateReadiness(body, release);
     return {
       schemaVersion: 1,
       runId,
@@ -285,7 +366,30 @@ function bootCandidate(runId, candidateDatabase) {
       applicationRole: "uwplan_app",
     };
   } finally {
-    spawnSync(
+    removeCandidate(environment, path);
+  }
+}
+
+function candidateWorkflow(runId, candidateDatabase, action, proofRunId) {
+  requireAcceptedCandidate(runId, candidateDatabase);
+  if (!runIdPattern.test(proofRunId))
+    fail("invalid workflow proof run identifier", 64);
+  requireProtectedFile(releaseEnvironment);
+  const release = readEnvironment(releaseEnvironment);
+  const token = randomBytes(32).toString("hex");
+  const { path, runtime } = candidateEnvironment(runId, candidateDatabase, {
+    UWPLAN_DEPLOYMENT_ENVIRONMENT: "candidate",
+    UWPLAN_RESTORE_PROOF_ENABLED: "true",
+    UWPLAN_RESTORE_PROOF_TOKEN: token,
+  });
+  const environment = {
+    ...process.env,
+    ...runtime,
+    ...release,
+    UWPLAN_CANDIDATE_ENV_FILE: path,
+  };
+  const compose = (args, options = {}) =>
+    run(
       dockerBinary,
       [
         "compose",
@@ -293,27 +397,66 @@ function bootCandidate(runId, candidateDatabase) {
         composeProject,
         "--file",
         composeFile,
-        "stop",
-        "candidate-app",
+        ...args,
       ],
-      { env: environment, stdio: "ignore" },
+      { env: environment, throwOnFailure: true, ...options },
     );
-    spawnSync(
-      dockerBinary,
+  try {
+    compose(
+      ["--profile", "candidate", "up", "--detach", "--wait", "candidate-app"],
+      { failureMessage: "candidate app did not become live" },
+    );
+    const readiness = JSON.parse(
+      compose(
+        [
+          "exec",
+          "--no-TTY",
+          "candidate-app",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:5000/api/ready').then(async response => { const body = await response.json(); if (!response.ok) process.exit(1); process.stdout.write(JSON.stringify(body)); }).catch(() => process.exit(1))",
+        ],
+        { failureMessage: "candidate readiness failed" },
+      ),
+    );
+    validateReadiness(readiness, release);
+    const output = compose(
       [
-        "compose",
-        "--project-name",
-        composeProject,
-        "--file",
-        composeFile,
-        "rm",
-        "--force",
-        "--stop",
+        "exec",
+        "--no-TTY",
         "candidate-app",
+        "node",
+        "-e",
+        `fetch('http://127.0.0.1:5000/api/candidate/restore-proof', { method: 'POST', headers: { authorization: 'Bearer ' + process.env.UWPLAN_RESTORE_PROOF_TOKEN, 'content-type': 'application/json' }, body: JSON.stringify({ action: '${action}', proofRunId: '${proofRunId}' }) }).then(async response => { const body = await response.json(); if (!response.ok) process.exit(1); process.stdout.write(JSON.stringify(body)); }).catch(() => process.exit(1))`,
       ],
-      { env: environment, stdio: "ignore" },
+      {
+        failureMessage: "candidate workflow proof failed",
+      },
     );
-    rmSync(path, { force: true });
+    const result = JSON.parse(output);
+    const expectedStatus = action === "write" ? "written" : "verified";
+    if (
+      result.schemaVersion !== 1 ||
+      result.event !== "database.workflow-proof" ||
+      result.status !== expectedStatus ||
+      result.proofRunId !== proofRunId ||
+      result.candidateDatabase !== candidateDatabase ||
+      result.applicationRole !== "uwplan_app" ||
+      result.workflow !== "user-plan-schedule" ||
+      result.recordCount !== 3 ||
+      !sha256Pattern.test(result.proofSha256 ?? "")
+    ) {
+      throw new Error("candidate workflow evidence failed validation");
+    }
+    const evidencePath = join(
+      runDirectory(runId),
+      action === "write" ? "workflow-written.json" : "workflow-verified.json",
+    );
+    writeFileSync(evidencePath, `${JSON.stringify(result)}\n`, { mode: 0o600 });
+    chmodSync(evidencePath, 0o600);
+    return result;
+  } finally {
+    removeCandidate(environment, path);
   }
 }
 
@@ -333,6 +476,54 @@ switch (action) {
     }
     process.stdout.write(
       `${JSON.stringify({ ...manifest, utilityImage: POSTGRES_UTILITY_IMAGE })}\n`,
+    );
+    break;
+  }
+  case "capture-candidate": {
+    const candidateDatabase = arguments_[0] ?? "";
+    const sourceRunId = arguments_[1] ?? "";
+    if (
+      !runIdPattern.test(sourceRunId) ||
+      candidateDatabase !== `uwplan_candidate_${sourceRunId}`
+    ) {
+      fail("candidate capture identity did not match its forward run", 64);
+    }
+    requireAcceptedCandidate(sourceRunId, candidateDatabase);
+    const workflow = JSON.parse(
+      readFileSync(
+        join(runDirectory(sourceRunId), "workflow-written.json"),
+        "utf8",
+      ),
+    );
+    if (
+      workflow.status !== "written" ||
+      workflow.proofRunId !== sourceRunId ||
+      workflow.candidateDatabase !== candidateDatabase ||
+      !sha256Pattern.test(workflow.proofSha256 ?? "")
+    ) {
+      fail("candidate has no accepted UWPlan workflow write evidence");
+    }
+    const manifestPath = join(directory, "source-manifest.json");
+    if (!existsSync(manifestPath)) {
+      utility("capture", runId, targetEnvironment, [], candidateDatabase);
+    }
+    const manifest = loadManifest(directory);
+    if (
+      manifest.runId !== runId ||
+      manifest.source.database !== candidateDatabase
+    ) {
+      fail("candidate capture source identity mismatch");
+    }
+    if (sha256(join(directory, "source.dump")) !== manifest.archive.sha256) {
+      fail("published candidate archive SHA-256 did not match its manifest");
+    }
+    process.stdout.write(
+      `${JSON.stringify({
+        ...manifest,
+        utilityImage: POSTGRES_UTILITY_IMAGE,
+        proofRunId: sourceRunId,
+        workflowProofSha256: workflow.proofSha256,
+      })}\n`,
     );
     break;
   }
@@ -440,19 +631,45 @@ switch (action) {
     break;
   }
   case "boot-candidate": {
-    const acceptancePath = join(directory, "integrity-accepted.json");
-    if (!existsSync(acceptancePath))
-      fail("candidate has no accepted integrity evidence");
-    const acceptance = JSON.parse(readFileSync(acceptancePath, "utf8"));
-    if (
-      acceptance.status !== "accepted" ||
-      acceptance.runId !== runId ||
-      acceptance.candidateDatabase !== arguments_[0]
-    ) {
-      fail("candidate integrity evidence does not match its identity");
+    requireAcceptedCandidate(runId, arguments_[0] ?? "");
+    try {
+      const result = bootCandidate(runId, arguments_[0] ?? "");
+      process.stdout.write(`${JSON.stringify(result)}\n`);
+    } catch (error) {
+      fail(error instanceof Error ? error.message : "candidate boot failed");
     }
-    const result = bootCandidate(runId, arguments_[0] ?? "");
-    process.stdout.write(`${JSON.stringify(result)}\n`);
+    break;
+  }
+  case "write-candidate-workflow": {
+    try {
+      const result = candidateWorkflow(
+        runId,
+        arguments_[0] ?? "",
+        "write",
+        runId,
+      );
+      process.stdout.write(`${JSON.stringify(result)}\n`);
+    } catch (error) {
+      fail(
+        error instanceof Error ? error.message : "candidate workflow failed",
+      );
+    }
+    break;
+  }
+  case "verify-candidate-workflow": {
+    try {
+      const result = candidateWorkflow(
+        runId,
+        arguments_[0] ?? "",
+        "verify",
+        arguments_[1] ?? "",
+      );
+      process.stdout.write(`${JSON.stringify(result)}\n`);
+    } catch (error) {
+      fail(
+        error instanceof Error ? error.message : "candidate workflow failed",
+      );
+    }
     break;
   }
   default:

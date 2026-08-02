@@ -8,6 +8,7 @@ const fields = original.split(" ");
 const [requestedCommand, action, runId, ...arguments_] = fields;
 const expectedArguments = new Map([
   ["capture", 0],
+  ["capture-candidate", 2],
   ["stream-manifest", 0],
   ["receive-manifest", 0],
   ["stream-archive", 0],
@@ -15,6 +16,8 @@ const expectedArguments = new Map([
   ["restore", 0],
   ["validate-integrity", 1],
   ["boot-candidate", 1],
+  ["write-candidate-workflow", 1],
+  ["verify-candidate-workflow", 2],
 ]);
 
 if (
@@ -23,8 +26,16 @@ if (
   arguments_.length !== expectedArguments.get(action) ||
   !/^[0-9]{8}T[0-9]{9}Z$/.test(runId) ||
   (action === "receive-archive" && !/^[0-9a-f]{64}$/.test(arguments_[0])) ||
-  ((action === "boot-candidate" || action === "validate-integrity") &&
-    !/^uwplan_candidate_[0-9]{8}T[0-9]{9}Z$/.test(arguments_[0]))
+  (new Set([
+    "boot-candidate",
+    "capture-candidate",
+    "validate-integrity",
+    "verify-candidate-workflow",
+    "write-candidate-workflow",
+  ]).has(action) &&
+    !/^uwplan_candidate_[0-9]{8}T[0-9]{9}Z$/.test(arguments_[0])) ||
+  (new Set(["capture-candidate", "verify-candidate-workflow"]).has(action) &&
+    !/^[0-9]{8}T[0-9]{9}Z$/.test(arguments_[1]))
 ) {
   process.stderr.write("database migration SSH command rejected\n");
   process.exit(64);
