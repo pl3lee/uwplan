@@ -1,0 +1,25 @@
+name = "uwplan-maintenance"
+main = "worker.mjs"
+compatibility_date = "2026-08-01"
+
+# Replace with the disposable zone first. Production routes are added only at
+# the runbook's explicit, owner-approved maintenance gate.
+routes = [
+  { pattern = "test.example.net/*", zone_name = "example.net" },
+  { pattern = "www.test.example.net/*", zone_name = "example.net" },
+]
+
+[vars]
+ALLOWED_HOSTS = "test.example.net,www.test.example.net"
+BOOTSTRAP_GENERATION = "replace-with-unique-rotation-id"
+# Store SHA-256 hex digests, never the bootstrap/control tokens themselves.
+BOOTSTRAP_TOKEN_SHA256 = "replace-with-64-hex-digest"
+CONTROL_TOKEN_SHA256 = "replace-with-64-hex-digest"
+
+[[durable_objects.bindings]]
+name = "BYPASS_COORDINATOR"
+class_name = "OperatorBypassCoordinator"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["OperatorBypassCoordinator"]

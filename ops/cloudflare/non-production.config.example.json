@@ -1,0 +1,30 @@
+{
+  "accountId": "replace-account-id",
+  "zoneId": "replace-disposable-zone-id",
+  "zoneName": "test.example.net",
+  "hostnames": ["test.example.net", "www.test.example.net"],
+  "tokenFile": "/run/secrets/uwplan-cloudflare-token",
+  "digitalOceanOrigins": {
+    "test.example.net": "198.51.100.20",
+    "www.test.example.net": "origin-do.test.example.net"
+  },
+  "digitalOceanOriginAddress": "198.51.100.20",
+  "digitalOceanOriginPort": 443,
+  "digitalOceanReadinessUrl": "https://test.example.net/api/ready",
+  "digitalOceanExpectedRelease": {
+    "digest": "sha256:replace-with-64-hex-digest",
+    "revision": "replace-revision"
+  },
+  "originalReadinessUrl": "https://old-origin-check.test.example.net/api/ready",
+  "originalExpectedRelease": {
+    "digest": "sha256:replace-with-64-hex-digest",
+    "revision": "replace-revision"
+  },
+  "workerUsage": { "used": 0, "limit": 100000, "reserved": 1000 },
+  "worker": {
+    "baseUrl": "https://test.example.net",
+    "bootstrapTokenFile": "/run/secrets/uwplan-worker-bootstrap",
+    "controlTokenFile": "/run/secrets/uwplan-worker-control"
+  },
+  "evidencePath": "/var/lib/uwplan-migration/cloudflare-non-production.json"
+}
