@@ -25,6 +25,7 @@ function harness(
     failedIntegrityGates?: string[];
     sourceVersionNum?: string;
     targetVersionNum?: string;
+    overprivilegedMigrationRole?: boolean;
     unready?: boolean;
   } = {},
 ) {
@@ -64,6 +65,7 @@ else if (action === "receive-archive") {
   schemaVersion: 1, runId, candidateDatabase: "uwplan_candidate_" + runId,
   archiveSha256: ${JSON.stringify(archiveSha256)}, targetVersionNum: ${JSON.stringify(options.targetVersionNum ?? "160014")}, restored: true, singleTransaction: true,
   exitOnError: true, analyzed: true, databaseOwner: "uwplan_app",
+  migrationRole: { name: "uwplan_migration_admin", login: true, superuser: false, createdb: true, createrole: ${options.overprivilegedMigrationRole ? "true" : "false"}, replication: false, bypassRls: false, appRoleAdmin: false, appRoleInherit: false, appRoleSet: true },
   appRole: { login: true, superuser: false, createdb: false, createrole: false, replication: false, bypassRls: false }
 }));
 else if (action === "validate-integrity") process.stdout.write(JSON.stringify({
@@ -203,6 +205,22 @@ describe("database candidate move command", () => {
       expect(result.status).toBe(1);
       expect(result.stderr).toBe(
         "application candidate did not pass readiness\n",
+      );
+    } finally {
+      test.cleanup();
+    }
+  });
+
+  it("rejects an overprivileged migration role before integrity validation", () => {
+    const test = harness({ overprivilegedMigrationRole: true });
+    try {
+      const result = test.run();
+      expect(result.status).toBe(1);
+      expect(result.stderr).toBe(
+        "fresh candidate restore did not satisfy the restore contract\n",
+      );
+      expect(test.operations().map(({ action }) => action)).not.toContain(
+        "validate-integrity",
       );
     } finally {
       test.cleanup();

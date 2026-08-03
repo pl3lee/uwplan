@@ -182,6 +182,18 @@ function validateRestore(restore, capture, runId) {
     restore.exitOnError !== true ||
     restore.analyzed !== true ||
     restore.databaseOwner !== "uwplan_app" ||
+    restore.migrationRole?.name !== "uwplan_migration_admin" ||
+    restore.migrationRole?.login !== true ||
+    restore.migrationRole?.createdb !== true ||
+    restore.migrationRole?.createrole !== false ||
+    restore.migrationRole?.appRoleAdmin !== false ||
+    restore.migrationRole?.appRoleInherit !== false ||
+    restore.migrationRole?.appRoleSet !== true ||
+    Object.values({
+      superuser: restore.migrationRole?.superuser,
+      replication: restore.migrationRole?.replication,
+      bypassRls: restore.migrationRole?.bypassRls,
+    }).some((value) => value !== false) ||
     restore.appRole?.login !== true ||
     Object.values({ ...restore.appRole, login: false }).some(Boolean)
   ) {

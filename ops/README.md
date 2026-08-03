@@ -85,10 +85,14 @@ visudo -cf /etc/sudoers.d/uwplan-deploy
 
 `/etc/uwplan/runtime.env` is root-owned mode `0600` and contains only the protected `UWPLAN_ENV_FILE`, `UWPLAN_ALLOY_ENV_FILE`, `POSTGRES_PASSWORD_FILE`, and `POSTGRES_ADMIN_PASSWORD_FILE` paths. `/var/lib/uwplan-runtime/release.env` is written root-owned mode `0600`. The helper uses fixed production paths (`/opt/uwplan/current/compose.yaml`, `/etc/uwplan/runtime.env`, `/var/lib/uwplan-runtime/release.env`, and loopback readiness); environment overrides and injected Docker runners work only when the helper is executed outside its installed production path under the explicit disposable test seam.
 
-The database initializes `postgres` with the administrator secret and creates
-`uwplan_app` separately with LOGIN, NOSUPERUSER, NOCREATEDB, NOCREATEROLE,
-NOREPLICATION, and NOBYPASSRLS. Candidate moves and their disposable fixture
-are documented in `ops/database/README.md`.
+The database bootstrap initializes `postgres` with the administrator secret
+and, under that one-time superuser authority, creates or demotes `uwplan_app`
+to LOGIN, NOSUPERUSER, NOCREATEDB, NOCREATEROLE, NOREPLICATION, and
+NOBYPASSRLS. Normal candidate restores use the separately provisioned
+LOGIN+CREATEDB+NOCREATEROLE `uwplan_migration_admin` with SET-only membership
+in `uwplan_app`; they neither connect as `postgres` nor alter role flags.
+Candidate moves and their disposable fixture are documented in
+`ops/database/README.md`.
 
 Validate the installation before enabling the key:
 

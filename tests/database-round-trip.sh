@@ -9,6 +9,8 @@ readonly REJECTED_REVERSE_RUN_ID="20260802T203500000Z"
 readonly REVERSE_RUN_ID="20260802T204000000Z"
 readonly RACKNerd_PASSWORD="disposable-racknerd-admin-password"
 readonly DO_ADMIN_PASSWORD="disposable-digitalocean-admin-password"
+readonly RACKNerd_MIGRATION_PASSWORD="disposable-racknerd-migration-password"
+readonly DO_MIGRATION_PASSWORD="disposable-digitalocean-migration-password"
 readonly APP_PASSWORD="disposable-round-trip-app-password"
 readonly PROJECT_NAME="${COMPOSE_PROJECT_NAME:-uwplan-db-round-trip-${GITHUB_RUN_ID:-local}-${GITHUB_RUN_ATTEMPT:-1}}"
 readonly NETWORK="${PROJECT_NAME}_runtime"
@@ -148,6 +150,11 @@ chmod 600 \
   "$release_environment"
 
 compose up --detach --wait db
+compose exec --no-TTY db psql --username postgres --dbname postgres \
+  --set ON_ERROR_STOP=1 --quiet <<SQL
+CREATE ROLE uwplan_migration_admin LOGIN CREATEDB NOCREATEROLE NOSUPERUSER NOREPLICATION NOBYPASSRLS PASSWORD '${DO_MIGRATION_PASSWORD}';
+GRANT uwplan_app TO uwplan_migration_admin WITH ADMIN FALSE, INHERIT FALSE, SET TRUE;
+SQL
 docker run --detach --name "$RACKNerd_SOURCE_CONTAINER" --network "$NETWORK" \
   --env POSTGRES_DB=uwplan_fixture \
   --env POSTGRES_USER=postgres \
@@ -165,9 +172,13 @@ for _ in {1..30}; do
 done
 docker exec "$RACKNerd_SOURCE_CONTAINER" pg_isready --username postgres --dbname uwplan_fixture >/dev/null
 docker exec "$RACKNerd_TARGET_CONTAINER" pg_isready --username postgres --dbname postgres >/dev/null
-docker exec "$RACKNerd_TARGET_CONTAINER" psql --username postgres --dbname postgres \
-  --set ON_ERROR_STOP=1 --command \
-  "create role uwplan_app login password '${APP_PASSWORD}' nosuperuser nocreatedb nocreaterole noreplication nobypassrls;" >/dev/null
+docker exec --interactive "$RACKNerd_TARGET_CONTAINER" \
+  psql --username postgres --dbname postgres \
+  --set ON_ERROR_STOP=1 --quiet <<SQL
+CREATE ROLE uwplan_app LOGIN PASSWORD '${APP_PASSWORD}' NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+CREATE ROLE uwplan_migration_admin LOGIN CREATEDB NOCREATEROLE NOSUPERUSER NOREPLICATION NOBYPASSRLS PASSWORD '${RACKNerd_MIGRATION_PASSWORD}';
+GRANT uwplan_app TO uwplan_migration_admin WITH ADMIN FALSE, INHERIT FALSE, SET TRUE;
+SQL
 
 docker run --rm --network "$NETWORK" \
   --env "DATABASE_URL=postgresql://postgres:${RACKNerd_PASSWORD}@${RACKNerd_SOURCE_CONTAINER}:5432/uwplan_fixture" \
@@ -192,16 +203,16 @@ EOF
 cat >"$racknerd_target_environment" <<EOF
 PGHOST=${RACKNerd_TARGET_CONTAINER}
 PGPORT=5432
-PGUSER=postgres
-PGPASSWORD=${RACKNerd_PASSWORD}
+PGUSER=uwplan_migration_admin
+PGPASSWORD=${RACKNerd_MIGRATION_PASSWORD}
 PGDATABASE=postgres
 UWPLAN_DB_DOCKER_NETWORK=${NETWORK}
 EOF
 cat >"$digitalocean_target_environment" <<EOF
 PGHOST=db
 PGPORT=5432
-PGUSER=postgres
-PGPASSWORD=${DO_ADMIN_PASSWORD}
+PGUSER=uwplan_migration_admin
+PGPASSWORD=${DO_MIGRATION_PASSWORD}
 PGDATABASE=postgres
 UWPLAN_DB_DOCKER_NETWORK=${NETWORK}
 EOF
@@ -209,6 +220,15 @@ chmod 600 \
   "$racknerd_source_environment" \
   "$racknerd_target_environment" \
   "$digitalocean_target_environment"
+
+for target_environment in \
+  "$racknerd_target_environment" \
+  "$digitalocean_target_environment"; do
+  docker run --rm --network "$NETWORK" --env-file "$target_environment" \
+    "$POSTGRES_IMAGE" psql --no-psqlrc --quiet --tuples-only --no-align \
+    --command "SELECT current_user" \
+    | grep --fixed-strings --line-regexp uwplan_migration_admin >/dev/null
+done
 
 racknerd_host capture "$FORWARD_RUN_ID" >"$forward_capture"
 racknerd_host stream-manifest "$FORWARD_RUN_ID" \

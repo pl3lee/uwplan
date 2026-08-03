@@ -8,6 +8,7 @@ readonly RUN_ID="20260802T193000000Z"
 readonly SOURCE_PASSWORD="disposable-source-admin-password"
 readonly APP_PASSWORD="disposable-candidate-app-password"
 readonly ADMIN_PASSWORD="disposable-target-admin-password"
+readonly MIGRATION_PASSWORD="disposable-target-migration-password"
 readonly PROJECT_NAME="${COMPOSE_PROJECT_NAME:-uwplan-db-candidate-${GITHUB_RUN_ID:-local}-${GITHUB_RUN_ATTEMPT:-1}}"
 readonly NETWORK="${PROJECT_NAME}_runtime"
 readonly SOURCE_CONTAINER="${PROJECT_NAME}-source"
@@ -105,6 +106,11 @@ EOF
 chmod 600 "$runtime_environment" "$release_environment"
 
 compose up --detach --wait db
+compose exec --no-TTY db psql --username postgres --dbname postgres \
+  --set ON_ERROR_STOP=1 --quiet <<SQL
+CREATE ROLE uwplan_migration_admin LOGIN CREATEDB NOCREATEROLE NOSUPERUSER NOREPLICATION NOBYPASSRLS PASSWORD '${MIGRATION_PASSWORD}';
+GRANT uwplan_app TO uwplan_migration_admin WITH ADMIN FALSE, INHERIT FALSE, SET TRUE;
+SQL
 docker run --detach --name "$SOURCE_CONTAINER" --network "$NETWORK" \
   --env POSTGRES_DB=uwplan_fixture \
   --env POSTGRES_USER=postgres \
@@ -136,8 +142,8 @@ EOF
 cat >"$target_environment" <<EOF
 PGHOST=db
 PGPORT=5432
-PGUSER=postgres
-PGPASSWORD=${ADMIN_PASSWORD}
+PGUSER=uwplan_migration_admin
+PGPASSWORD=${MIGRATION_PASSWORD}
 PGDATABASE=postgres
 UWPLAN_DB_DOCKER_NETWORK=${NETWORK}
 EOF
@@ -148,10 +154,42 @@ source_host stream-manifest "$RUN_ID" | target_host receive-manifest "$RUN_ID" >
 archive_sha256="$(jq --raw-output '.archive.sha256' "$capture_evidence")"
 source_host stream-archive "$RUN_ID" \
   | target_host receive-archive "$RUN_ID" "$archive_sha256" >/dev/null
+
+compose exec --no-TTY db psql --username postgres --dbname postgres \
+  --set ON_ERROR_STOP=1 --quiet --command \
+  "ALTER ROLE uwplan_app SUPERUSER;" >/dev/null
+if target_host restore "$RUN_ID" >/dev/null 2>&1; then
+  echo "Restore accepted an elevated uwplan_app role" >&2
+  exit 1
+fi
+compose exec --no-TTY db psql --username postgres --dbname postgres \
+  --set ON_ERROR_STOP=1 --quiet --command \
+  "ALTER ROLE uwplan_app NOSUPERUSER NOLOGIN;" >/dev/null
+if target_host restore "$RUN_ID" >/dev/null 2>&1; then
+  echo "Restore accepted a non-login uwplan_app role" >&2
+  exit 1
+fi
+compose exec --no-TTY db psql --username postgres --dbname postgres \
+  --set ON_ERROR_STOP=1 --quiet --command \
+  "ALTER ROLE uwplan_app LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;" >/dev/null
 target_host restore "$RUN_ID" >"$restore_evidence"
 
 candidate_database="$(jq --raw-output '.candidateDatabase' "$restore_evidence")"
 [[ "$candidate_database" == "uwplan_candidate_${RUN_ID}" ]]
+jq -e '
+  .migrationRole == {
+    "name": "uwplan_migration_admin",
+    "login": true,
+    "superuser": false,
+    "createdb": true,
+    "createrole": false,
+    "replication": false,
+    "bypassRls": false,
+    "appRoleAdmin": false,
+    "appRoleInherit": false,
+    "appRoleSet": true
+  }
+' "$restore_evidence" >/dev/null
 target_host validate-integrity "$RUN_ID" "$candidate_database" >"$integrity_evidence"
 jq -e --arg candidate "$candidate_database" '
   .status == "accepted" and

@@ -130,6 +130,15 @@ function utility(
 ) {
   requireProtectedFile(environmentPath);
   const environment = readEnvironment(environmentPath);
+  if (
+    action === "restore" &&
+    (environment.PGUSER !== "uwplan_migration_admin" ||
+      environment.PGDATABASE !== "postgres")
+  ) {
+    fail(
+      "protected target environment must use uwplan_migration_admin on postgres",
+    );
+  }
   const network = environment.UWPLAN_DB_DOCKER_NETWORK;
   if (!network || !/^[A-Za-z0-9_.-]+$/.test(network)) {
     fail("protected database environment must name a Docker network");

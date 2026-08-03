@@ -14,6 +14,13 @@ consume it. A custom archive is published by rename only after `pg_restore
 candidate identity, creates `uwplan_candidate_<UTC run id>` from `template0`
 with the source encoding and locale, restores as `uwplan_app` in one
 transaction with exit-on-error, and runs `ANALYZE`.
+The target connection must be the dedicated `uwplan_migration_admin` role:
+LOGIN, CREATEDB, NOCREATEROLE, NOSUPERUSER, NOREPLICATION, and NOBYPASSRLS.
+It has SET-only membership in `uwplan_app` (`ADMIN FALSE`, `INHERIT FALSE`,
+`SET TRUE`) so it can assign the fresh database to the app role and run the
+restore as that owner. Restore never creates or alters either role. It fails
+closed unless `uwplan_app` was already provisioned as LOGIN, NOSUPERUSER,
+NOCREATEDB, NOCREATEROLE, NOREPLICATION, and NOBYPASSRLS.
 
 Before the candidate application may boot, `integrity.sh` derives source and
 candidate manifests from repeatable-read snapshots and `integrity.mjs`
@@ -43,9 +50,20 @@ Install the repository at `/opt/uwplan/current` on both hosts and create a
 mode-`0700` `/var/lib/uwplan-migration`. The source file
 `/etc/uwplan/database-source.env` contains only `PGHOST`, `PGPORT`, `PGUSER`,
 `PGPASSWORD`, `PGDATABASE`, and `UWPLAN_DB_DOCKER_NETWORK`. The target file
-`/etc/uwplan/database-target.env` contains the same fields for a database
-administrator that may create a fresh database and alter `uwplan_app`; it is
-never used by the application.
+`/etc/uwplan/database-target.env` contains the same fields with
+`PGUSER=uwplan_migration_admin`. This role may create a fresh database and SET
+ROLE to `uwplan_app`; it cannot alter roles, grant membership, inherit app
+privileges, or use superuser capabilities. It is never used by the
+application. A bootstrap superuser provisions the boundary once:
+
+```sql
+ALTER ROLE uwplan_app LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+CREATE ROLE uwplan_migration_admin LOGIN CREATEDB NOCREATEROLE NOSUPERUSER NOREPLICATION NOBYPASSRLS;
+GRANT uwplan_app TO uwplan_migration_admin WITH ADMIN FALSE, INHERIT FALSE, SET TRUE;
+```
+
+Set the migration role's password through the protected provisioning channel,
+not in command history or repository files.
 
 Use a dedicated SSH key whose `authorized_keys` entry forces
 `ops/database/forced-command.mjs`, disables forwarding, and has access only to
@@ -72,9 +90,11 @@ UWPLAN_DB_TARGET_HOST=migration-target \
 node ops/database/move-candidate.mjs 20260802T193000000Z
 ```
 
-Success prints one sanitized JSON record. A corruption/checksum difference,
+Success prints one sanitized JSON record, including the verified migration and
+application role attributes. A corruption/checksum difference,
 version or locale drift, schema/ledger/table/sequence mismatch, invalid
-constraint/index, unsafe ownership or role attributes, reused identity,
+constraint/index, unsafe ownership or role attributes, overprivileged
+migration membership, reused identity,
 restore error, or failed application readiness exits nonzero without emitting
 credentials or row values.
 
@@ -103,8 +123,9 @@ workflow is started.
 
 Both hosts therefore need the source/target database environment appropriate
 to the direction they serve, plus their protected runtime and release files.
-The RackNerd target administrator is used only to create the fresh reverse
-candidate; it never overwrites or connects the app to the serving database.
+The RackNerd target migration role is used only to create the fresh reverse
+candidate and SET ROLE to its app owner; it never overwrites or connects the
+app to the serving database.
 Run with distinct UTC identities:
 
 ```sh
@@ -124,8 +145,10 @@ The JSON contains no credentials, emails, row values, or authentication data.
 `tests/database-candidate-command.test.ts` prove the exact comparison and SSH
 failure matrix with fake infrastructure. `tests/database-candidate.sh` uses
 two disposable PostgreSQL 16 instances and the built application image to
-prove synchronized capture, exact privacy-safe integrity, restore, credential
-separation, fixture data, and readiness without production data or hosts.
+prove synchronized capture, exact privacy-safe integrity, PostgreSQL 16.14
+least-privilege restore, elevated and non-login app-role rejection, credential
+separation, fixture data, app-role DML, and readiness without production data
+or hosts.
 `tests/database-round-trip-command.test.ts` proves fail-closed orchestration,
 and `tests/database-round-trip.sh` exercises both directions, the real release
 image's UWPlan workflow write, protected evidence, and reverse readiness using

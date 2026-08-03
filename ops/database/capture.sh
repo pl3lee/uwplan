@@ -22,6 +22,13 @@ readonly SNAPSHOT_OUTPUT="${EVIDENCE_DIRECTORY}/snapshot.output"
 : "${PGDATABASE:?PGDATABASE is required}"
 [[ "$PGDATABASE" =~ ^[A-Za-z0-9_-]+$ ]]
 
+role_statement=""
+pg_dump_role=()
+if [[ "$PGUSER" == "uwplan_migration_admin" ]]; then
+  role_statement="SET ROLE uwplan_app;"
+  pg_dump_role=(--role=uwplan_app)
+fi
+
 mkdir -p "$EVIDENCE_DIRECTORY"
 chmod 700 "$EVIDENCE_DIRECTORY"
 rm -f "$ARCHIVE_PARTIAL" "$MANIFEST_PARTIAL"
@@ -49,6 +56,7 @@ exec 4<"$SNAPSHOT_OUTPUT"
 rm -f "$SNAPSHOT_INPUT" "$SNAPSHOT_OUTPUT"
 
 printf '%s\n' \
+  "$role_statement" \
   'BEGIN ISOLATION LEVEL REPEATABLE READ, READ ONLY;' \
   'SELECT pg_export_snapshot();' >&3
 IFS= read -r snapshot_id <&4
@@ -56,6 +64,7 @@ IFS= read -r snapshot_id <&4
 
 metadata="$({
   printf '%s\n' \
+    "$role_statement" \
     'BEGIN ISOLATION LEVEL REPEATABLE READ, READ ONLY;' \
     "SET TRANSACTION SNAPSHOT '${snapshot_id}';" \
     "SELECT pg_encoding_to_char(encoding) || E'\\t' || datcollate || E'\\t' || datctype || E'\\t' || current_setting('server_version_num') FROM pg_database WHERE datname = current_database();" \
@@ -70,6 +79,7 @@ IFS=$'\t' read -r source_encoding source_collation source_ctype source_version <
 (( 10#$source_version <= 160014 ))
 
 pg_dump \
+  "${pg_dump_role[@]}" \
   --format=custom \
   --no-owner \
   --no-privileges \

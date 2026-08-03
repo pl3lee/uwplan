@@ -20,6 +20,13 @@ trap 'printf "database integrity manifest failed during %s\n" "$stage" >&2' ERR
 : "${PGPORT:?PGPORT is required}"
 : "${PGUSER:?PGUSER is required}"
 
+role_statement=""
+pg_dump_role=()
+if [[ "$PGUSER" == "uwplan_migration_admin" ]]; then
+  role_statement="SET ROLE uwplan_app;"
+  pg_dump_role=(--role=uwplan_app)
+fi
+
 mkdir -p "$EVIDENCE_DIRECTORY"
 chmod 700 "$EVIDENCE_DIRECTORY"
 
@@ -48,6 +55,7 @@ if [[ "$snapshot_id" == "-" ]]; then
   exec 4<"$snapshot_output"
   rm -f "$snapshot_input" "$snapshot_output"
   printf '%s\n' \
+    "$role_statement" \
     'BEGIN ISOLATION LEVEL REPEATABLE READ, READ ONLY;' \
     'SELECT pg_export_snapshot();' >&3
   IFS= read -r snapshot_id <&4
@@ -58,6 +66,7 @@ snapshot_query() {
   local sql="$1"
   {
     printf '%s\n' \
+      "$role_statement" \
       'BEGIN ISOLATION LEVEL REPEATABLE READ, READ ONLY;' \
       "SET TRANSACTION SNAPSHOT '${snapshot_id}';" \
       "SET LOCAL TIME ZONE 'UTC';" \
@@ -95,7 +104,8 @@ server_version="$(printf '%s' "$database_json" | sed -nE 's/.*"serverVersionNum"
 
 stage="normalized-schema"
 schema_sha256="$({
-  pg_dump --dbname="$DATABASE_NAME" --schema-only --no-owner --no-privileges \
+  pg_dump --dbname="$DATABASE_NAME" "${pg_dump_role[@]}" \
+    --schema-only --no-owner --no-privileges \
     --snapshot="$snapshot_id"
 } | sed -E '/^--/d;/^\\(un)?restrict /d;/^[[:space:]]*$/d' \
   | sha256sum | awk '{print $1}')"

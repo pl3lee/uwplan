@@ -71,6 +71,7 @@ else if (action === "receive-archive") {
   schemaVersion: 1, runId, candidateDatabase: "uwplan_candidate_" + runId,
   archiveSha256: sha256, targetVersionNum: runId === ${JSON.stringify(options.wrongTargetVersionRunId)} ? "160013" : "160014", restored: true, singleTransaction: true,
   exitOnError: true, analyzed: true, databaseOwner: "uwplan_app",
+  migrationRole: { name: "uwplan_migration_admin", login: true, superuser: false, createdb: true, createrole: false, replication: false, bypassRls: false, appRoleAdmin: false, appRoleInherit: false, appRoleSet: true },
   appRole: { login: true, superuser: false, createdb: false, createrole: false, replication: false, bypassRls: false }
 })); }
 else if (action === "validate-integrity") process.stdout.write(JSON.stringify({
