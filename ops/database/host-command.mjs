@@ -19,6 +19,7 @@ import { fileURLToPath } from "node:url";
 import { pipeline } from "node:stream/promises";
 import { POSTGRES_UTILITY_IMAGE } from "./protocol.mjs";
 import { compareIntegrity, isIntegrityManifest } from "./integrity.mjs";
+import { AUTH_SCRUB_PROCEDURE_VERSION } from "../auth-rehearsal/protocol.mjs";
 
 const production = process.env.NODE_ENV !== "test";
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
@@ -51,6 +52,7 @@ const runIdPattern = /^[0-9]{8}T[0-9]{9}Z$/;
 const sha256Pattern = /^[0-9a-f]{64}$/;
 const candidatePattern = /^uwplan_candidate_[0-9]{8}T[0-9]{9}Z$/;
 const safeValuePattern = /^[A-Za-z0-9_.@-]+$/;
+const authScrubScript = join(scriptDirectory, "../auth-rehearsal/scrub.sql");
 
 function fail(message, code = 1) {
   process.stderr.write(`${message}\n`);
@@ -178,6 +180,194 @@ function requireAcceptedCandidate(runId, candidateDatabase) {
     fail("candidate integrity evidence does not match its identity");
   }
   return acceptance;
+}
+
+function requireFreshAcceptedCandidate(runId, candidateDatabase) {
+  if (candidateDatabase !== `uwplan_candidate_${runId}`) {
+    fail("authentication scrub requires the run's fresh candidate", 64);
+  }
+  const directory = runDirectory(runId);
+  const acceptancePath = join(directory, "integrity-accepted.json");
+  requireProtectedFile(acceptancePath);
+  const acceptance = requireAcceptedCandidate(runId, candidateDatabase);
+  if (!sha256Pattern.test(acceptance.sourceArchiveSha256 ?? "")) {
+    fail("candidate integrity evidence has no source archive identity");
+  }
+  const markerPath = join(directory, "auth-artifact-scrub-accepted.json");
+  const rejectionPath = join(directory, "auth-artifact-scrub-rejected.json");
+  if (existsSync(markerPath)) {
+    fail("authentication scrub marker already exists for this candidate");
+  }
+  if (existsSync(rejectionPath)) {
+    fail("failed candidate identity cannot be scrubbed again");
+  }
+  return { acceptance, acceptancePath, markerPath, rejectionPath };
+}
+
+function requireCandidateApplicationsStopped() {
+  for (const service of ["candidate-app", "rehearsal-app"]) {
+    const active = run(
+      dockerBinary,
+      [
+        "ps",
+        "--quiet",
+        "--filter",
+        `label=com.docker.compose.project=${composeProject}`,
+        "--filter",
+        `label=com.docker.compose.service=${service}`,
+      ],
+      {
+        throwOnFailure: true,
+        failureMessage: "candidate application state could not be verified",
+      },
+    );
+    if (active.trim()) {
+      fail("candidate application must be stopped before authentication scrub");
+    }
+  }
+}
+
+function candidatePsql(candidateDatabase, options) {
+  requireProtectedFile(targetEnvironment);
+  const environment = readEnvironment(targetEnvironment);
+  const network = environment.UWPLAN_DB_DOCKER_NETWORK;
+  if (!network || !/^[A-Za-z0-9_.-]+$/.test(network)) {
+    fail("protected database environment must name a Docker network");
+  }
+  const args = [
+    "run",
+    "--rm",
+    "--network",
+    network,
+    "--env-file",
+    targetEnvironment,
+    "--env",
+    `PGDATABASE=${candidateDatabase}`,
+  ];
+  if (options.file) {
+    args.push("--volume", `${options.file}:/auth-scrub.sql:ro`);
+  }
+  args.push(
+    POSTGRES_UTILITY_IMAGE,
+    "psql",
+    "--no-psqlrc",
+    "--set",
+    "ON_ERROR_STOP=1",
+    ...(options.file
+      ? ["--file", "/auth-scrub.sql"]
+      : ["--tuples-only", "--no-align", "--command", options.query]),
+  );
+  return run(dockerBinary, args, {
+    throwOnFailure: true,
+    failureMessage: options.failureMessage,
+  });
+}
+
+function candidateCounts(candidateDatabase, includeAuthArtifacts) {
+  const authFields = includeAuthArtifacts
+    ? `,
+      'authArtifactCounts', json_build_object(
+        'session', (select count(*)::integer from public.session),
+        'verificationToken', (select count(*)::integer from public.verification_token),
+        'account', (select count(*)::integer from public.account)
+      )`
+    : "";
+  const output = candidatePsql(candidateDatabase, {
+    query: `select json_build_object(
+      'database', current_database(),
+      'preservedCounts', json_build_object(
+        'user', (select count(*)::integer from public."user"),
+        'plan', (select count(*)::integer from public.plan),
+        'schedule', (select count(*)::integer from public.schedule)
+      ),
+      'preservedDigests', json_build_object(
+        'user', (select md5(coalesce(string_agg(row_to_json(row_value)::text, E'\\n' order by row_value.id::text), '')) from public."user" row_value),
+        'plan', (select md5(coalesce(string_agg(row_to_json(row_value)::text, E'\\n' order by row_value.id::text), '')) from public.plan row_value),
+        'schedule', (select md5(coalesce(string_agg(row_to_json(row_value)::text, E'\\n' order by row_value.id::text), '')) from public.schedule row_value)
+      )${authFields}
+    )::text;`,
+    failureMessage: "candidate count verification failed",
+  });
+  try {
+    return JSON.parse(output.trim());
+  } catch {
+    fail("candidate count verification returned invalid evidence");
+  }
+}
+
+function scrubCandidateAuthentication(runId, candidateDatabase) {
+  const { acceptance, acceptancePath, markerPath, rejectionPath } =
+    requireFreshAcceptedCandidate(runId, candidateDatabase);
+  writeFileSync(
+    rejectionPath,
+    `${JSON.stringify({
+      schemaVersion: 1,
+      event: "auth.artifact-scrub",
+      status: "in-progress",
+      procedureVersion: AUTH_SCRUB_PROCEDURE_VERSION,
+      runId,
+      candidateDatabase,
+    })}\n`,
+    { mode: 0o600 },
+  );
+  chmodSync(rejectionPath, 0o600);
+  requireCandidateApplicationsStopped();
+  const before = candidateCounts(candidateDatabase, false);
+  try {
+    candidatePsql(candidateDatabase, {
+      file: authScrubScript,
+      failureMessage: "candidate authentication scrub failed and rolled back",
+    });
+  } catch (error) {
+    fail(
+      error instanceof Error
+        ? error.message
+        : "candidate authentication scrub failed and rolled back",
+    );
+  }
+  const after = candidateCounts(candidateDatabase, true);
+  if (
+    before.database !== candidateDatabase ||
+    after.database !== candidateDatabase ||
+    JSON.stringify(before.preservedCounts) !==
+      JSON.stringify(after.preservedCounts) ||
+    JSON.stringify(before.preservedDigests) !==
+      JSON.stringify(after.preservedDigests) ||
+    after.authArtifactCounts?.session !== 0 ||
+    after.authArtifactCounts?.verificationToken !== 0 ||
+    after.authArtifactCounts?.account !== 0
+  ) {
+    fail("candidate authentication scrub postcondition failed");
+  }
+  const evidence = {
+    schemaVersion: 1,
+    event: "auth.artifact-scrub",
+    status: "accepted",
+    procedureVersion: AUTH_SCRUB_PROCEDURE_VERSION,
+    runId,
+    candidateDatabase,
+    sourceArchiveSha256: acceptance.sourceArchiveSha256,
+    integrityMarkerSha256: sha256(acceptancePath),
+    applicationStopped: true,
+    transaction: {
+      committed: true,
+      lockedTables: [
+        "public.session",
+        "public.verification_token",
+        "public.account",
+      ],
+    },
+    authArtifactCounts: after.authArtifactCounts,
+    preservedCounts: after.preservedCounts,
+    preservedDigests: after.preservedDigests,
+  };
+  const partial = `${markerPath}.partial`;
+  writeFileSync(partial, `${JSON.stringify(evidence)}\n`, { mode: 0o600 });
+  chmodSync(partial, 0o600);
+  renameSync(partial, markerPath);
+  chmodSync(markerPath, 0o600);
+  rmSync(rejectionPath, { force: true });
+  return evidence;
 }
 
 function sha256(path) {
@@ -637,6 +827,19 @@ switch (action) {
       process.stdout.write(`${JSON.stringify(result)}\n`);
     } catch (error) {
       fail(error instanceof Error ? error.message : "candidate boot failed");
+    }
+    break;
+  }
+  case "scrub-candidate-auth": {
+    try {
+      const result = scrubCandidateAuthentication(runId, arguments_[0] ?? "");
+      process.stdout.write(`${JSON.stringify(result)}\n`);
+    } catch (error) {
+      fail(
+        error instanceof Error
+          ? error.message
+          : "candidate authentication scrub failed",
+      );
     }
     break;
   }

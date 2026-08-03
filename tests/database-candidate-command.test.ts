@@ -23,6 +23,8 @@ function harness(
     badReceiveHash?: boolean;
     corruptCapture?: boolean;
     failedIntegrityGates?: string[];
+    sourceVersionNum?: string;
+    targetVersionNum?: string;
     unready?: boolean;
   } = {},
 ) {
@@ -47,7 +49,7 @@ const manifest = {
   utilityVersionNum: "160014",
   utilityImage: ${JSON.stringify(utilityImage)},
   archive: { format: "custom", sha256: ${JSON.stringify(archiveSha256)}, complete: true, owners: false, privileges: false, filters: false, clusterGlobals: false, listable: ${options.corruptCapture ? "false" : "true"} },
-  source: { database: "fixture", serverVersionNum: "160014", encoding: "UTF8", collation: "C", ctype: "C" },
+  source: { database: "fixture", serverVersionNum: ${JSON.stringify(options.sourceVersionNum ?? "160006")}, encoding: "UTF8", collation: "C", ctype: "C" },
   integrity: { fixture: true }
 };
 if (action === "capture") process.stdout.write(JSON.stringify(manifest));
@@ -60,7 +62,7 @@ else if (action === "receive-archive") {
   process.stdout.write(JSON.stringify({ archiveReceived: true, runId, sha256: ${options.badReceiveHash ? '"0".repeat(64)' : JSON.stringify(archiveSha256)} }));
 } else if (action === "restore") process.stdout.write(JSON.stringify({
   schemaVersion: 1, runId, candidateDatabase: "uwplan_candidate_" + runId,
-  archiveSha256: ${JSON.stringify(archiveSha256)}, restored: true, singleTransaction: true,
+  archiveSha256: ${JSON.stringify(archiveSha256)}, targetVersionNum: ${JSON.stringify(options.targetVersionNum ?? "160014")}, restored: true, singleTransaction: true,
   exitOnError: true, analyzed: true, databaseOwner: "uwplan_app",
   appRole: { login: true, superuser: false, createdb: false, createrole: false, replication: false, bypassRls: false }
 }));
@@ -124,6 +126,8 @@ describe("database candidate move command", () => {
           status: "accepted",
           runId,
           utilityImage,
+          sourceVersionNum: "160006",
+          targetVersionNum: "160014",
           archiveSha256,
           transfer: "ssh",
           candidateDatabase: `uwplan_candidate_${runId}`,
@@ -236,6 +240,22 @@ describe("database candidate move command", () => {
       expect(test.operations().map(({ action }) => action)).toEqual([
         "capture",
       ]);
+    } finally {
+      test.cleanup();
+    }
+  });
+
+  it("rejects a target that is not the pinned PostgreSQL patch before integrity", () => {
+    const test = harness({ targetVersionNum: "160013" });
+    try {
+      const result = test.run();
+      expect(result.status).toBe(1);
+      expect(result.stderr).toBe(
+        "fresh candidate restore did not satisfy the restore contract\n",
+      );
+      expect(test.operations().map(({ action }) => action)).not.toContain(
+        "validate-integrity",
+      );
     } finally {
       test.cleanup();
     }

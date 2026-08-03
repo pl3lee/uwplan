@@ -28,6 +28,7 @@ function harness(
     failedIntegrityRunId?: string;
     mismatchedWorkflowProof?: boolean;
     missingReleaseRunId?: string;
+    wrongTargetVersionRunId?: string;
     unreadyRunId?: string;
   } = {},
 ) {
@@ -52,7 +53,7 @@ const capture = {
   schemaVersion: 1, runId, snapshotId: "00000003-0000001B-1",
   utilityVersionNum: "160014", utilityImage: ${JSON.stringify(utilityImage)},
   archive: { format: "custom", sha256, complete: true, owners: false, privileges: false, filters: false, clusterGlobals: false, listable: true },
-  source: { database: action === "capture-candidate" ? "uwplan_candidate_" + forwardRunId : "fixture", serverVersionNum: "160014", encoding: "UTF8", collation: "C", ctype: "C" },
+  source: { database: action === "capture-candidate" ? "uwplan_candidate_" + forwardRunId : "fixture", serverVersionNum: action === "capture-candidate" ? "160014" : "160006", encoding: "UTF8", collation: "C", ctype: "C" },
   integrity: { fixture: true },
   ...(action === "capture-candidate" ? { proofRunId: forwardRunId, workflowProofSha256: ${JSON.stringify(proofSha256)} } : {})
 };
@@ -68,7 +69,7 @@ else if (action === "receive-archive") {
   if (runId === ${JSON.stringify(options.failedRestoreRunId)}) { process.stderr.write("restore failed\\n"); process.exit(1); }
   process.stdout.write(JSON.stringify({
   schemaVersion: 1, runId, candidateDatabase: "uwplan_candidate_" + runId,
-  archiveSha256: sha256, restored: true, singleTransaction: true,
+  archiveSha256: sha256, targetVersionNum: runId === ${JSON.stringify(options.wrongTargetVersionRunId)} ? "160013" : "160014", restored: true, singleTransaction: true,
   exitOnError: true, analyzed: true, databaseOwner: "uwplan_app",
   appRole: { login: true, superuser: false, createdb: false, createrole: false, replication: false, bypassRls: false }
 })); }
@@ -150,6 +151,8 @@ describe("database round-trip proof command", () => {
         archives: { forward: "protected", reverse: "protected" },
         forward: {
           runId: forwardRunId,
+          sourceVersionNum: "160006",
+          targetVersionNum: "160014",
           archiveSha256: forwardSha256,
           candidateDatabase: `uwplan_candidate_${forwardRunId}`,
           integrity: "accepted",
@@ -167,6 +170,8 @@ describe("database round-trip proof command", () => {
         },
         reverse: {
           runId: reverseRunId,
+          sourceVersionNum: "160014",
+          targetVersionNum: "160014",
           archiveSha256: reverseSha256,
           candidateDatabase: `uwplan_candidate_${reverseRunId}`,
           integrity: "accepted",
@@ -326,6 +331,22 @@ describe("database round-trip proof command", () => {
         .map(({ action }) => action);
       expect(reverseActions).not.toContain("validate-integrity");
       expect(reverseActions).not.toContain("boot-candidate");
+    } finally {
+      test.cleanup();
+    }
+  });
+
+  it("rejects a round-trip target that is not the pinned PostgreSQL patch", () => {
+    const test = harness({ wrongTargetVersionRunId: forwardRunId });
+    try {
+      const result = test.run();
+      expect(result.status).toBe(1);
+      expect(result.stderr).toBe(
+        "fresh candidate restore did not satisfy the contract\n",
+      );
+      expect(test.operations().map(({ action }) => action)).not.toContain(
+        "validate-integrity",
+      );
     } finally {
       test.cleanup();
     }

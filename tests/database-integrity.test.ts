@@ -19,14 +19,14 @@ type MutableIntegrityFixture = {
   appRole: Record<string, boolean>;
 };
 
-function manifest() {
+function manifest(serverVersionNum = "160014") {
   return {
     schemaVersion: 1,
     runId: "20260802T193000000Z",
     utilityImage,
     utilityVersionNum: "160014",
     database: {
-      serverVersionNum: "160014",
+      serverVersionNum,
       encoding: "UTF8",
       collation: "C",
       ctype: "C",
@@ -75,12 +75,6 @@ function manifest() {
 const integrityMismatchCases: Array<
   [string, (value: MutableIntegrityFixture) => void]
 > = [
-  [
-    "version",
-    (value) => {
-      value.database.serverVersionNum = "160013";
-    },
-  ],
   [
     "locale",
     (value) => {
@@ -154,25 +148,36 @@ const integrityMismatchCases: Array<
 ];
 
 describe("production database integrity gates", () => {
-  it("accepts only an exact, valid candidate", () => {
-    const source = manifest();
-    const candidate = structuredClone(source);
+  it("accepts a PostgreSQL 16.6 source restored to the pinned 16.14 target", () => {
+    const source = manifest("160006");
+    const candidate = manifest("160014");
     expect(compareIntegrity(source, candidate)).toEqual({
       status: "accepted",
       failedGates: [],
     });
   });
 
+  it.each([
+    ["an older target patch", "160006", "160013"],
+    ["a PostgreSQL 17 source", "170000", "160014"],
+    ["a PostgreSQL 17 target", "160006", "170000"],
+    ["a source newer than the utility", "160015", "160014"],
+  ])("rejects %s", (_scenario, sourceVersion, targetVersion) => {
+    const result = compareIntegrity(
+      manifest(sourceVersion),
+      manifest(targetVersion),
+    );
+    expect(result.status).toBe("rejected");
+    expect(result.failedGates).toContain("version");
+  });
+
   it.each(integrityMismatchCases)("rejects the %s mismatch", (gate, mutate) => {
     const source = manifest();
     const candidate = structuredClone(source);
     mutate(candidate);
-    expect(compareIntegrity(source, candidate)).toEqual(
-      expect.objectContaining({
-        status: "rejected",
-        failedGates: expect.arrayContaining([gate]),
-      }),
-    );
+    const result = compareIntegrity(source, candidate);
+    expect(result.status).toBe("rejected");
+    expect(result.failedGates).toContain(gate);
   });
 
   it("rejects malformed evidence without echoing row material", () => {

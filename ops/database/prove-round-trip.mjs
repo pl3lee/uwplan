@@ -2,7 +2,11 @@
 
 import { spawn } from "node:child_process";
 import { pipeline } from "node:stream/promises";
-import { POSTGRES_UTILITY_IMAGE } from "./protocol.mjs";
+import {
+  POSTGRES_MAJOR_VERSION,
+  POSTGRES_UTILITY_IMAGE,
+  POSTGRES_UTILITY_VERSION_NUM,
+} from "./protocol.mjs";
 
 const production = process.env.NODE_ENV !== "test";
 const sshBinary = production
@@ -20,6 +24,11 @@ const hostPattern = /^(?:[A-Za-z0-9_.-]+@)?[A-Za-z0-9][A-Za-z0-9_.:-]{0,252}$/;
 const sha256Pattern = /^[0-9a-f]{64}$/;
 const releaseDigestPattern = /^sha256:[0-9a-f]{64}$/;
 const releaseRevisionPattern = /^[A-Za-z0-9_.-]{1,128}$/;
+const versionPattern = /^[0-9]{6}$/;
+
+function majorVersion(version) {
+  return version.slice(0, -4);
+}
 
 function fail(message, code = 1) {
   process.stderr.write(`${message}\n`);
@@ -141,7 +150,12 @@ function validateCapture(capture, runId) {
   if (
     capture.runId !== runId ||
     capture.utilityImage !== POSTGRES_UTILITY_IMAGE ||
-    capture.utilityVersionNum !== "160014" ||
+    capture.utilityVersionNum !== POSTGRES_UTILITY_VERSION_NUM ||
+    typeof capture.source?.serverVersionNum !== "string" ||
+    !versionPattern.test(capture.source.serverVersionNum) ||
+    majorVersion(capture.source.serverVersionNum) !== POSTGRES_MAJOR_VERSION ||
+    Number(capture.source.serverVersionNum) >
+      Number(POSTGRES_UTILITY_VERSION_NUM) ||
     capture.archive?.format !== "custom" ||
     !sha256Pattern.test(capture.archive?.sha256 ?? "") ||
     capture.archive?.complete !== true ||
@@ -159,6 +173,9 @@ function validateRestore(restore, capture, runId) {
   if (
     restore.runId !== runId ||
     restore.archiveSha256 !== capture.archive.sha256 ||
+    restore.targetVersionNum !== POSTGRES_UTILITY_VERSION_NUM ||
+    majorVersion(restore.targetVersionNum) !==
+      majorVersion(capture.source.serverVersionNum) ||
     restore.candidateDatabase !== `uwplan_candidate_${runId}` ||
     restore.restored !== true ||
     restore.singleTransaction !== true ||
@@ -321,6 +338,8 @@ try {
       archives: { forward: "protected", reverse: "protected" },
       forward: {
         runId: forwardRunId,
+        sourceVersionNum: forward.capture.source.serverVersionNum,
+        targetVersionNum: forward.restore.targetVersionNum,
         archiveSha256: forward.capture.archive.sha256,
         candidateDatabase: forward.restore.candidateDatabase,
         integrity: "accepted",
@@ -335,6 +354,8 @@ try {
       },
       reverse: {
         runId: reverseRunId,
+        sourceVersionNum: reverse.capture.source.serverVersionNum,
+        targetVersionNum: reverse.restore.targetVersionNum,
         archiveSha256: reverse.capture.archive.sha256,
         candidateDatabase: reverse.restore.candidateDatabase,
         integrity: "accepted",

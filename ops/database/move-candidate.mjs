@@ -2,7 +2,11 @@
 
 import { spawn } from "node:child_process";
 import { pipeline } from "node:stream/promises";
-import { POSTGRES_UTILITY_IMAGE } from "./protocol.mjs";
+import {
+  POSTGRES_MAJOR_VERSION,
+  POSTGRES_UTILITY_IMAGE,
+  POSTGRES_UTILITY_VERSION_NUM,
+} from "./protocol.mjs";
 
 const production = process.env.NODE_ENV !== "test";
 const sshBinary = production
@@ -20,6 +24,11 @@ const runId =
 const runIdPattern = /^[0-9]{8}T[0-9]{9}Z$/;
 const hostPattern = /^(?:[A-Za-z0-9_.-]+@)?[A-Za-z0-9][A-Za-z0-9_.:-]{0,252}$/;
 const sha256Pattern = /^[0-9a-f]{64}$/;
+const versionPattern = /^[0-9]{6}$/;
+
+function majorVersion(version) {
+  return version.slice(0, -4);
+}
 
 function fail(message, code = 1) {
   process.stderr.write(`${message}\n`);
@@ -119,7 +128,12 @@ try {
   if (
     capture.runId !== runId ||
     capture.utilityImage !== POSTGRES_UTILITY_IMAGE ||
-    capture.utilityVersionNum !== "160014" ||
+    capture.utilityVersionNum !== POSTGRES_UTILITY_VERSION_NUM ||
+    typeof capture.source?.serverVersionNum !== "string" ||
+    !versionPattern.test(capture.source.serverVersionNum) ||
+    majorVersion(capture.source.serverVersionNum) !== POSTGRES_MAJOR_VERSION ||
+    Number(capture.source.serverVersionNum) >
+      Number(POSTGRES_UTILITY_VERSION_NUM) ||
     capture.archive?.format !== "custom" ||
     !sha256Pattern.test(capture.archive?.sha256 ?? "") ||
     capture.archive?.complete !== true ||
@@ -155,6 +169,9 @@ try {
   if (
     restore.runId !== runId ||
     restore.archiveSha256 !== capture.archive.sha256 ||
+    restore.targetVersionNum !== POSTGRES_UTILITY_VERSION_NUM ||
+    majorVersion(restore.targetVersionNum) !==
+      majorVersion(capture.source.serverVersionNum) ||
     restore.restored !== true ||
     restore.singleTransaction !== true ||
     restore.exitOnError !== true ||
@@ -208,6 +225,8 @@ try {
       status: "accepted",
       runId,
       utilityImage: POSTGRES_UTILITY_IMAGE,
+      sourceVersionNum: capture.source.serverVersionNum,
+      targetVersionNum: restore.targetVersionNum,
       archiveSha256: capture.archive.sha256,
       transfer: "ssh",
       candidateDatabase: restore.candidateDatabase,

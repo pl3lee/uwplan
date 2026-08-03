@@ -17,16 +17,20 @@ transaction with exit-on-error, and runs `ANALYZE`.
 
 Before the candidate application may boot, `integrity.sh` derives source and
 candidate manifests from repeatable-read snapshots and `integrity.mjs`
-compares them. The contract requires exact PostgreSQL versions, the pinned
+compares them. The contract accepts a PostgreSQL 16 source no newer than the
+pinned 16.14 utility, requires the target candidate to run exactly 16.14, and
+requires matching source/target major versions. It also requires the pinned
 utility-image digest, locale/encoding, extensions, non-default tablespaces,
 normalized schema, Drizzle ledger count/max-id/hash, every ordinary-table
 count/content hash, and every sequence definition/value/`is_called` state. It
 also rejects unvalidated constraints, invalid indexes, unsafe database/object
 ownership, or elevated `uwplan_app` attributes.
 
-Table rows pass directly from `COPY` into SHA-256; neither row serialization
-nor row values are written to evidence, stdout, or stderr. Evidence contains
-only identities, counts, digests, gate names, and the candidate/run identity.
+Accepted sanitized operator evidence records both source and target server
+version numbers. Table rows pass directly from `COPY` into SHA-256; neither row
+serialization nor row values are written to evidence, stdout, or stderr.
+Evidence contains only identities, counts, digests, gate names, and the
+candidate/run identity.
 The host writes a mode-`0600` acceptance marker only after every gate passes,
 and `boot-candidate` refuses to run without that matching marker. A restore or
 integrity failure writes a terminal rejection marker, keeps the candidate app

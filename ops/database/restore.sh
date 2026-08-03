@@ -28,7 +28,7 @@ actual_sha256="$(sha256sum "$ARCHIVE_PATH" | awk '{print $1}')"
 [[ "$actual_sha256" == "$EXPECTED_SHA256" ]]
 pg_restore --list "$ARCHIVE_PATH" >/dev/null
 target_version="$(psql --no-psqlrc --quiet --tuples-only --no-align --command "SELECT current_setting('server_version_num')")"
-[[ "$target_version" =~ ^16[0-9]{4}$ ]]
+[[ "$target_version" == "160014" ]]
 
 psql --no-psqlrc --set ON_ERROR_STOP=1 --quiet <<'SQL'
 DO $role$

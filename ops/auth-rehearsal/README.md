@@ -13,8 +13,37 @@ database invariants exist.
 ## 1. Prepare protected configuration
 
 Use a new accepted `uwplan_candidate_<UTC run id>` produced by the database
-restore workflow. It must contain no production sessions or credentials and
-must not be serving traffic. Install these files outside the repository:
+restore workflow. The candidate name must exactly match the integrity run ID,
+and neither `candidate-app` nor `rehearsal-app` may be running. Never run the
+scrub against `uwplan` or another serving database.
+
+On the DigitalOcean target host, remove only the restored authentication
+artifacts before preparing any browser or provider credentials:
+
+```sh
+sudo node /opt/uwplan/current/ops/database/host-command.mjs \
+  scrub-candidate-auth \
+  20260802T210000000Z \
+  uwplan_candidate_20260802T210000000Z
+```
+
+The host action requires the matching root-owned mode-`0600`
+`integrity-accepted.json`, locks and truncates `public.session`,
+`public.verification_token`, and
+`public.account` in one transaction, then opens a separate database connection
+to prove all three global counts are zero. It also proves the global `user`,
+`plan`, and `schedule` counts and content digests did not change. Lock
+acquisition is capped at five seconds and the scrub statement at 30 seconds, so
+contention fails closed instead of blocking indefinitely. A SQL failure rolls
+back and publishes no acceptance marker. Output and evidence contain counts and
+hashes, never credentials, tokens, emails, or row data.
+
+Success creates a mode-`0600` `auth-artifact-scrub-accepted.json` bound to the
+run ID, exact candidate, source archive SHA-256, integrity-marker SHA-256, and
+scrub procedure version. The action is single-use: discard the candidate after
+any failed or interrupted attempt rather than repairing or re-scrubbing it.
+
+Install these files outside the repository:
 
 - `/etc/uwplan/rehearsal-app.env`, based on `rehearsal-app.env.example`;
 - `/etc/uwplan/rehearsal-caddy.env`, based on `caddy.env.example`; and
@@ -49,18 +78,35 @@ caddy hash-password
 The plaintext is used only in the protected operator file; the hash is used
 only by Caddy. The app must never receive either value.
 
+Add the exact integrity, scrub, and guarded-start marker paths to the protected
+verifier file. Missing, non-root-owned, world-readable, stale, mismatched, or
+nonzero evidence is rejected.
+
 ## 2. Start the isolated app and Caddy site
 
 The `rehearsal-app` profile binds only `127.0.0.1:5001` and reads the dedicated
 app file. The normal `app` service and its environment are not involved.
 
+Use the guarded start command. It validates the integrity and scrub files,
+starts only the database and telemetry dependencies, then connects from an
+ephemeral container on the Compose network as `uwplan_app`. It requires the
+three authentication tables still to be globally empty and the preserved table
+counts and content digests to still match before starting the app:
+
 ```sh
-UWPLAN_REHEARSAL_ENV_FILE=/etc/uwplan/rehearsal-app.env \
-  docker compose \
-  --env-file /etc/uwplan/runtime.env \
-  --env-file /var/lib/uwplan-runtime/release.env \
-  --profile rehearsal up --detach --wait db alloy rehearsal-app
+sudo env \
+  UWPLAN_AUTH_REHEARSAL_ENV_FILE=/etc/uwplan/auth-rehearsal-verify.env \
+  node /opt/uwplan/current/ops/auth-rehearsal/start.mjs
 ```
+
+Do not start `rehearsal-app` directly with `docker compose`; that bypasses the
+pre-start freshness check and is not accepted rehearsal procedure.
+
+Success creates root-owned mode-`0600` `auth-rehearsal-started.json`. The marker
+binds the accepted scrub, protected app/runtime/release files, Compose file, and
+the exact running container, image, start timestamp, and zero restart count.
+The final verifier rejects a missing marker, any changed input, or a container
+that was started, restarted, or recreated outside the guarded command.
 
 Run the host Caddy service with `ops/caddy/rehearsal.Caddyfile` and the protected
 Caddy environment. That file leaves only `/api/ready` unauthenticated. Every
@@ -122,13 +168,17 @@ UWPLAN_AUTH_REHEARSAL_ENV_FILE=/etc/uwplan/auth-rehearsal-verify.env \
 chmod 0600 /var/lib/uwplan-migration/20260802T210000000Z/auth-rehearsal-accepted.json
 ```
 
-The verifier checks unauthenticated and wrong-password `401` responses,
-readiness exemption, protected signin, callback coverage, Basic-header
+The verifier first revalidates the protected scrub marker against the current
+integrity-marker bytes, then validates the guarded-start marker against the
+current protected configuration and live container/image IDs. It rejects
+missing, stale, mismatched, or nonzero preflight evidence. It then checks
+unauthenticated and wrong-password `401`
+responses, readiness exemption, protected signin, callback coverage, Basic-header
 stripping, dedicated credential fingerprints, the candidate database identity,
 both two-signin idempotency invariants, both planning-write markers, and the
 two browser attestations. The versioned automated suite separately proves
-safe cross-provider rejection. The verifier connects only to the candidate
-URL as `uwplan_app` and emits hashes/counts/statuses—never
+safe cross-provider rejection. The verifier queries the candidate from inside
+the guarded live container as `uwplan_app` and emits hashes/counts/statuses—never
 emails, passwords, OAuth credentials, database URLs, cookies, or row values.
 
 A failure is not repairable evidence. Keep the Plane ticket In Progress,

@@ -3,6 +3,7 @@ set -euo pipefail
 
 readonly CANDIDATE_IMAGE="${1:?Pass the already-built UWPlan image}"
 readonly POSTGRES_IMAGE="docker.io/library/postgres:16.14-bookworm@sha256:92620daddcd947f8d5ab5ba66e848702fe443d87fed30c4cea8e389fd78dfc55"
+readonly POSTGRES_SOURCE_IMAGE="docker.io/library/postgres:16.6-bookworm@sha256:557fea37a744d5f4c8faab304b0a90858b53ab119735a88c131fd19dab802f36"
 readonly FORWARD_RUN_ID="20260802T203000000Z"
 readonly REJECTED_REVERSE_RUN_ID="20260802T203500000Z"
 readonly REVERSE_RUN_ID="20260802T204000000Z"
@@ -11,7 +12,8 @@ readonly DO_ADMIN_PASSWORD="disposable-digitalocean-admin-password"
 readonly APP_PASSWORD="disposable-round-trip-app-password"
 readonly PROJECT_NAME="${COMPOSE_PROJECT_NAME:-uwplan-db-round-trip-${GITHUB_RUN_ID:-local}-${GITHUB_RUN_ATTEMPT:-1}}"
 readonly NETWORK="${PROJECT_NAME}_runtime"
-readonly RACKNerd_CONTAINER="${PROJECT_NAME}-racknerd"
+readonly RACKNerd_SOURCE_CONTAINER="${PROJECT_NAME}-racknerd-source"
+readonly RACKNerd_TARGET_CONTAINER="${PROJECT_NAME}-racknerd-target"
 
 work_directory="$(mktemp -d)"
 racknerd_state="${work_directory}/racknerd-state"
@@ -74,7 +76,7 @@ digitalocean_host() {
 }
 
 cleanup() {
-  docker rm --force "$RACKNerd_CONTAINER" >/dev/null 2>&1 || true
+  docker rm --force "$RACKNerd_SOURCE_CONTAINER" "$RACKNerd_TARGET_CONTAINER" >/dev/null 2>&1 || true
   compose down --volumes --remove-orphans >/dev/null 2>&1 || true
   rm -rf "$work_directory"
 }
@@ -109,7 +111,7 @@ AUTH_GOOGLE_ID=round-trip-google-id
 AUTH_GOOGLE_SECRET=round-trip-google-secret
 AUTH_SECRET=round-trip-auth-secret
 AUTH_TRUST_HOST=true
-DATABASE_URL=postgresql://uwplan_app:${APP_PASSWORD}@${RACKNerd_CONTAINER}:5432/uwplan
+DATABASE_URL=postgresql://uwplan_app:${APP_PASSWORD}@${RACKNerd_TARGET_CONTAINER}:5432/uwplan
 EOF
 cat >"$alloy_environment" <<EOF
 UWPLAN_REMOTE_OTLP_ENDPOINT=127.0.0.1:4317
@@ -146,31 +148,41 @@ chmod 600 \
   "$release_environment"
 
 compose up --detach --wait db
-docker run --detach --name "$RACKNerd_CONTAINER" --network "$NETWORK" \
+docker run --detach --name "$RACKNerd_SOURCE_CONTAINER" --network "$NETWORK" \
   --env POSTGRES_DB=uwplan_fixture \
+  --env POSTGRES_USER=postgres \
+  --env "POSTGRES_PASSWORD=$RACKNerd_PASSWORD" \
+  "$POSTGRES_SOURCE_IMAGE" >/dev/null
+docker run --detach --name "$RACKNerd_TARGET_CONTAINER" --network "$NETWORK" \
+  --env POSTGRES_DB=postgres \
   --env POSTGRES_USER=postgres \
   --env "POSTGRES_PASSWORD=$RACKNerd_PASSWORD" \
   "$POSTGRES_IMAGE" >/dev/null
 for _ in {1..30}; do
-  docker exec "$RACKNerd_CONTAINER" pg_isready --username postgres --dbname uwplan_fixture >/dev/null 2>&1 && break
+  docker exec "$RACKNerd_SOURCE_CONTAINER" pg_isready --username postgres --dbname uwplan_fixture >/dev/null 2>&1 && \
+    docker exec "$RACKNerd_TARGET_CONTAINER" pg_isready --username postgres --dbname postgres >/dev/null 2>&1 && break
   sleep 1
 done
-docker exec "$RACKNerd_CONTAINER" pg_isready --username postgres --dbname uwplan_fixture >/dev/null
+docker exec "$RACKNerd_SOURCE_CONTAINER" pg_isready --username postgres --dbname uwplan_fixture >/dev/null
+docker exec "$RACKNerd_TARGET_CONTAINER" pg_isready --username postgres --dbname postgres >/dev/null
+docker exec "$RACKNerd_TARGET_CONTAINER" psql --username postgres --dbname postgres \
+  --set ON_ERROR_STOP=1 --command \
+  "create role uwplan_app login password '${APP_PASSWORD}' nosuperuser nocreatedb nocreaterole noreplication nobypassrls;" >/dev/null
 
 docker run --rm --network "$NETWORK" \
-  --env "DATABASE_URL=postgresql://postgres:${RACKNerd_PASSWORD}@${RACKNerd_CONTAINER}:5432/uwplan_fixture" \
+  --env "DATABASE_URL=postgresql://postgres:${RACKNerd_PASSWORD}@${RACKNerd_SOURCE_CONTAINER}:5432/uwplan_fixture" \
   --env RELEASE_DIGEST=sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee \
   --env RELEASE_REVISION=database-round-trip-fixture \
   "$CANDIDATE_IMAGE" node /app/ops/deploy/migrate-release.mjs >/dev/null
-docker exec "$RACKNerd_CONTAINER" psql --username postgres --dbname postgres \
+docker exec "$RACKNerd_SOURCE_CONTAINER" psql --username postgres --dbname postgres \
   --set ON_ERROR_STOP=1 --command \
   "create role uwplan_app login password '${APP_PASSWORD}' nosuperuser nocreatedb nocreaterole noreplication nobypassrls;" >/dev/null
-docker exec "$RACKNerd_CONTAINER" psql --username postgres --dbname uwplan_fixture \
+docker exec "$RACKNerd_SOURCE_CONTAINER" psql --username postgres --dbname uwplan_fixture \
   --set ON_ERROR_STOP=1 --command \
   "insert into \"user\" (id, email) values ('round-trip-fixture-user', 'fixture@example.invalid');" >/dev/null
 
 cat >"$racknerd_source_environment" <<EOF
-PGHOST=${RACKNerd_CONTAINER}
+PGHOST=${RACKNerd_SOURCE_CONTAINER}
 PGPORT=5432
 PGUSER=postgres
 PGPASSWORD=${RACKNerd_PASSWORD}
@@ -178,7 +190,7 @@ PGDATABASE=uwplan_fixture
 UWPLAN_DB_DOCKER_NETWORK=${NETWORK}
 EOF
 cat >"$racknerd_target_environment" <<EOF
-PGHOST=${RACKNerd_CONTAINER}
+PGHOST=${RACKNerd_TARGET_CONTAINER}
 PGPORT=5432
 PGUSER=postgres
 PGPASSWORD=${RACKNerd_PASSWORD}
@@ -253,13 +265,13 @@ verify_proof_sha="$(jq --raw-output '.proofSha256' "$workflow_verify")"
 [[ "$(jq --raw-output '.workflowProofSha256' "$reverse_capture")" == "$write_proof_sha" ]]
 
 source_fixture_count="$(
-  docker exec "$RACKNerd_CONTAINER" psql \
+  docker exec "$RACKNerd_SOURCE_CONTAINER" psql \
     --username postgres --dbname uwplan_fixture --tuples-only --no-align \
     --command \
     "select count(*) from \"user\" where id = 'round-trip-fixture-user' and email = 'fixture@example.invalid'"
 )"
 source_proof_count="$(
-  docker exec "$RACKNerd_CONTAINER" psql \
+  docker exec "$RACKNerd_SOURCE_CONTAINER" psql \
     --username postgres --dbname uwplan_fixture --tuples-only --no-align \
     --command "select count(*) from \"user\" where id like 'restore-proof-%'"
 )"

@@ -6,17 +6,29 @@ import { readFileSync, statSync } from "node:fs";
 const runIdPattern = /^[0-9]{8}T[0-9]{9}Z$/;
 const candidateDatabasePattern = /^uwplan_candidate_[0-9]{8}T[0-9]{9}Z$/;
 const sha256Pattern = /^[0-9a-f]{64}$/;
+const md5Pattern = /^[0-9a-f]{32}$/;
 const basicUserPattern = /^[A-Za-z0-9_.-]{1,64}$/;
+export const AUTH_SCRUB_PROCEDURE_VERSION = "auth-artifact-scrub-v1";
 
 export function sha256(value) {
   return createHash("sha256").update(value, "utf8").digest("hex");
 }
 
+export function fileSha256(path) {
+  return createHash("sha256").update(readFileSync(path)).digest("hex");
+}
+
 export function readProtectedEnvironment(path) {
   if (!path) throw new Error("protected rehearsal environment is required");
   const stat = statSync(path);
-  if (!stat.isFile() || (stat.mode & 0o777) !== 0o600) {
-    throw new Error("protected rehearsal environment must be a mode-0600 file");
+  if (
+    !stat.isFile() ||
+    (stat.mode & 0o777) !== 0o600 ||
+    (process.env.NODE_ENV !== "test" && stat.uid !== 0)
+  ) {
+    throw new Error(
+      "protected rehearsal environment must be a root-owned mode-0600 file",
+    );
   }
 
   const values = {};
@@ -42,6 +54,149 @@ export function readProtectedEnvironment(path) {
     values[key] = value;
   }
   return values;
+}
+
+export function readProtectedJson(path, description = "protected evidence") {
+  if (!path) throw new Error(`${description} is required`);
+  const stat = statSync(path);
+  if (
+    !stat.isFile() ||
+    (stat.mode & 0o777) !== 0o600 ||
+    (process.env.NODE_ENV !== "test" && stat.uid !== 0)
+  ) {
+    throw new Error(`${description} must be a root-owned mode-0600 file`);
+  }
+  return JSON.parse(readFileSync(path, "utf8"));
+}
+
+function isCount(value) {
+  return Number.isSafeInteger(value) && value >= 0;
+}
+
+export function validateAuthScrubMarker({
+  runId,
+  candidateDatabase,
+  markerPath,
+  integrityPath,
+}) {
+  const integrity = readProtectedJson(
+    integrityPath,
+    "candidate integrity evidence",
+  );
+  const marker = readProtectedJson(markerPath, "authentication scrub marker");
+  const integrityMarkerSha256 = createHash("sha256")
+    .update(readFileSync(integrityPath))
+    .digest("hex");
+  const expectedCandidate = `uwplan_candidate_${runId}`;
+  const preservedCounts = marker?.preservedCounts ?? {};
+  const preservedDigests = marker?.preservedDigests ?? {};
+  if (
+    !runIdPattern.test(runId ?? "") ||
+    candidateDatabase !== expectedCandidate ||
+    integrity?.status !== "accepted" ||
+    integrity?.runId !== runId ||
+    integrity?.candidateDatabase !== candidateDatabase ||
+    !sha256Pattern.test(integrity?.sourceArchiveSha256 ?? "") ||
+    marker?.schemaVersion !== 1 ||
+    marker?.event !== "auth.artifact-scrub" ||
+    marker?.status !== "accepted" ||
+    marker?.procedureVersion !== AUTH_SCRUB_PROCEDURE_VERSION ||
+    marker?.runId !== runId ||
+    marker?.candidateDatabase !== candidateDatabase ||
+    marker?.sourceArchiveSha256 !== integrity.sourceArchiveSha256 ||
+    marker?.integrityMarkerSha256 !== integrityMarkerSha256 ||
+    marker?.applicationStopped !== true ||
+    marker?.transaction?.committed !== true ||
+    JSON.stringify(marker?.transaction?.lockedTables) !==
+      JSON.stringify([
+        "public.session",
+        "public.verification_token",
+        "public.account",
+      ]) ||
+    marker?.authArtifactCounts?.session !== 0 ||
+    marker?.authArtifactCounts?.verificationToken !== 0 ||
+    marker?.authArtifactCounts?.account !== 0 ||
+    !isCount(preservedCounts.user) ||
+    !isCount(preservedCounts.plan) ||
+    !isCount(preservedCounts.schedule) ||
+    !md5Pattern.test(preservedDigests.user ?? "") ||
+    !md5Pattern.test(preservedDigests.plan ?? "") ||
+    !md5Pattern.test(preservedDigests.schedule ?? "")
+  ) {
+    throw new Error(
+      "authentication scrub evidence is missing, stale, or mismatched",
+    );
+  }
+  return marker;
+}
+
+export function validatePreparedCandidateSnapshot(marker, snapshot) {
+  if (
+    snapshot?.database !== marker.candidateDatabase ||
+    snapshot?.authArtifactCounts?.session !== 0 ||
+    snapshot?.authArtifactCounts?.verificationToken !== 0 ||
+    snapshot?.authArtifactCounts?.account !== 0 ||
+    snapshot?.preservedCounts?.user !== marker.preservedCounts.user ||
+    snapshot?.preservedCounts?.plan !== marker.preservedCounts.plan ||
+    snapshot?.preservedCounts?.schedule !== marker.preservedCounts.schedule ||
+    snapshot?.preservedDigests?.user !== marker.preservedDigests.user ||
+    snapshot?.preservedDigests?.plan !== marker.preservedDigests.plan ||
+    snapshot?.preservedDigests?.schedule !== marker.preservedDigests.schedule
+  ) {
+    throw new Error("candidate authentication scrub is no longer current");
+  }
+}
+
+export function validateRehearsalStartMarker({
+  configuration,
+  operatorEnvironment,
+  runtimeEnvironmentPath,
+  releaseEnvironmentPath,
+  composeFilePath,
+  containerId,
+  imageId,
+  startedAt,
+  restartCount,
+}) {
+  const marker = readProtectedJson(
+    operatorEnvironment.UWPLAN_AUTH_START_MARKER_FILE,
+    "rehearsal start marker",
+  );
+  const expectedContainerId = /^[0-9a-f]{64}$/.test(containerId ?? "")
+    ? containerId
+    : "";
+  const expectedImageId = /^sha256:[0-9a-f]{64}$/.test(imageId ?? "")
+    ? imageId
+    : "";
+  const expectedStartedAt =
+    typeof startedAt === "string" && !Number.isNaN(Date.parse(startedAt))
+      ? startedAt
+      : "";
+  if (
+    marker?.schemaVersion !== 1 ||
+    marker?.event !== "auth.rehearsal-start" ||
+    marker?.status !== "started" ||
+    marker?.runId !== configuration.runId ||
+    marker?.candidateDatabase !== configuration.database ||
+    marker?.authScrubMarkerSha256 !==
+      fileSha256(operatorEnvironment.UWPLAN_AUTH_SCRUB_MARKER_FILE) ||
+    marker?.rehearsalEnvironmentSha256 !==
+      fileSha256(operatorEnvironment.UWPLAN_REHEARSAL_APP_ENV_FILE) ||
+    marker?.runtimeEnvironmentSha256 !==
+      fileSha256(runtimeEnvironmentPath) ||
+    marker?.releaseEnvironmentSha256 !==
+      fileSha256(releaseEnvironmentPath) ||
+    marker?.composeFileSha256 !== fileSha256(composeFilePath) ||
+    marker?.containerId !== expectedContainerId ||
+    marker?.imageId !== expectedImageId ||
+    marker?.startedAt !== expectedStartedAt ||
+    marker?.restartCount !== restartCount ||
+    !Number.isSafeInteger(restartCount) ||
+    restartCount !== 0
+  ) {
+    throw new Error("rehearsal start evidence is missing, stale, or mismatched");
+  }
+  return marker;
 }
 
 function requireValue(environment, key, pattern) {
@@ -107,6 +262,22 @@ export function validateRehearsalConfiguration(
     throw new Error("rehearsal application boundary is not isolated");
   }
 
+  if (database !== `uwplan_candidate_${runId}`) {
+    throw new Error("rehearsal candidate identity does not match its run");
+  }
+  const authScrub = validateAuthScrubMarker({
+    runId,
+    candidateDatabase: database,
+    markerPath: requireValue(
+      operatorEnvironment,
+      "UWPLAN_AUTH_SCRUB_MARKER_FILE",
+    ),
+    integrityPath: requireValue(
+      operatorEnvironment,
+      "UWPLAN_INTEGRITY_ACCEPTED_FILE",
+    ),
+  });
+
   for (const [key, minimumLength] of [
     ["AUTH_SECRET", 32],
     ["AUTH_GOOGLE_ID", 8],
@@ -169,6 +340,7 @@ export function validateRehearsalConfiguration(
     basicUser,
     basicPassword,
     identities,
+    authScrub,
   };
 }
 
@@ -199,6 +371,9 @@ export function validateRehearsalEvidence(
   attestation,
 ) {
   if (
+    configuration.authScrub?.status !== "accepted" ||
+    configuration.authScrub?.runId !== configuration.runId ||
+    configuration.authScrub?.candidateDatabase !== configuration.database ||
     snapshot?.schemaVersion !== 1 ||
     snapshot.database?.name !== configuration.database ||
     snapshot.database?.role !== "uwplan_app" ||
@@ -239,6 +414,12 @@ export function validateRehearsalEvidence(
     databaseRole: "uwplan_app",
     productionDatabaseContacted: false,
     productionCredentialsUsed: false,
+    authenticationArtifacts: {
+      procedureVersion: AUTH_SCRUB_PROCEDURE_VERSION,
+      sourceArchiveSha256: configuration.authScrub.sourceArchiveSha256,
+      integrityMarkerSha256: configuration.authScrub.integrityMarkerSha256,
+      preflightCounts: configuration.authScrub.authArtifactCounts,
+    },
     basicAuth: {
       missingRejected: true,
       wrongRejected: true,

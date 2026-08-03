@@ -3,6 +3,7 @@ set -euo pipefail
 
 readonly CANDIDATE_IMAGE="${1:?Pass the already-built UWPlan image}"
 readonly POSTGRES_IMAGE="docker.io/library/postgres:16.14-bookworm@sha256:92620daddcd947f8d5ab5ba66e848702fe443d87fed30c4cea8e389fd78dfc55"
+readonly POSTGRES_SOURCE_IMAGE="docker.io/library/postgres:16.6-bookworm@sha256:557fea37a744d5f4c8faab304b0a90858b53ab119735a88c131fd19dab802f36"
 readonly RUN_ID="20260802T193000000Z"
 readonly SOURCE_PASSWORD="disposable-source-admin-password"
 readonly APP_PASSWORD="disposable-candidate-app-password"
@@ -108,7 +109,7 @@ docker run --detach --name "$SOURCE_CONTAINER" --network "$NETWORK" \
   --env POSTGRES_DB=uwplan_fixture \
   --env POSTGRES_USER=postgres \
   --env "POSTGRES_PASSWORD=$SOURCE_PASSWORD" \
-  "$POSTGRES_IMAGE" >/dev/null
+  "$POSTGRES_SOURCE_IMAGE" >/dev/null
 for _ in {1..30}; do
   docker exec "$SOURCE_CONTAINER" pg_isready --username postgres --dbname uwplan_fixture >/dev/null 2>&1 && break
   sleep 1

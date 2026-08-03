@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 
-import { readFileSync, statSync } from "node:fs";
-import postgres from "postgres";
+import { spawnSync } from "node:child_process";
 
 import {
   readProtectedEnvironment,
+  readProtectedJson,
   validateRehearsalConfiguration,
   validateRehearsalEvidence,
+  validateRehearsalStartMarker,
 } from "./protocol.mjs";
 
 function fail(message) {
@@ -14,108 +15,114 @@ function fail(message) {
   process.exit(1);
 }
 
-function readProtectedJson(path) {
-  const stat = statSync(path);
-  if (!stat.isFile() || (stat.mode & 0o777) !== 0o600) {
-    throw new Error("browser attestation must be a mode-0600 file");
-  }
-  return JSON.parse(readFileSync(path, "utf8"));
-}
-
-function count(value) {
-  return Number(value ?? 0);
-}
-
-async function identitySnapshot(sql, identity) {
-  const userRows = await sql`
-    select id from "user" where lower(email) = lower(${identity.email})
-  `;
-  const userIds = userRows.map(({ id }) => id);
-  if (userIds.length === 0) {
-    return {
-      users: 0,
-      accounts: { google: 0, github: 0 },
-      plans: 0,
-      schedules: { total: 0, default: 0, marker: 0 },
-      termRanges: 0,
-    };
-  }
-
-  const [accountRows, planRows, scheduleRows, termRangeRows] =
-    await Promise.all([
-      sql`
-        select provider, count(*)::integer as count
-        from account where user_id in ${sql(userIds)}
-        group by provider
-      `,
-      sql`
-        select count(*)::integer as count
-        from plan where user_id in ${sql(userIds)}
-      `,
-      sql`
-        select
-          count(*)::integer as total,
-          count(*) filter (where schedule.name = 'Default')::integer as default,
-          count(*) filter (
-            where schedule.name = ${identity.marker ?? "__no_marker__"}
-          )::integer as marker
-        from schedule
-        inner join plan on plan.id = schedule.plan_id
-        where plan.user_id in ${sql(userIds)}
-      `,
-      sql`
-        select count(*)::integer as count
-        from user_term_range where user_id in ${sql(userIds)}
-      `,
-    ]);
-  const accountCounts = Object.fromEntries(
-    accountRows.map(({ provider, count: providerCount }) => [
-      provider,
-      count(providerCount),
-    ]),
-  );
-
-  return {
-    users: userRows.length,
-    accounts: {
-      google: accountCounts.google ?? 0,
-      github: accountCounts.github ?? 0,
-    },
-    plans: count(planRows[0]?.count),
-    schedules: {
-      total: count(scheduleRows[0]?.total),
-      default: count(scheduleRows[0]?.default),
-      marker: count(scheduleRows[0]?.marker),
-    },
-    termRanges: count(termRangeRows[0]?.count),
-  };
-}
-
-async function databaseSnapshot(configuration) {
-  const sql = postgres(configuration.databaseUrl, {
-    max: 1,
-    connect_timeout: 10,
-    idle_timeout: 2,
-    prepare: false,
+function runDocker(dockerBinary, args, environment, failureMessage, input) {
+  const result = spawnSync(dockerBinary, args, {
+    encoding: "utf8",
+    env: environment,
+    input,
   });
+  if (result.error || result.status !== 0) throw new Error(failureMessage);
+  return result.stdout.trim();
+}
+
+function runtimeConfiguration(operatorEnvironment) {
+  const production = process.env.NODE_ENV !== "test";
+  const result = {
+    dockerBinary: production
+      ? "/usr/bin/docker"
+      : (process.env.UWPLAN_AUTH_REHEARSAL_DOCKER_BIN ?? "docker"),
+    composeFile: production
+      ? "/opt/uwplan/current/compose.yaml"
+      : (process.env.UWPLAN_AUTH_REHEARSAL_COMPOSE_FILE ?? "compose.yaml"),
+    runtimeEnvironment: production
+      ? "/etc/uwplan/runtime.env"
+      : (process.env.UWPLAN_AUTH_REHEARSAL_RUNTIME_ENV ?? ""),
+    releaseEnvironment: production
+      ? "/var/lib/uwplan-runtime/release.env"
+      : (process.env.UWPLAN_AUTH_REHEARSAL_RELEASE_ENV ?? ""),
+  };
+  readProtectedEnvironment(result.runtimeEnvironment);
+  readProtectedEnvironment(result.releaseEnvironment);
+  result.environment = {
+    ...process.env,
+    UWPLAN_REHEARSAL_ENV_FILE:
+      operatorEnvironment.UWPLAN_REHEARSAL_APP_ENV_FILE,
+  };
+  result.compose = [
+    "compose",
+    "--file",
+    result.composeFile,
+    "--env-file",
+    result.runtimeEnvironment,
+    "--env-file",
+    result.releaseEnvironment,
+    "--profile",
+    "rehearsal",
+  ];
+  return result;
+}
+
+function runningRehearsal(configuration, operatorEnvironment) {
+  const runtime = runtimeConfiguration(operatorEnvironment);
+  const containerId = runDocker(
+    runtime.dockerBinary,
+    [...runtime.compose, "ps", "--quiet", "rehearsal-app"],
+    runtime.environment,
+    "running rehearsal application is unavailable",
+  );
+  const imageId = runDocker(
+    runtime.dockerBinary,
+    ["inspect", "--format", "{{.Image}}", containerId],
+    runtime.environment,
+    "running rehearsal image identity is unavailable",
+  );
+  const startedAt = runDocker(
+    runtime.dockerBinary,
+    ["inspect", "--format", "{{.State.StartedAt}}", containerId],
+    runtime.environment,
+    "running rehearsal start identity is unavailable",
+  );
+  const restartCount = Number(
+    runDocker(
+      runtime.dockerBinary,
+      ["inspect", "--format", "{{.RestartCount}}", containerId],
+      runtime.environment,
+      "running rehearsal restart state is unavailable",
+    ),
+  );
+  validateRehearsalStartMarker({
+    configuration,
+    operatorEnvironment,
+    runtimeEnvironmentPath: runtime.runtimeEnvironment,
+    releaseEnvironmentPath: runtime.releaseEnvironment,
+    composeFilePath: runtime.composeFile,
+    containerId,
+    imageId,
+    startedAt,
+    restartCount,
+  });
+  return { ...runtime, containerId };
+}
+
+function databaseSnapshot(runtime, configuration) {
+  const rawSnapshot = runDocker(
+    runtime.dockerBinary,
+    [
+      "exec",
+      "--interactive",
+      runtime.containerId,
+      "node",
+      "/app/ops/auth-rehearsal/snapshot.mjs",
+      "acceptance",
+    ],
+    runtime.environment,
+    "candidate database acceptance snapshot failed",
+    JSON.stringify(configuration.identities),
+  );
   try {
-    const databaseIdentity = await sql`
-      select current_database() as database, current_user as role
-    `;
-    return {
-      schemaVersion: 1,
-      database: {
-        name: databaseIdentity[0]?.database,
-        role: databaseIdentity[0]?.role,
-        productionContacted: false,
-      },
-      identities: {
-        google: await identitySnapshot(sql, configuration.identities.google),
-        github: await identitySnapshot(sql, configuration.identities.github),
-      },
-    };
-  } finally {
-    await sql.end({ timeout: 2 });
+    return JSON.parse(rawSnapshot);
+  } catch {
+    throw new Error("candidate database acceptance snapshot was not valid JSON");
   }
 }
 
@@ -189,6 +196,7 @@ async function main() {
   );
   const attestation = readProtectedJson(
     operatorEnvironment.UWPLAN_REHEARSAL_ATTESTATION_FILE,
+    "browser attestation",
   );
   const sensitiveValues = [
     ...Object.values(rehearsalEnvironment),
@@ -196,8 +204,9 @@ async function main() {
     configuration.basicPassword,
   ].filter((value) => typeof value === "string" && value.length >= 6);
 
+  const runtime = runningRehearsal(configuration, operatorEnvironment);
   await verifyHttpBoundary(configuration, sensitiveValues);
-  const snapshot = await databaseSnapshot(configuration);
+  const snapshot = databaseSnapshot(runtime, configuration);
   const evidence = validateRehearsalEvidence(
     configuration,
     snapshot,

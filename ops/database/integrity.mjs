@@ -1,7 +1,11 @@
-import { POSTGRES_UTILITY_IMAGE } from "./protocol.mjs";
+import {
+  POSTGRES_MAJOR_VERSION,
+  POSTGRES_UTILITY_IMAGE,
+  POSTGRES_UTILITY_VERSION_NUM,
+} from "./protocol.mjs";
 
 const sha256Pattern = /^[0-9a-f]{64}$/;
-const versionPattern = /^16[0-9]{4}$/;
+const versionPattern = /^[0-9]{6}$/;
 
 const canonical = (value) => JSON.stringify(value);
 const same = (left, right) => canonical(left) === canonical(right);
@@ -20,8 +24,9 @@ export function isIntegrityManifest(value) {
       value.schemaVersion === 1 &&
       typeof value.runId === "string" &&
       value.utilityImage === POSTGRES_UTILITY_IMAGE &&
-      value.utilityVersionNum === "160014" &&
-      versionPattern.test(value.database?.serverVersionNum ?? "") &&
+      value.utilityVersionNum === POSTGRES_UTILITY_VERSION_NUM &&
+      typeof value.database?.serverVersionNum === "string" &&
+      versionPattern.test(value.database.serverVersionNum) &&
       typeof value.database?.encoding === "string" &&
       typeof value.database?.collation === "string" &&
       typeof value.database?.ctype === "string" &&
@@ -74,9 +79,16 @@ export function compareIntegrity(source, candidate) {
     if (!accepted) failedGates.push(name);
   };
 
+  const sourceVersion = source.database.serverVersionNum;
+  const candidateVersion = candidate.database.serverVersionNum;
+  const sourceMajor = sourceVersion.slice(0, -4);
+  const candidateMajor = candidateVersion.slice(0, -4);
   gate(
     "version",
-    source.database.serverVersionNum === candidate.database.serverVersionNum,
+    sourceMajor === POSTGRES_MAJOR_VERSION &&
+      Number(sourceVersion) <= Number(POSTGRES_UTILITY_VERSION_NUM) &&
+      candidateVersion === POSTGRES_UTILITY_VERSION_NUM &&
+      sourceMajor === candidateMajor,
   );
   gate(
     "tool-image",
