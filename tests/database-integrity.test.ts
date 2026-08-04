@@ -25,6 +25,10 @@ function manifest(serverVersionNum = "160014") {
     runId: "20260802T193000000Z",
     utilityImage,
     utilityVersionNum: "160014",
+    rowDigest: {
+      algorithm: "sha256",
+      canonicalization: "postgres-row-json-utf8-base64-lines-v1",
+    },
     database: {
       serverVersionNum,
       encoding: "UTF8",
@@ -186,5 +190,16 @@ describe("production database integrity gates", () => {
     });
     expect(result).toEqual({ status: "rejected", failedGates: ["manifest"] });
     expect(JSON.stringify(result)).not.toContain("sentinel-private-row-value");
+  });
+
+  it("rejects pre-streaming manifests without the row digest contract", () => {
+    const source = manifest("160006");
+    const candidate = manifest("160014");
+    delete (source as Partial<typeof source>).rowDigest;
+
+    expect(compareIntegrity(source, candidate)).toEqual({
+      status: "rejected",
+      failedGates: ["manifest"],
+    });
   });
 });

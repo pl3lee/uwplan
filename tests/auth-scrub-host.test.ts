@@ -1,6 +1,7 @@
 /** @jest-environment node */
 
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   chmodSync,
   existsSync,
@@ -18,6 +19,44 @@ const command = join(process.cwd(), "ops/database/host-command.mjs");
 const runId = "20260802T211500000Z";
 const candidateDatabase = `uwplan_candidate_${runId}`;
 const sentinel = "student-secret-sentinel@example.invalid";
+const utilityImage =
+  "docker.io/library/postgres:16.14-bookworm@sha256:92620daddcd947f8d5ab5ba66e848702fe443d87fed30c4cea8e389fd78dfc55";
+const rowDigest = {
+  algorithm: "sha256",
+  canonicalization: "postgres-row-json-utf8-base64-lines-v1",
+};
+
+function integrityManifest() {
+  return {
+    schemaVersion: 1,
+    runId,
+    utilityImage,
+    utilityVersionNum: "160014",
+    rowDigest,
+    database: {
+      serverVersionNum: "160014",
+      encoding: "UTF8",
+      collation: "C",
+      ctype: "C",
+      localeProvider: "c",
+      defaultTablespace: "pg_default",
+    },
+    schemaSha256: "e".repeat(64),
+    extensions: [],
+    tablespaces: [],
+    ledger: { count: 1, maxId: 1, sha256: "f".repeat(64) },
+    tables: [
+      { schemaIdentity: "cHVibGlj", nameIdentity: "dXNlcg==", count: 7, sha256: "1".repeat(64) },
+      { schemaIdentity: "cHVibGlj", nameIdentity: "cGxhbg==", count: 5, sha256: "2".repeat(64) },
+      { schemaIdentity: "cHVibGlj", nameIdentity: "c2NoZWR1bGU=", count: 6, sha256: "3".repeat(64) },
+    ],
+    sequences: [],
+    unvalidatedConstraints: [],
+    invalidIndexes: [],
+    ownershipViolations: [],
+    appRole: { login: true, superuser: false, createdb: false, createrole: false, replication: false, bypassRls: false },
+  };
+}
 
 function harness() {
   const root = mkdtempSync(join(tmpdir(), "uwplan-auth-scrub-host-"));
@@ -29,6 +68,12 @@ function harness() {
   const dockerLog = join(root, "docker.jsonl");
   const docker = join(root, "fake-docker.mjs");
   mkdirSync(runDirectory, { recursive: true, mode: 0o700 });
+  const candidateIntegrityText = `${JSON.stringify(integrityManifest())}\n`;
+  writeFileSync(
+    join(runDirectory, "candidate-integrity-manifest.json"),
+    candidateIntegrityText,
+    { mode: 0o600 },
+  );
   writeFileSync(
     integrityPath,
     `${JSON.stringify({
@@ -37,6 +82,9 @@ function harness() {
       candidateDatabase,
       status: "accepted",
       sourceArchiveSha256: "a".repeat(64),
+      candidateIntegrityManifestSha256: createHash("sha256")
+        .update(candidateIntegrityText)
+        .digest("hex"),
     })}\n`,
     { mode: 0o600 },
   );
@@ -55,6 +103,14 @@ if (args[0] === "ps") {
   if (process.env.FAKE_ACTIVE_APP === "1") process.stdout.write("container-id\\n");
   process.exit(0);
 }
+if (args.includes("/integrity.sh")) {
+  const manifest = ${JSON.stringify(integrityManifest())};
+  const user = manifest.tables.find((table) => table.nameIdentity === "dXNlcg==");
+  if (process.env.FAKE_CHANGED_PRESERVED === "1") user.count = 8;
+  if (process.env.FAKE_CHANGED_DIGEST === "1") user.sha256 = "4".repeat(64);
+  process.stdout.write(JSON.stringify(manifest) + "\\n");
+  process.exit(0);
+}
 if (!args.includes("psql")) process.exit(64);
 if (args.includes("/auth-scrub.sql")) {
   if (process.env.FAKE_SCRUB_FAIL === "1") {
@@ -63,24 +119,17 @@ if (args.includes("/auth-scrub.sql")) {
   }
   process.exit(0);
 }
-const query = args.at(-1) ?? "";
-const after = query.includes("authArtifactCounts");
-const preserved = process.env.FAKE_CHANGED_PRESERVED === "1" && after
-  ? { user: 8, plan: 5, schedule: 6 }
-  : { user: 7, plan: 5, schedule: 6 };
 const result = {
   database: ${JSON.stringify(candidateDatabase)},
-  preservedCounts: preserved,
-  preservedDigests: {
-    user: process.env.FAKE_CHANGED_DIGEST === "1" && after ? "4".repeat(32) : "1".repeat(32),
-    plan: "2".repeat(32),
-    schedule: "3".repeat(32),
+  authArtifactCounts: {
+    session: 0,
+    verificationToken: 0,
+    account: process.env.FAKE_NEGATIVE_AUTH === "1"
+      ? -1
+      : process.env.FAKE_NONZERO_AUTH === "1"
+        ? 1
+        : 0,
   },
-};
-if (after) result.authArtifactCounts = {
-  session: 0,
-  verificationToken: 0,
-  account: process.env.FAKE_NONZERO_AUTH === "1" ? 1 : 0,
 };
 process.stdout.write(JSON.stringify(result) + "\\n");
 `,
@@ -154,15 +203,16 @@ describe("candidate authentication artifact scrub", () => {
       expect(evidence).toEqual(
         expect.objectContaining({
           status: "accepted",
-          procedureVersion: "auth-artifact-scrub-v1",
+          procedureVersion: "auth-artifact-scrub-v2",
           candidateDatabase,
           authArtifactCounts: { session: 0, verificationToken: 0, account: 0 },
           preservedCounts: { user: 7, plan: 5, schedule: 6 },
           preservedDigests: {
-            user: "1".repeat(32),
-            plan: "2".repeat(32),
-            schedule: "3".repeat(32),
+            user: "1".repeat(64),
+            plan: "2".repeat(64),
+            schedule: "3".repeat(64),
           },
+          rowDigest,
         }),
       );
       expect(statSync(test.markerPath).mode & 0o777).toBe(0o600);
@@ -171,6 +221,20 @@ describe("candidate authentication artifact scrub", () => {
       expect(
         test.operations().some((args) => args.includes("/auth-scrub.sql")),
       ).toBe(true);
+    } finally {
+      test.cleanup();
+    }
+  });
+
+  it("rejects impossible negative authentication counts", () => {
+    const test = harness();
+    try {
+      const result = test.run(candidateDatabase, { FAKE_NEGATIVE_AUTH: "1" });
+      expect(result.status).toBe(1);
+      expect(result.stderr).toBe(
+        "candidate authentication count evidence was invalid\n",
+      );
+      expect(existsSync(test.markerPath)).toBe(false);
     } finally {
       test.cleanup();
     }

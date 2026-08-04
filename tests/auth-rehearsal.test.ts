@@ -48,7 +48,7 @@ function scrubEvidence(overrides: Record<string, unknown> = {}) {
     schemaVersion: 1,
     event: "auth.artifact-scrub",
     status: "accepted",
-    procedureVersion: "auth-artifact-scrub-v1",
+    procedureVersion: "auth-artifact-scrub-v2",
     runId,
     candidateDatabase: `uwplan_candidate_${runId}`,
     sourceArchiveSha256: "a".repeat(64),
@@ -63,11 +63,15 @@ function scrubEvidence(overrides: Record<string, unknown> = {}) {
       ],
     },
     authArtifactCounts: { session: 0, verificationToken: 0, account: 0 },
+    rowDigest: {
+      algorithm: "sha256",
+      canonicalization: "postgres-row-json-utf8-base64-lines-v1",
+    },
     preservedCounts: { user: 11, plan: 7, schedule: 9 },
     preservedDigests: {
-      user: "1".repeat(32),
-      plan: "2".repeat(32),
-      schedule: "3".repeat(32),
+      user: "1".repeat(64),
+      plan: "2".repeat(64),
+      schedule: "3".repeat(64),
     },
     ...overrides,
   };
@@ -275,6 +279,27 @@ describe("isolated authentication rehearsal", () => {
         integrityPath: evidence.integrityPath,
       }),
     ).toThrow("mode-0600");
+  });
+
+  it("rejects legacy MD5 scrub evidence", () => {
+    const evidence = scrubEvidence({
+      procedureVersion: "auth-artifact-scrub-v1",
+      rowDigest: undefined,
+      preservedDigests: {
+        user: "1".repeat(32),
+        plan: "2".repeat(32),
+        schedule: "3".repeat(32),
+      },
+    });
+
+    expect(() =>
+      validateAuthScrubMarker({
+        runId,
+        candidateDatabase: `uwplan_candidate_${runId}`,
+        markerPath: evidence.markerPath,
+        integrityPath: evidence.integrityPath,
+      }),
+    ).toThrow("missing, stale, or mismatched");
   });
 
   it("binds guarded start evidence to protected files and the live container", () => {

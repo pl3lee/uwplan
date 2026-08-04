@@ -38,6 +38,14 @@ contention fails closed instead of blocking indefinitely. A SQL failure rolls
 back and publishes no acceptance marker. Output and evidence contain counts and
 hashes, never credentials, tokens, emails, or row data.
 
+The preserved-table comparison uses scrub procedure v2 and the same
+`postgres-row-json-utf8-base64-lines-v1` streaming SHA-256 contract as the
+source/candidate integrity gate. The pre-scrub values come from the exact
+hash-bound accepted full integrity manifest; after the transaction, the host
+runs a new repeatable-read streaming integrity scan and compares the three
+preserved tables. The guarded app preflight uses one-row database cursors with
+the same canonicalization. Legacy v1/MD5 scrub markers are rejected.
+
 Success creates a mode-`0600` `auth-artifact-scrub-accepted.json` bound to the
 run ID, exact candidate, source archive SHA-256, integrity-marker SHA-256, and
 scrub procedure version. The action is single-use: discard the candidate after

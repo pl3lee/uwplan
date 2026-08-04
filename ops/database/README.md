@@ -34,8 +34,19 @@ also rejects unvalidated constraints, invalid indexes, unsafe database/object
 ownership, or elevated `uwplan_app` attributes.
 
 Accepted sanitized operator evidence records both source and target server
-version numbers. Table rows pass directly from `COPY` into SHA-256; neither row
-serialization nor row values are written to evidence, stdout, or stderr.
+version numbers. Every table digest uses
+`postgres-row-json-utf8-base64-lines-v1`: PostgreSQL applies UTC, ISO date,
+hexadecimal `bytea`, and stable float-output settings; converts each complete
+`row_to_json` value to UTF-8; removes base64 line wrapping; sorts by the JSON
+text under `COLLATE "C"`; and streams one base64 line per row from `COPY`
+directly into SHA-256. This preserves nulls, types, binary values, Unicode,
+row boundaries, and source/target ordering without a full-table aggregate or
+the PostgreSQL 1 GiB value limit. Neither row serialization nor row values are
+written to evidence, stdout, or stderr.
+`tests/database-row-digest-integration.mjs` verifies that PostgreSQL `COPY`
+and the Node one-row cursor produce identical counts and SHA-256 digests for
+empty and reordered duplicate rows containing nulls, binary bytes, Unicode,
+numeric values, and timestamps using the pinned PostgreSQL 16.14 image.
 Evidence contains only identities, counts, digests, gate names, and the
 candidate/run identity.
 The host writes a mode-`0600` acceptance marker only after every gate passes,

@@ -52,7 +52,7 @@ function harness() {
     schemaVersion: 1,
     event: "auth.artifact-scrub",
     status: "accepted",
-    procedureVersion: "auth-artifact-scrub-v1",
+    procedureVersion: "auth-artifact-scrub-v2",
     runId,
     candidateDatabase,
     sourceArchiveSha256: "a".repeat(64),
@@ -67,11 +67,15 @@ function harness() {
       ],
     },
     authArtifactCounts: { session: 0, verificationToken: 0, account: 0 },
+    rowDigest: {
+      algorithm: "sha256",
+      canonicalization: "postgres-row-json-utf8-base64-lines-v1",
+    },
     preservedCounts: { user: 7, plan: 5, schedule: 6 },
     preservedDigests: {
-      user: "1".repeat(32),
-      plan: "2".repeat(32),
-      schedule: "3".repeat(32),
+      user: "1".repeat(64),
+      plan: "2".repeat(64),
+      schedule: "3".repeat(64),
     },
   };
   writeFileSync(scrubPath, `${JSON.stringify(scrub)}\n`, { mode: 0o600 });
@@ -137,8 +141,9 @@ if (args.includes("run")) {
   const snapshot = {
     database: ${JSON.stringify(candidateDatabase)},
     authArtifactCounts: { session: 0, verificationToken: 0, account: process.env.FAKE_STALE === "1" ? 1 : 0 },
+    rowDigest: { algorithm: "sha256", canonicalization: "postgres-row-json-utf8-base64-lines-v1" },
     preservedCounts: { user: 7, plan: 5, schedule: 6 },
-    preservedDigests: { user: "1".repeat(32), plan: "2".repeat(32), schedule: "3".repeat(32) },
+    preservedDigests: { user: "1".repeat(64), plan: "2".repeat(64), schedule: "3".repeat(64) },
   };
   process.stdout.write(JSON.stringify(snapshot) + "\\n");
   process.exit(0);

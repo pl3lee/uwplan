@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 
 import postgres from "postgres";
+import {
+  ROW_DIGEST_CONTRACT,
+  digestCanonicalRowBatches,
+} from "../database/row-digest.mjs";
 
 function fail() {
   process.stderr.write("candidate database snapshot failed\n");
@@ -18,36 +22,57 @@ async function readInput() {
 }
 
 async function preparedSnapshot(sql) {
+  await sql.unsafe(`
+    SET LOCAL TIME ZONE 'UTC';
+    SET LOCAL DateStyle = 'ISO, YMD';
+    SET LOCAL bytea_output = 'hex';
+    SET LOCAL extra_float_digits = 3;
+  `);
   const rows = await sql.unsafe(`
     select
       current_database() as database,
       (select count(*)::integer from public.session) as session,
       (select count(*)::integer from public.verification_token) as verification_token,
-      (select count(*)::integer from public.account) as account,
-      (select count(*)::integer from public."user") as "user",
-      (select count(*)::integer from public.plan) as plan,
-      (select count(*)::integer from public.schedule) as schedule,
-      (select md5(coalesce(string_agg(row_to_json(row_value)::text, E'\\n' order by row_value.id::text), '')) from public."user" row_value) as user_digest,
-      (select md5(coalesce(string_agg(row_to_json(row_value)::text, E'\\n' order by row_value.id::text), '')) from public.plan row_value) as plan_digest,
-      (select md5(coalesce(string_agg(row_to_json(row_value)::text, E'\\n' order by row_value.id::text), '')) from public.schedule row_value) as schedule_digest
+      (select count(*)::integer from public.account) as account
   `);
   const row = rows[0] ?? {};
+  const preserved = {};
+  for (const [name, table] of Object.entries({
+    user: 'public."user"',
+    plan: "public.plan",
+    schedule: "public.schedule",
+  })) {
+    preserved[name] = await digestCanonicalRowBatches(
+      sql
+        .unsafe(`
+          SELECT replace(
+            encode(convert_to(row_to_json(row_data)::text, 'UTF8'), 'base64'),
+            E'\\n',
+            ''
+          ) AS "canonicalRow"
+          FROM ${table} AS row_data
+          ORDER BY row_to_json(row_data)::text COLLATE "C"
+        `)
+        .cursor(1),
+    );
+  }
   return {
     database: row.database,
+    rowDigest: ROW_DIGEST_CONTRACT,
     authArtifactCounts: {
       session: count(row.session),
       verificationToken: count(row.verification_token),
       account: count(row.account),
     },
     preservedCounts: {
-      user: count(row.user),
-      plan: count(row.plan),
-      schedule: count(row.schedule),
+      user: preserved.user.count,
+      plan: preserved.plan.count,
+      schedule: preserved.schedule.count,
     },
     preservedDigests: {
-      user: row.user_digest,
-      plan: row.plan_digest,
-      schedule: row.schedule_digest,
+      user: preserved.user.sha256,
+      plan: preserved.plan.sha256,
+      schedule: preserved.schedule.sha256,
     },
   };
 }
@@ -148,7 +173,10 @@ async function main() {
   try {
     const result =
       mode === "prepared"
-        ? await preparedSnapshot(sql)
+        ? await sql.begin(
+            "isolation level repeatable read read only",
+            preparedSnapshot,
+          )
         : await acceptanceSnapshot(sql);
     process.stdout.write(`${JSON.stringify(result)}\n`);
   } finally {

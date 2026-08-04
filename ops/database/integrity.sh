@@ -9,6 +9,8 @@ readonly DATABASE_NAME="${2:?Pass the database name}"
 readonly REQUESTED_SNAPSHOT="${3:--}"
 readonly EVIDENCE_DIRECTORY="${4:-/evidence}"
 readonly UTILITY_IMAGE="${UWPLAN_DB_UTILITY_IMAGE:?Pinned utility image is required}"
+readonly ROW_DIGEST_ALGORITHM="sha256"
+readonly ROW_DIGEST_CANONICALIZATION="postgres-row-json-utf8-base64-lines-v1"
 
 stage="preflight"
 trap 'printf "database integrity manifest failed during %s\n" "$stage" >&2' ERR
@@ -156,7 +158,11 @@ while IFS='|' read -r schema_identity name_identity qualified_identity; do
   count="$(snapshot_query "SELECT count(*) FROM ${qualified};")"
   [[ "$count" =~ ^[0-9]+$ ]]
   content_sha256="$(hash_query "COPY (
-    SELECT row_to_json(row_data)::text
+    SELECT replace(
+      encode(convert_to(row_to_json(row_data)::text, 'UTF8'), 'base64'),
+      E'\\n',
+      ''
+    )
     FROM ${qualified} AS row_data
     ORDER BY row_to_json(row_data)::text COLLATE \"C\"
   ) TO STDOUT;")"
@@ -175,11 +181,15 @@ else
   [[ "$ledger_max_id" =~ ^[0-9]+$ ]]
   ledger_max_id_json="$ledger_max_id"
 fi
-ledger_sha256="$(hash_query 'COPY (
-  SELECT row_to_json(row_data)::text
+ledger_sha256="$(hash_query "COPY (
+  SELECT replace(
+    encode(convert_to(row_to_json(row_data)::text, 'UTF8'), 'base64'),
+    E'\\n',
+    ''
+  )
   FROM drizzle.__drizzle_migrations AS row_data
-  ORDER BY row_to_json(row_data)::text COLLATE "C"
-) TO STDOUT;')"
+  ORDER BY row_to_json(row_data)::text COLLATE \"C\"
+) TO STDOUT;")"
 ledger_json="{\"count\":${ledger_count},\"maxId\":${ledger_max_id_json},\"sha256\":\"${ledger_sha256}\"}"
 
 stage="sequences"
@@ -305,8 +315,8 @@ SELECT COALESCE((
 ), '{\"login\":false,\"superuser\":false,\"createdb\":false,\"createrole\":false,\"replication\":false,\"bypassRls\":false}');")"
 
 stage="evidence"
-printf '{"schemaVersion":1,"runId":"%s","utilityImage":"%s","utilityVersionNum":"160014","database":%s,"schemaSha256":"%s","extensions":%s,"tablespaces":%s,"ledger":%s,"tables":%s,"sequences":%s,"unvalidatedConstraints":%s,"invalidIndexes":%s,"ownershipViolations":%s,"appRole":%s}\n' \
-  "$RUN_ID" "$UTILITY_IMAGE" "$database_json" "$schema_sha256" \
+printf '{"schemaVersion":1,"runId":"%s","utilityImage":"%s","utilityVersionNum":"160014","rowDigest":{"algorithm":"%s","canonicalization":"%s"},"database":%s,"schemaSha256":"%s","extensions":%s,"tablespaces":%s,"ledger":%s,"tables":%s,"sequences":%s,"unvalidatedConstraints":%s,"invalidIndexes":%s,"ownershipViolations":%s,"appRole":%s}\n' \
+  "$RUN_ID" "$UTILITY_IMAGE" "$ROW_DIGEST_ALGORITHM" "$ROW_DIGEST_CANONICALIZATION" "$database_json" "$schema_sha256" \
   "$extensions_json" "$tablespaces_json" "$ledger_json" "$tables_json" \
   "$sequences_json" "$unvalidated_constraints_json" "$invalid_indexes_json" \
   "$ownership_violations_json" "$app_role_json"

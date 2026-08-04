@@ -18,7 +18,11 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { pipeline } from "node:stream/promises";
 import { POSTGRES_UTILITY_IMAGE } from "./protocol.mjs";
-import { compareIntegrity, isIntegrityManifest } from "./integrity.mjs";
+import {
+  compareIntegrity,
+  isIntegrityManifest,
+  preservedStateFromIntegrity,
+} from "./integrity.mjs";
 import { AUTH_SCRUB_PROCEDURE_VERSION } from "../auth-rehearsal/protocol.mjs";
 
 const production = process.env.NODE_ENV !== "test";
@@ -202,6 +206,28 @@ function requireFreshAcceptedCandidate(runId, candidateDatabase) {
   if (!sha256Pattern.test(acceptance.sourceArchiveSha256 ?? "")) {
     fail("candidate integrity evidence has no source archive identity");
   }
+  const candidateIntegrityPath = join(
+    directory,
+    "candidate-integrity-manifest.json",
+  );
+  requireProtectedFile(candidateIntegrityPath);
+  if (
+    !sha256Pattern.test(acceptance.candidateIntegrityManifestSha256 ?? "") ||
+    sha256(candidateIntegrityPath) !==
+      acceptance.candidateIntegrityManifestSha256
+  ) {
+    fail("candidate full integrity evidence is stale or mismatched");
+  }
+  const candidateIntegrity = JSON.parse(
+    readFileSync(candidateIntegrityPath, "utf8"),
+  );
+  if (
+    !isIntegrityManifest(candidateIntegrity) ||
+    candidateIntegrity.runId !== runId ||
+    candidateIntegrity.database.serverVersionNum !== "160014"
+  ) {
+    fail("candidate full integrity evidence failed validation");
+  }
   const markerPath = join(directory, "auth-artifact-scrub-accepted.json");
   const rejectionPath = join(directory, "auth-artifact-scrub-rejected.json");
   if (existsSync(markerPath)) {
@@ -210,7 +236,13 @@ function requireFreshAcceptedCandidate(runId, candidateDatabase) {
   if (existsSync(rejectionPath)) {
     fail("failed candidate identity cannot be scrubbed again");
   }
-  return { acceptance, acceptancePath, markerPath, rejectionPath };
+  return {
+    acceptance,
+    acceptancePath,
+    candidateIntegrity,
+    markerPath,
+    rejectionPath,
+  };
 }
 
 function requireCandidateApplicationsStopped() {
@@ -272,41 +304,46 @@ function candidatePsql(candidateDatabase, options) {
   });
 }
 
-function candidateCounts(candidateDatabase, includeAuthArtifacts) {
-  const authFields = includeAuthArtifacts
-    ? `,
-      'authArtifactCounts', json_build_object(
+function candidateAuthArtifactState(candidateDatabase) {
+  const output = candidatePsql(candidateDatabase, {
+    query: `SET ROLE uwplan_app;
+      select json_build_object(
+        'database', current_database(),
+        'authArtifactCounts', json_build_object(
         'session', (select count(*)::integer from public.session),
         'verificationToken', (select count(*)::integer from public.verification_token),
         'account', (select count(*)::integer from public.account)
-      )`
-    : "";
-  const output = candidatePsql(candidateDatabase, {
-    query: `select json_build_object(
-      'database', current_database(),
-      'preservedCounts', json_build_object(
-        'user', (select count(*)::integer from public."user"),
-        'plan', (select count(*)::integer from public.plan),
-        'schedule', (select count(*)::integer from public.schedule)
-      ),
-      'preservedDigests', json_build_object(
-        'user', (select md5(coalesce(string_agg(row_to_json(row_value)::text, E'\\n' order by row_value.id::text), '')) from public."user" row_value),
-        'plan', (select md5(coalesce(string_agg(row_to_json(row_value)::text, E'\\n' order by row_value.id::text), '')) from public.plan row_value),
-        'schedule', (select md5(coalesce(string_agg(row_to_json(row_value)::text, E'\\n' order by row_value.id::text), '')) from public.schedule row_value)
-      )${authFields}
-    )::text;`,
-    failureMessage: "candidate count verification failed",
+        )
+      )::text;`,
+    failureMessage: "candidate authentication count verification failed",
   });
   try {
-    return JSON.parse(output.trim());
+    const state = JSON.parse(output.trim());
+    if (
+      state.database !== candidateDatabase ||
+      !["session", "verificationToken", "account"].every((name) =>
+        Number.isSafeInteger(state.authArtifactCounts?.[name]) &&
+        state.authArtifactCounts[name] >= 0,
+      ) ||
+      Object.keys(state.authArtifactCounts ?? {}).sort().join(",") !==
+        "account,session,verificationToken"
+    ) {
+      fail("candidate authentication count evidence was invalid");
+    }
+    return state;
   } catch {
-    fail("candidate count verification returned invalid evidence");
+    fail("candidate authentication count verification returned invalid evidence");
   }
 }
 
 function scrubCandidateAuthentication(runId, candidateDatabase) {
-  const { acceptance, acceptancePath, markerPath, rejectionPath } =
-    requireFreshAcceptedCandidate(runId, candidateDatabase);
+  const {
+    acceptance,
+    acceptancePath,
+    candidateIntegrity,
+    markerPath,
+    rejectionPath,
+  } = requireFreshAcceptedCandidate(runId, candidateDatabase);
   writeFileSync(
     rejectionPath,
     `${JSON.stringify({
@@ -321,7 +358,7 @@ function scrubCandidateAuthentication(runId, candidateDatabase) {
   );
   chmodSync(rejectionPath, 0o600);
   requireCandidateApplicationsStopped();
-  const before = candidateCounts(candidateDatabase, false);
+  const before = preservedStateFromIntegrity(candidateIntegrity);
   try {
     candidatePsql(candidateDatabase, {
       file: authScrubScript,
@@ -334,17 +371,27 @@ function scrubCandidateAuthentication(runId, candidateDatabase) {
         : "candidate authentication scrub failed and rolled back",
     );
   }
-  const after = candidateCounts(candidateDatabase, true);
+  const afterIntegrity = JSON.parse(
+    utility("integrity", runId, targetEnvironment, [candidateDatabase, "-"]),
+  );
   if (
-    before.database !== candidateDatabase ||
-    after.database !== candidateDatabase ||
+    !isIntegrityManifest(afterIntegrity) ||
+    afterIntegrity.runId !== runId ||
+    afterIntegrity.database.serverVersionNum !== "160014"
+  ) {
+    fail("post-scrub streaming integrity evidence failed validation");
+  }
+  const after = preservedStateFromIntegrity(afterIntegrity);
+  const authState = candidateAuthArtifactState(candidateDatabase);
+  if (
     JSON.stringify(before.preservedCounts) !==
       JSON.stringify(after.preservedCounts) ||
     JSON.stringify(before.preservedDigests) !==
       JSON.stringify(after.preservedDigests) ||
-    after.authArtifactCounts?.session !== 0 ||
-    after.authArtifactCounts?.verificationToken !== 0 ||
-    after.authArtifactCounts?.account !== 0
+    JSON.stringify(before.rowDigest) !== JSON.stringify(after.rowDigest) ||
+    authState.authArtifactCounts.session !== 0 ||
+    authState.authArtifactCounts.verificationToken !== 0 ||
+    authState.authArtifactCounts.account !== 0
   ) {
     fail("candidate authentication scrub postcondition failed");
   }
@@ -366,7 +413,8 @@ function scrubCandidateAuthentication(runId, candidateDatabase) {
         "public.account",
       ],
     },
-    authArtifactCounts: after.authArtifactCounts,
+    authArtifactCounts: authState.authArtifactCounts,
+    rowDigest: after.rowDigest,
     preservedCounts: after.preservedCounts,
     preservedDigests: after.preservedDigests,
   };
@@ -776,7 +824,7 @@ switch (action) {
     process.stdout.write(output);
     break;
   }
-  case "validate-integrity": {
+      case "validate-integrity": {
     const candidateDatabase = arguments_[0] ?? "";
     if (!candidatePattern.test(candidateDatabase))
       fail("invalid candidate identity", 64);
@@ -792,11 +840,30 @@ switch (action) {
       { mode: 0o600 },
     );
     chmodSync(rejectionPath, 0o600);
-    const candidate = JSON.parse(
-      utility("integrity", runId, targetEnvironment, [candidateDatabase, "-"]),
-    );
-    const result = compareIntegrity(manifest.integrity, candidate);
-    const evidence = {
+        const candidate = JSON.parse(
+          utility("integrity", runId, targetEnvironment, [candidateDatabase, "-"]),
+        );
+        const result =
+          candidate.runId === runId
+            ? compareIntegrity(manifest.integrity, candidate)
+            : { status: "rejected", failedGates: ["manifest"] };
+        const candidateIntegrityPath = join(
+          directory,
+          "candidate-integrity-manifest.json",
+        );
+        let candidateIntegrityManifestSha256 = null;
+        if (result.status === "accepted") {
+          writeFileSync(
+            candidateIntegrityPath,
+            `${JSON.stringify(candidate)}\n`,
+            { mode: 0o600 },
+          );
+          chmodSync(candidateIntegrityPath, 0o600);
+          candidateIntegrityManifestSha256 = sha256(candidateIntegrityPath);
+        } else {
+          rmSync(candidateIntegrityPath, { force: true });
+        }
+        const evidence = {
       schemaVersion: 1,
       event: "database.candidate-integrity",
       runId,
@@ -807,7 +874,8 @@ switch (action) {
       sourceSchemaSha256: manifest.integrity.schemaSha256,
       candidateSchemaSha256: candidate.schemaSha256,
       ordinaryTableCount: candidate.tables?.length ?? 0,
-      sequenceCount: candidate.sequences?.length ?? 0,
+          sequenceCount: candidate.sequences?.length ?? 0,
+          candidateIntegrityManifestSha256,
     };
     const evidencePath = join(directory, "candidate-integrity.json");
     writeFileSync(evidencePath, `${JSON.stringify(evidence)}\n`, {

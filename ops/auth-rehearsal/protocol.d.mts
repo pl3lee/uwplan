@@ -14,7 +14,7 @@ export interface RehearsalConfiguration {
   authScrub: Record<string, unknown>;
 }
 
-export const AUTH_SCRUB_PROCEDURE_VERSION: "auth-artifact-scrub-v1";
+export const AUTH_SCRUB_PROCEDURE_VERSION: "auth-artifact-scrub-v2";
 export function sha256(value: string): string;
 export function fileSha256(path: string): string;
 export function readProtectedEnvironment(path: string): Record<string, string>;

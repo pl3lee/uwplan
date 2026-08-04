@@ -2,13 +2,13 @@
 
 import { createHash } from "node:crypto";
 import { readFileSync, statSync } from "node:fs";
+import { ROW_DIGEST_CONTRACT } from "../database/row-digest.mjs";
 
 const runIdPattern = /^[0-9]{8}T[0-9]{9}Z$/;
 const candidateDatabasePattern = /^uwplan_candidate_[0-9]{8}T[0-9]{9}Z$/;
 const sha256Pattern = /^[0-9a-f]{64}$/;
-const md5Pattern = /^[0-9a-f]{32}$/;
 const basicUserPattern = /^[A-Za-z0-9_.-]{1,64}$/;
-export const AUTH_SCRUB_PROCEDURE_VERSION = "auth-artifact-scrub-v1";
+export const AUTH_SCRUB_PROCEDURE_VERSION = "auth-artifact-scrub-v2";
 
 export function sha256(value) {
   return createHash("sha256").update(value, "utf8").digest("hex");
@@ -106,6 +106,8 @@ export function validateAuthScrubMarker({
     marker?.sourceArchiveSha256 !== integrity.sourceArchiveSha256 ||
     marker?.integrityMarkerSha256 !== integrityMarkerSha256 ||
     marker?.applicationStopped !== true ||
+    JSON.stringify(marker?.rowDigest) !==
+      JSON.stringify(ROW_DIGEST_CONTRACT) ||
     marker?.transaction?.committed !== true ||
     JSON.stringify(marker?.transaction?.lockedTables) !==
       JSON.stringify([
@@ -119,9 +121,9 @@ export function validateAuthScrubMarker({
     !isCount(preservedCounts.user) ||
     !isCount(preservedCounts.plan) ||
     !isCount(preservedCounts.schedule) ||
-    !md5Pattern.test(preservedDigests.user ?? "") ||
-    !md5Pattern.test(preservedDigests.plan ?? "") ||
-    !md5Pattern.test(preservedDigests.schedule ?? "")
+    !sha256Pattern.test(preservedDigests.user ?? "") ||
+    !sha256Pattern.test(preservedDigests.plan ?? "") ||
+    !sha256Pattern.test(preservedDigests.schedule ?? "")
   ) {
     throw new Error(
       "authentication scrub evidence is missing, stale, or mismatched",
@@ -133,6 +135,9 @@ export function validateAuthScrubMarker({
 export function validatePreparedCandidateSnapshot(marker, snapshot) {
   if (
     snapshot?.database !== marker.candidateDatabase ||
+    JSON.stringify(snapshot?.rowDigest) !==
+      JSON.stringify(ROW_DIGEST_CONTRACT) ||
+    JSON.stringify(snapshot?.rowDigest) !== JSON.stringify(marker.rowDigest) ||
     snapshot?.authArtifactCounts?.session !== 0 ||
     snapshot?.authArtifactCounts?.verificationToken !== 0 ||
     snapshot?.authArtifactCounts?.account !== 0 ||

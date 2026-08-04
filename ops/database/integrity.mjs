@@ -3,6 +3,7 @@ import {
   POSTGRES_UTILITY_IMAGE,
   POSTGRES_UTILITY_VERSION_NUM,
 } from "./protocol.mjs";
+import { ROW_DIGEST_CONTRACT } from "./row-digest.mjs";
 
 const sha256Pattern = /^[0-9a-f]{64}$/;
 const versionPattern = /^[0-9]{6}$/;
@@ -25,6 +26,7 @@ export function isIntegrityManifest(value) {
       typeof value.runId === "string" &&
       value.utilityImage === POSTGRES_UTILITY_IMAGE &&
       value.utilityVersionNum === POSTGRES_UTILITY_VERSION_NUM &&
+      same(value.rowDigest, ROW_DIGEST_CONTRACT) &&
       typeof value.database?.serverVersionNum === "string" &&
       versionPattern.test(value.database.serverVersionNum) &&
       typeof value.database?.encoding === "string" &&
@@ -67,6 +69,37 @@ export function isIntegrityManifest(value) {
       typeof value.appRole?.replication === "boolean" &&
       typeof value.appRole?.bypassRls === "boolean",
   );
+}
+
+const preservedTableIdentities = Object.freeze({
+  user: { schemaIdentity: "cHVibGlj", nameIdentity: "dXNlcg==" },
+  plan: { schemaIdentity: "cHVibGlj", nameIdentity: "cGxhbg==" },
+  schedule: { schemaIdentity: "cHVibGlj", nameIdentity: "c2NoZWR1bGU=" },
+});
+
+export function preservedStateFromIntegrity(manifest) {
+  if (!isIntegrityManifest(manifest)) {
+    throw new Error("preserved table integrity manifest is invalid");
+  }
+  const preservedCounts = {};
+  const preservedDigests = {};
+  for (const [name, identity] of Object.entries(preservedTableIdentities)) {
+    const matches = manifest.tables.filter(
+      (table) =>
+        table.schemaIdentity === identity.schemaIdentity &&
+        table.nameIdentity === identity.nameIdentity,
+    );
+    if (matches.length !== 1) {
+      throw new Error("preserved table integrity identity is missing or ambiguous");
+    }
+    preservedCounts[name] = matches[0].count;
+    preservedDigests[name] = matches[0].sha256;
+  }
+  return {
+    rowDigest: ROW_DIGEST_CONTRACT,
+    preservedCounts,
+    preservedDigests,
+  };
 }
 
 export function compareIntegrity(source, candidate) {
