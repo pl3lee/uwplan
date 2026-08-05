@@ -3,6 +3,7 @@ name: Release Image
 on:
   push:
     branches: [production]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -91,6 +92,7 @@ jobs:
           retention-days: 30
 
   deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/production'
     needs: release
     runs-on: ubuntu-latest
     environment: production
