@@ -81,7 +81,8 @@ jobs:
           build-args: |
             RELEASE_REVISION=${{ github.sha }}
             SOURCE_DATE_EPOCH=${{ steps.source.outputs.epoch }}
-          no-cache: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           outputs: type=docker,rewrite-timestamp=true
           platforms: linux/amd64
           provenance: false
