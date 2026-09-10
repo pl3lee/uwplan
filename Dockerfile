@@ -17,13 +17,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV RELEASE_REVISION=${RELEASE_REVISION}
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY . .
-# Reproducibility tests can supply one temporary key to both clean builds.
-# Normal releases omit this secret and retain Next.js key generation.
-RUN --mount=type=secret,id=next_server_actions_encryption_key \
-    if [ -s /run/secrets/next_server_actions_encryption_key ]; then \
-      export NEXT_SERVER_ACTIONS_ENCRYPTION_KEY="$(cat /run/secrets/next_server_actions_encryption_key)"; \
-    fi; \
-    SKIP_ENV_VALIDATION=1 npm run build
+RUN SKIP_ENV_VALIDATION=1 npm run build
 
 FROM ${NODE_IMAGE} AS runtime
 WORKDIR /app
