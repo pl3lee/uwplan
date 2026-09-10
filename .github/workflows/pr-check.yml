@@ -37,7 +37,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
       - run: npm ci
-      - run: SKIP_ENV_VALIDATION=1 npm run test
+      # HTTP suites start Next.js against the same .next directory.
+      - run: SKIP_ENV_VALIDATION=1 npm run test -- --runInBand
+      - run: node --import tsx --test tests/github-issuer.test.mjs
+      - run: python3 -m unittest discover -s tests -p test_production_deploy.py
 
   build:
     needs: [lint, test]
