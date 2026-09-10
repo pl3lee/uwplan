@@ -2,7 +2,7 @@
 
 Run `npm ci`, `npx playwright install chromium firefox webkit`, and
 `npm run test:e2e`. Docker must be running. The runner creates a fresh PostgreSQL
-16 container, applies all migrations, builds and runs the production app, and removes the container
+16 container, applies all migrations, runs the current application in development mode, and removes the container
 on completion. It overrides database/auth settings with disposable values and
 does not connect to an existing development or production database.
 
@@ -27,3 +27,9 @@ fixtures are excluded from the production image context.
 
 These tests verify integration with a controlled provider; production cutover
 still requires a real Google and GitHub sign-in smoke check.
+
+The legacy production build has a recorded intermittent server-action refresh
+failure (see `docs/behavior-parity.md`). Reproduce it with
+`E2E_PRODUCTION=1 npm run test:e2e`. The development baseline captures the intended
+flows; it does not certify the legacy production runtime. The replacement must
+run the same behavior assertions against its production build before cutover.

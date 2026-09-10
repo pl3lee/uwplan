@@ -31,7 +31,7 @@ export default defineConfig({
     { name: "mobile", use: { ...devices["iPhone 13"] }, grep: /@mobile/ },
   ],
   webServer: {
-    command: `npx next build && node --import ./e2e/provider-fetch.mjs node_modules/next/dist/bin/next start --hostname localhost --port ${process.env.E2E_PORT}`,
+    command: `${process.env.E2E_PRODUCTION === "1" ? "npx next build && " : ""}node --import ./e2e/provider-fetch.mjs node_modules/next/dist/bin/next ${process.env.E2E_PRODUCTION === "1" ? "start" : "dev"} --hostname localhost --port ${process.env.E2E_PORT}`,
     url: `${process.env.E2E_BASE_URL}/signin`,
     reuseExistingServer: false,
     timeout: 300_000,

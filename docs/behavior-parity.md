@@ -49,3 +49,24 @@ request authorization independently of what the UI exposes.
   when porting services.
 - The existing course tables offer sorting, and the template selector offers
   name search. There is no general course-search/filter control to preserve.
+
+## Baseline regression found by browser tests
+
+On the legacy production build, a course-selection action could save successfully
+and return updated server-component data while the selected-course table retained
+its old props. The same failure affected fixed-course toggles and changes to a
+selected free course. The browser baseline asserts the visible result before
+reloading, so it detects this failure rather than accepting persistence alone.
+
+The legacy baseline uses the development server to capture intended behavior.
+`E2E_PRODUCTION=1 npm run test:e2e` preserves a reproduction against the legacy
+production build. Explicit router refreshes did not reliably fix this failure
+and were removed. The production-only refresh failure remains unresolved in the
+legacy runtime; it is not accepted as successful behavior for the replacement.
+Run the complete unchanged behavior suite against the replacement production
+build before cutover.
+
+The baseline also found that the drag context generated different accessibility
+IDs during SSR and hydration. A stable ID derived from the active schedule fixes
+the mismatch, including the development error badge that covered mobile
+navigation. The browser drag/drop and mobile assignment flows cover the fix.

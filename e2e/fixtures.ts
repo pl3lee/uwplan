@@ -110,6 +110,9 @@ export async function mutate(page: Page, action: () => Promise<unknown>) {
   // Mutation responses acknowledge the write. The flow then asserts rendered
   // state and reloads it; it does not rely on optimistic updates alone.
   expect(response.status()).toBeLessThan(500);
+  // The legacy UI can repaint from an earlier action while another is pending.
+  // Settle the action and its refresh before the next user interaction.
+  await page.waitForLoadState("networkidle");
 }
 
 export async function reloadSavedPage(page: Page) {

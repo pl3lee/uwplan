@@ -504,7 +504,10 @@ export function Scheduler({
 
         {/* Desktop view with DnD */}
         <div className="hidden lg:block">
-          <DndContext onDragEnd={handleDragEnd}>
+          <DndContext
+            id={`schedule-${activeScheduleId}`}
+            onDragEnd={handleDragEnd}
+          >
             <div className="grid grid-cols-[0.25fr,0.75fr] gap-6">
               <AvailableCourses courses={optimisticCoursesToSchedule} />
               <div className="w-full space-y-4">
@@ -534,7 +537,12 @@ function AvailableCourses({ courses }: { courses: TermCourseInstance[] }) {
   });
 
   return (
-    <div ref={setNodeRef} className="h-full" role="region" aria-label="Available Courses">
+    <div
+      ref={setNodeRef}
+      className="h-full"
+      role="region"
+      aria-label="Available Courses"
+    >
       <Card
         className={cn(
           "h-full transition-shadow",
