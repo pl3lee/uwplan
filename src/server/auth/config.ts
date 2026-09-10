@@ -13,7 +13,7 @@ import {
   userTermRanges,
 } from "@/server/db/schema";
 import Google from "next-auth/providers/google";
-import GitHub from "next-auth/providers/github";
+import { githubProvider } from "./github";
 
 /**
  * Module augmentation for `next-auth` types. Allows us to add custom properties to the `session`
@@ -44,7 +44,7 @@ declare module "next-auth" {
 export const authConfig = {
   providers: [
     Google,
-    GitHub,
+    githubProvider,
     /**
      * ...add more providers here.
      *

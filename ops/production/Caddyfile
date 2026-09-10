@@ -1,0 +1,6 @@
+uwplan.com {
+    reverse_proxy 127.0.0.1:5002
+}
+www.uwplan.com {
+    redir https://uwplan.com{uri} permanent
+}
