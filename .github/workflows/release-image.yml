@@ -94,7 +94,6 @@ jobs:
           retention-days: 30
 
   deploy:
-    if: github.ref == 'refs/heads/main'
     needs: release
     runs-on: ubuntu-latest
     environment: production
@@ -119,16 +118,19 @@ jobs:
           printf '%s\n' "$DEPLOY_KEY" > "$RUNNER_TEMP/uwplan-ssh/id_ed25519"
           printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$RUNNER_TEMP/uwplan-ssh/known_hosts"
 
-      - name: Admit the immutable release through the forced command
+      - name: Validate access or admit the immutable release
         env:
           DEPLOY_DIGEST: ${{ needs.release.outputs.manifest_digest }}
           DEPLOY_HOST: ${{ vars.UWPLAN_DEPLOY_HOST }}
           DEPLOY_REVISION: ${{ github.sha }}
+          DEPLOY_REF: ${{ github.ref }}
         run: |
           if [[ ! "$DEPLOY_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
             echo "Refusing to deploy an invalid manifest digest" >&2
             exit 1
           fi
+          COMMAND="deploy $DEPLOY_DIGEST $DEPLOY_REVISION"
+          if [[ "$DEPLOY_REF" != "refs/heads/main" ]]; then COMMAND="status"; fi
           ssh \
             -i "$RUNNER_TEMP/uwplan-ssh/id_ed25519" \
             -o BatchMode=yes \
@@ -136,4 +138,4 @@ jobs:
             -o StrictHostKeyChecking=yes \
             -o "UserKnownHostsFile=$RUNNER_TEMP/uwplan-ssh/known_hosts" \
             "uwplan-deploy@$DEPLOY_HOST" \
-            "deploy $DEPLOY_DIGEST $DEPLOY_REVISION"
+            "$COMMAND"

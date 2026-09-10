@@ -111,7 +111,13 @@ if __name__ == '__main__':
     try:
         if len(sys.argv) != 2:
             raise ValueError('Expected one original SSH command')
-        deploy(*parse_command(sys.argv[1]))
+        if sys.argv[1] == 'status':
+            identity = release_identity(RELEASE.read_bytes())
+            healthy = ready(*identity)
+            print(json.dumps({'ready': healthy, 'frozen': (STATE / 'frozen').exists(), 'digest': identity[0], 'revision': identity[1]}))
+            if not healthy: sys.exit(1)
+        else:
+            deploy(*parse_command(sys.argv[1]))
     except Exception as error:
         print(str(error), file=sys.stderr)
         sys.exit(1)
