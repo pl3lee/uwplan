@@ -74,10 +74,18 @@ jobs:
 
       - uses: docker/setup-buildx-action@v3
 
+      - name: Share temporary encryption entropy between the two test builds
+        run: |
+          KEY=$(openssl rand -base64 32)
+          echo "::add-mask::$KEY"
+          echo "REPRODUCTION_KEY=$KEY" >> "$GITHUB_ENV"
+
       - name: Clean deterministic Docker image A (loaded, non-pushed)
         uses: docker/build-push-action@v6
         with:
           context: .
+          secrets: |
+            next_server_actions_encryption_key=${{ env.REPRODUCTION_KEY }}
           build-args: |
             RELEASE_REVISION=${{ github.sha }}
             SOURCE_DATE_EPOCH=${{ steps.source.outputs.epoch }}
@@ -92,6 +100,8 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          secrets: |
+            next_server_actions_encryption_key=${{ env.REPRODUCTION_KEY }}
           build-args: |
             RELEASE_REVISION=${{ github.sha }}
             SOURCE_DATE_EPOCH=${{ steps.source.outputs.epoch }}
