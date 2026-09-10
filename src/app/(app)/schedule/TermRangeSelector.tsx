@@ -37,7 +37,7 @@ export function TermRangeSelector({
             onStartTermChange({ ...startTerm, season })
           }
         >
-          <SelectTrigger className="w-[100px]">
+          <SelectTrigger className="w-[100px]" aria-label="Start season">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -54,7 +54,7 @@ export function TermRangeSelector({
             onStartTermChange({ ...startTerm, year: parseInt(year) })
           }
         >
-          <SelectTrigger className="w-[100px]">
+          <SelectTrigger className="w-[100px]" aria-label="Start year">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -74,7 +74,7 @@ export function TermRangeSelector({
             onEndTermChange({ ...endTerm, season })
           }
         >
-          <SelectTrigger className="w-[100px]">
+          <SelectTrigger className="w-[100px]" aria-label="End season">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -91,7 +91,7 @@ export function TermRangeSelector({
             onEndTermChange({ ...endTerm, year: parseInt(year) })
           }
         >
-          <SelectTrigger className="w-[100px]">
+          <SelectTrigger className="w-[100px]" aria-label="End year">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

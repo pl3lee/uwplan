@@ -8,6 +8,9 @@ coverage
 node_modules
 npm-debug.log*
 tests
+e2e
+output
+playwright.config.ts
 .codex-staging
 *.dump
 *.backup

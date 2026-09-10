@@ -135,7 +135,7 @@ function CourseCard({
               }
             }}
           >
-            <SelectTrigger className="w-32">
+            <SelectTrigger className="w-32" aria-label={`Term for ${course.courseCode}`}>
               <SelectValue placeholder="Select term" />
             </SelectTrigger>
             <SelectContent>

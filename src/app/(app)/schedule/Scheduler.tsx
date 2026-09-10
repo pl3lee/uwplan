@@ -534,7 +534,7 @@ function AvailableCourses({ courses }: { courses: TermCourseInstance[] }) {
   });
 
   return (
-    <div ref={setNodeRef} className="h-full">
+    <div ref={setNodeRef} className="h-full" role="region" aria-label="Available Courses">
       <Card
         className={cn(
           "h-full transition-shadow",
@@ -566,7 +566,7 @@ function TermBoard({
   });
 
   return (
-    <div ref={setNodeRef} className="h-full">
+    <div ref={setNodeRef} className="h-full" role="region" aria-label={name}>
       <Card
         className={cn(
           "h-full transition-shadow",

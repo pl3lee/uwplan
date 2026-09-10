@@ -5,6 +5,9 @@ on:
     branches: [main]
 
 jobs:
+  e2e:
+    uses: ./.github/workflows/browser-tests.yml
+
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -43,7 +46,7 @@ jobs:
       - run: python3 -m unittest discover -s tests -p test_production_deploy.py
 
   image:
-    needs: [lint, test]
+    needs: [lint, test, e2e]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
