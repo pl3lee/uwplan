@@ -1,6 +1,7 @@
 name: Release Image
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
 
@@ -93,6 +94,7 @@ jobs:
           retention-days: 30
 
   deploy:
+    if: github.ref == 'refs/heads/main'
     needs: release
     runs-on: ubuntu-latest
     environment: production
