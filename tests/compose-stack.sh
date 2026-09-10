@@ -79,7 +79,7 @@ chmod 600 "$alloy_environment"
 docker pull "$CADDY_IMAGE" >/dev/null
 docker run --rm \
   --volume "$(pwd)/ops/caddy/Caddyfile:/etc/caddy/Caddyfile:ro" \
-  "$CADDY_IMAGE" caddy adapt --config /etc/caddy/Caddyfile --adapter caddyfile \
+  "$CADDY_IMAGE" adapt --config /etc/caddy/Caddyfile --adapter caddyfile \
   --validate >/dev/null
 docker run --rm \
   --env "UWPLAN_CADDY_APEX=https://localhost:${CADDY_HTTPS_PORT}" \
@@ -87,7 +87,7 @@ docker run --rm \
   --env "UWPLAN_CADDY_CANONICAL_URL=https://localhost:${CADDY_HTTPS_PORT}" \
   --env "UWPLAN_CADDY_TLS_DIRECTIVE=tls internal" \
   --volume "$(pwd)/ops/caddy/Caddyfile:/etc/caddy/Caddyfile:ro" \
-  "$CADDY_IMAGE" caddy adapt --config /etc/caddy/Caddyfile --adapter caddyfile \
+  "$CADDY_IMAGE" adapt --config /etc/caddy/Caddyfile --adapter caddyfile \
   --validate >/dev/null
 docker run --detach --name "$neighbor_name" --entrypoint /bin/sh "$CADDY_IMAGE" \
   -c 'while true; do sleep 3600; done' >/dev/null

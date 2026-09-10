@@ -10,7 +10,7 @@ services:
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     env_file:
-      - path: /etc/uwplan-production/app.env
+      - path: ${UWPLAN_CONFIG_DIR:-/etc/uwplan-production}/app.env
         format: raw
     environment:
       RELEASE_DIGEST: ${RELEASE_DIGEST:?digest required}
@@ -52,7 +52,7 @@ services:
     mem_limit: 192m
     memswap_limit: 512m
     env_file:
-      - path: /etc/uwplan-production/migrator.env
+      - path: ${UWPLAN_CONFIG_DIR:-/etc/uwplan-production}/migrator.env
         format: raw
     environment:
       RELEASE_DIGEST: ${RELEASE_DIGEST:?digest required}
@@ -60,6 +60,6 @@ services:
     command: [node, /app/ops/deploy/migrate-release.mjs]
 secrets:
   postgres_admin_password:
-    file: /etc/uwplan-production/postgres-admin-password
+    file: ${UWPLAN_CONFIG_DIR:-/etc/uwplan-production}/postgres-admin-password
 volumes:
   postgres_data:

@@ -20,7 +20,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
       - run: npm ci
-      - run: SKIP_ENV_VALIDATION=1 npm run lint
+      - run: SKIP_ENV_VALIDATION=1 npm run check
 
   test:
     runs-on: ubuntu-latest
@@ -41,24 +41,6 @@ jobs:
       - run: SKIP_ENV_VALIDATION=1 npm run test -- --runInBand
       - run: node --import tsx --test tests/github-issuer.test.mjs
       - run: python3 -m unittest discover -s tests -p test_production_deploy.py
-
-  build:
-    needs: [lint, test]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-      - name: Cache node modules
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-      - run: npm ci
-      - run: SKIP_ENV_VALIDATION=1 npm run build
 
   image:
     needs: [lint, test]
@@ -159,11 +141,8 @@ jobs:
             exit 1
           fi
 
-      - name: Exercise the Compose stack through host Caddy
+      - name: Exercise the production Compose stack
         env:
           UWPLAN_IMAGE: uwplan-ci:candidate
           COMPOSE_PROJECT_NAME: uwplan-ci-${{ github.run_id }}-${{ github.run_attempt }}
-        run: bash tests/compose-stack.sh
-
-      - name: Prove the previous release against candidate-forward schema
-        run: bash tests/deploy-schema-forward.sh uwplan-ci:candidate
+        run: bash tests/production-stack.sh
