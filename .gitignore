@@ -48,3 +48,4 @@ yarn-error.log*
 
 # db data
 data
+__pycache__/
