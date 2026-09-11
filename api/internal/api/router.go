@@ -15,6 +15,7 @@ type Dependencies struct {
 	OAuth     OAuthService
 	Schedules ScheduleService
 	Courses   CourseService
+	Templates TemplateService
 }
 
 func NewRouter(cfg config.Config, deps Dependencies) (http.Handler, huma.API) {
