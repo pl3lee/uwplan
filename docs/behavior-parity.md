@@ -76,9 +76,11 @@ build: create/rename/delete with a retained final schedule, drag/move/remove,
 term-range persistence, exact CSV export, and mobile navigation/assignment.
 The shared response helper recognizes CSV downloads served by GET as well as
 legacy action responses. Template creation/copy/rename/delete, owned-plan visibility, admin user listing,
-and admin cross-owner rename now have replacement implementations too. Run the
-27 non-OAuth shared cases together; the six OAuth callbacks still require the
-Go provider transport fixture before complete parity and cutover.
+and admin cross-owner rename now have replacement implementations too. The
+complete 33-case suite also exercises Google/GitHub provisioning and returning
+accounts through the production Go binary and isolated provider transport.
+Run it with `E2E_RUNTIME=go pnpm test:e2e`; CI requires every case. Real provider
+sign-in and stored data after application restarts remain cutover/rehearsal checks.
 
 The baseline also found that the drag context generated different accessibility
 IDs during SSR and hydration. A stable ID derived from the active schedule fixes

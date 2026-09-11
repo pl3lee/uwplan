@@ -101,11 +101,13 @@ Owned-template queries back management; the admin loader and API both enforce
 the current admin role. Successful template mutations refresh membership,
 definitions, owned/all lists, and affected schedules.
 
-CI now runs all 27 non-OAuth shared cases on the replacement production build:
+CI runs all 33 shared cases on the replacement production build, including
+Google/GitHub provisioning and returning-user sessions:
 
 ```sh
-E2E_RUNTIME=go pnpm test:e2e --grep-invert 'callback provisions a user'
+E2E_RUNTIME=go pnpm test:e2e
 ```
 
-The six Google/GitHub callback cases still require the Go provider transport
-fixture and remain part of the complete legacy suite during the transition.
+The provider fixture uses a temporary CA and restricted HTTPS proxy inside the
+disposable Go stack. Production authentication logic and the shared browser
+assertions remain unchanged. See `e2e/README.md` for isolation and prerequisites.
