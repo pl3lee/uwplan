@@ -1,0 +1,12 @@
+all: false
+dir: '{{.InterfaceDir}}'
+filename: mock.go
+force-file-write: true
+formatter: goimports
+pkgname: '{{.SrcPackageName}}'
+structname: '{{.InterfaceName}}Mock'
+template: testify
+packages:
+  github.com/pl3lee/uwplan/api/internal/service/auth:
+    config:
+      all: true

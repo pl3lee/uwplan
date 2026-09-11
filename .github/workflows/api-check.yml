@@ -20,6 +20,9 @@ jobs:
         with:
           go-version-file: api/go.mod
           cache-dependency-path: api/go.sum
+      - run: make generate
+      - name: Check generated artifacts
+        run: test -z "$(git status --porcelain -- .)"
       - run: go vet ./...
       - run: make test
       - run: go build ./...

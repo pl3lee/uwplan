@@ -1,7 +1,7 @@
 # UWPlan API
 
-The Go foundation currently contains the academic-term domain and the PostgreSQL
-schema transition. The existing application and release migrator remain active
+The Go foundation contains the academic-term domain, PostgreSQL schema
+transition, account resolution and provisioning, and Redis session services. The existing application and release migrator remain active
 until the API, authentication, and web replacement are ready for cutover.
 
 Use Go 1.26 and Docker. From `api/`, run `make test-unit` for the default suite or
@@ -32,3 +32,27 @@ new versions. Preserve the legacy migration history for upgrade testing and
 recovery. Coordinate the release migration runner before production adoption;
 rollback should restore the prior application images while retaining compatible
 schema changes.
+
+## Account and session boundaries
+
+`internal/service/auth` owns the user and session repository ports. PostgreSQL
+queries are generated with sqlc; persistence records are translated into domain
+objects in repositories. Run `make generate` to reproduce sqlc queries and
+package-local mockery mocks. CI rejects generated changes.
+
+Resolve existing accounts by provider plus provider account ID, preserving legacy
+user IDs and roles. An unlinked provider with an existing email is rejected;
+email alone cannot transfer ownership. New accounts receive UUIDv7 IDs and a
+plan, Default schedule, and five-year term range in one transaction. Advisory
+locks serialize concurrent first sign-ins. A failed provisioning step rolls back
+the whole account.
+
+Session credentials contain 256 random bits. Only their SHA-256 hash is stored in
+Redis, with a positive expiry; logout deletes that session. Authentication reads
+the user's current role from PostgreSQL, so role changes are not cached in a
+session. Missing or expired sessions are distinct from dependency outages.
+
+These services are not exposed over HTTP yet. OAuth verification, state and CSRF
+protection, secure cookie handling, and Huma endpoints are the next layer. The
+existing authentication runtime remains active until the complete replacement
+passes the shared browser suite.
