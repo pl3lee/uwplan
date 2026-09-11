@@ -285,14 +285,19 @@ function CourseChoice({
   );
 }
 
+type CourseCatalog = {
+  byID: ReadonlyMap<string, CourseBody>;
+  byCode: ReadonlyMap<string, CourseBody>;
+};
+
 function FreeCourseCode({
   slot,
   course,
-  courses,
+  byCode,
 }: {
   slot: TemplateCourseItemBody;
   course: CourseBody | undefined;
-  courses: CourseBody[];
+  byCode: CourseCatalog["byCode"];
 }) {
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => setHydrated(true), []);
@@ -316,7 +321,7 @@ function FreeCourseCode({
         onChange={(event) => {
           const code = event.target.value.replace(/\s+/g, "").toUpperCase();
           setValue(code);
-          const match = courses.find((course) => course.code === code);
+          const match = byCode.get(code);
           if (match)
             mutation.mutate(() =>
               changeFreeCourse(slot.id, { course_id: match.id }),
@@ -335,14 +340,13 @@ function FreeCourseCode({
 
 export function RequirementCourses({
   slots,
-  courses,
+  catalog,
   plan,
 }: {
   slots: TemplateCourseItemBody[];
-  courses: CourseBody[];
+  catalog: CourseCatalog;
   plan: PlanStateBody;
 }) {
-  const byID = new Map(courses.map((course) => [course.id, course]));
   const choices = new Map(
     (plan.choices ?? []).map((choice) => [choice.item_id, choice]),
   );
@@ -350,7 +354,7 @@ export function RequirementCourses({
   const rows = slots.map((slot) => {
     const choice = choices.get(slot.id);
     const id = slot.type === "free" ? choice?.course_id : slot.course_id;
-    const course = id ? byID.get(id) : undefined;
+    const course = id ? catalog.byID.get(id) : undefined;
     return {
       id: slot.id,
       course,
@@ -368,7 +372,7 @@ export function RequirementCourses({
             key={slot.id}
             slot={slot}
             course={course}
-            courses={courses}
+            byCode={catalog.byCode}
           />
         ) : course ? (
           <CourseLink course={course} />

@@ -92,3 +92,14 @@ A release-run WebKit trace also exposed a free-course input accepting text after
 a reload before its React change handler was ready. No mutation request followed
 the fill. Disable that field until hydration finishes so early user input cannot
 be discarded. The existing reload-and-change browser assertion covers this case.
+
+## Catalog navigation regression
+
+Select renders its authenticated layout immediately and loads course data from
+the browser query cache, with explicit initial loading and retry states. The
+production-sized catalog regression verifies that SSR HTML excludes the catalog,
+three Select/Schedule round trips reuse it beyond the previous 30-second cache
+window, and a delayed background refresh leaves saved rows usable. Course
+selection, free-course typing, previews, and mutation invalidation retain their
+existing behavior. `pnpm test:e2e` now runs 35 cases, including initial catalog
+failure recovery.
