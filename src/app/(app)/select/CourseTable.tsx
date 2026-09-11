@@ -1,6 +1,6 @@
 "use client";
 
-import { useOptimistic, useTransition } from "react";
+import { useEffect, useOptimistic, useTransition } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import {
@@ -56,6 +56,9 @@ export function CourseTable({
   selectedCourseItems,
   otherSelectedCourses,
 }: CourseTableProps) {
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
+
   const initFreeCourseMap = new Map();
   freeCourses.forEach((freeCourse) => {
     initFreeCourseMap.set(
@@ -350,6 +353,7 @@ export function CourseTable({
                         toast.error("Failed to update free course");
                       }
                     }}
+                    disabled={!hydrated}
                     placeholder="Course code"
                     className="w-fit text-sm"
                   />
