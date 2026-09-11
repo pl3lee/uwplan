@@ -1,3 +1,4 @@
+import { injectTraceHeaders, logEvent } from "../../observability.mjs";
 import type { ApiRequestOptions } from "./api-fetch";
 
 function apiOrigin(): string {
@@ -32,6 +33,7 @@ export function serverApiOptions(request: Request): ApiRequestOptions {
       /^(?:__Host-)?uwplan_(?:session|oauth_google|oauth_github)=/.test(part),
     );
   if (cookies.length) headers.Cookie = cookies.join("; ");
+  injectTraceHeaders(headers, request);
   return {
     baseUrl: apiOrigin(),
     headers,
@@ -121,13 +123,9 @@ export async function proxyApiRequest(request: Request): Promise<Response> {
     });
   } catch (error) {
     if (error instanceof Response) return error;
-    console.error(
-      JSON.stringify({
-        service: "uwplan-web",
-        event: "api.proxy.failed",
-        error_type: error instanceof Error ? error.name : "unknown",
-      }),
-    );
+    logEvent("error", "api.proxy.failed", {
+      error_type: error instanceof Error ? error.name : "unknown",
+    });
     return Response.json(
       { title: "Bad Gateway", status: 502, detail: "API unavailable" },
       { status: 502, headers: { "Cache-Control": "no-store" } },

@@ -1,18 +1,18 @@
-import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import express from "express";
+import {
+  logEvent,
+  requestTelemetry,
+  setupObservability,
+} from "./observability.mjs";
 
-const log = (fields) =>
-  console.log(
-    JSON.stringify({
-      timestamp: new Date().toISOString(),
-      service: "uwplan-web",
-      ...fields,
-    }),
-  );
+const log = ({ event, ...fields }) =>
+  logEvent(event.endsWith(".failed") ? "error" : "info", event, fields);
+let shutdownTelemetry = async () => {};
 
 async function main() {
   process.env.NODE_ENV = "production";
+  shutdownTelemetry = setupObservability();
   // Load React only after selecting production mode so the renderer and router
   // use the same runtime even when NODE_ENV was absent in the launch environment.
   const { createRequestHandler } = await import("@react-router/express");
@@ -23,21 +23,7 @@ async function main() {
   const build = await import("./build/server/index.js");
   const app = express();
   app.disable("x-powered-by");
-  app.use((req, res, next) => {
-    const requestId = randomUUID();
-    const started = performance.now();
-    res.setHeader("X-Request-ID", requestId);
-    res.once("finish", () =>
-      log({
-        event: "http.request",
-        request_id: requestId,
-        method: req.method,
-        status: res.statusCode,
-        duration_ms: Math.round(performance.now() - started),
-      }),
-    );
-    next();
-  });
+  app.use(requestTelemetry);
   const client = fileURLToPath(new URL("./build/client/", import.meta.url));
   app.use(
     "/assets",
@@ -65,23 +51,26 @@ async function main() {
   server.requestTimeout = 30_000;
   server.headersTimeout = 15_000;
   server.keepAliveTimeout = 5_000;
-  server.on("error", (error) => {
+  server.on("error", async (error) => {
     log({ event: "server.failed", error_type: error.name });
     process.exitCode = 1;
+    await shutdownTelemetry();
   });
   for (const signal of ["SIGINT", "SIGTERM"])
     process.once(signal, () => {
-      server.close(() => {
+      server.close(async () => {
+        await shutdownTelemetry();
         process.exitCode = 0;
       });
       setTimeout(() => server.closeAllConnections(), 10_000).unref();
     });
 }
 
-main().catch((error) => {
+main().catch(async (error) => {
   log({
     event: "startup.failed",
     error_type: error instanceof Error ? error.name : "unknown",
   });
   process.exitCode = 1;
+  await shutdownTelemetry();
 });

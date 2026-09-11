@@ -5,8 +5,8 @@ TanStack Query, and an Orval-generated Huma client.
 
 The rewrite is in progress. Public pages, the sign-in entry point, course
 selection, scheduling, template creation/copying/management, and administration
-are ported. OAuth browser-provider parity and deployment/telemetry rehearsals
-are still pending. Production continues
+are ported, including shared OAuth browser-provider parity. Deployment and live
+telemetry rehearsals are still pending. Production continues
 to use the existing application until the cutover checks in
 [`docs/rewrite-plan.md`](../docs/rewrite-plan.md) pass.
 
@@ -34,6 +34,10 @@ credentials and PostgreSQL/Redis as described in [`api/README.md`](../api/README
 | `API_ORIGIN` | Internal API origin, required in production; never included in browser code |
 | `PORT` | Web server listening port; the production server defaults to 3000 |
 | `HOST` | Web server listening address |
+| `OTEL_ENABLED` | Set to `true` to export server logs and request traces over OTLP/HTTP |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | Collector base URL; standard per-signal endpoint and header variables are also supported |
+| `OTEL_EXPORTER_OTLP_HEADERS` | Collector authentication headers; keep these in server secrets |
+| `RELEASE_DIGEST` / `RELEASE_REVISION` | Immutable web image digest and source revision attached to logs and traces |
 
 Build and run the production server:
 
@@ -62,10 +66,14 @@ pnpm --filter @uwplan/web test:browser
 
 Commit `app/generated/` with API changes. CI regenerates it and rejects drift.
 Vitest covers the transport, session lookup, and proxy boundary. The production
-server test sends callback credential sentinels and verifies redacted output.
-The custom server emits structured request logs without URLs, cookies, or other
-request headers; OTLP export and release correlation are pending the deployment
-stage. The web browser
+server tests send callback credential sentinels and verify redacted output and
+OTLP payloads. The custom server emits structured logs as `uwplan-web` with
+release identity, bounded route names, status, duration, and request/trace IDs.
+It propagates W3C trace context to the API and accepts bounded validation IDs for
+deployment checks. Query strings, raw paths, cookies, authorization headers, and
+baggage are excluded. OTLP queues and export timeouts are bounded; collector
+outages leave requests available, and shutdown flushes pending events. Live
+collector routing and Grafana verification remain part of deployment. The web browser
 checks exercise public pages and native provider form submission on the production
 build in desktop/mobile Chromium. They intercept provider-entry navigation and
 do not claim OAuth parity. The shared course-selection test also runs against
