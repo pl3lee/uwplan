@@ -13,29 +13,9 @@ import { usePlanningMutation } from "~/lib/planning-mutation";
 import { cn } from "~/lib/utils";
 import { ApiErrorMessage } from "./api-error";
 import { Button } from "./button";
+import { CourseDetails } from "./course-details";
 import { SelectField } from "./select-field";
 import { termLabels } from "./term-range";
-
-function CourseDetails({ course }: { course: CourseBody }) {
-  return (
-    <div className="space-y-2 text-sm">
-      {[
-        ["Description", course.description],
-        ["Prerequisites", course.prereqs],
-        ["Antirequisites", course.antireqs],
-        ["Corequisites", course.coreqs],
-      ].map(
-        ([label, value]) =>
-          value && (
-            <div key={label}>
-              <span className="font-medium">{label}: </span>
-              <span className="text-muted-foreground">{value}</span>
-            </div>
-          ),
-      )}
-    </div>
-  );
-}
 
 function CourseInfoDialog({ course }: { course: CourseBody }) {
   return (

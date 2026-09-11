@@ -22,6 +22,7 @@ import type {
 import { usePlanningMutation } from "~/lib/planning-mutation";
 import { ApiErrorMessage } from "./api-error";
 import { Button, buttonVariants } from "./button";
+import { CourseDetails } from "./course-details";
 
 export function CourseLink({ course }: { course: CourseBody }) {
   return (
@@ -37,22 +38,7 @@ export function CourseLink({ course }: { course: CourseBody }) {
       <PreviewCard.Portal>
         <PreviewCard.Positioner sideOffset={4} className="z-50">
           <PreviewCard.Popup className="w-80 rounded-md border bg-popover p-4 text-popover-foreground shadow-md">
-            <div className="flex flex-col gap-2 text-sm">
-              {[
-                ["Description", course.description],
-                ["Prerequisites", course.prereqs],
-                ["Antirequisites", course.antireqs],
-                ["Corequisites", course.coreqs],
-              ].map(
-                ([label, value]) =>
-                  value && (
-                    <div key={label}>
-                      <span className="font-medium">{label}: </span>
-                      <span className="text-muted-foreground">{value}</span>
-                    </div>
-                  ),
-              )}
-            </div>
+            <CourseDetails course={course} />
           </PreviewCard.Popup>
         </PreviewCard.Positioner>
       </PreviewCard.Portal>
