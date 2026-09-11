@@ -15,3 +15,10 @@ test-integration:
 
 migrate:
 	$(GO) run ./cmd/migrate
+
+.PHONY: generate sqlc mocks
+generate: sqlc mocks
+sqlc:
+	$(GO) tool sqlc generate
+mocks:
+	$(GO) tool mockery --config .mockery.yaml
