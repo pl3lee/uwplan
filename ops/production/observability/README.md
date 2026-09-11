@@ -30,7 +30,10 @@ cutover. Logs use the separate `uwplan-api` and `uwplan-web` service names.
 
 For deployment validation, send a request to `/api/ready` with a unique
 `x-uwplan-validation-id: validation-UUID` header. Find both service records with
-that identifier and their admitted release identities in Loki. Verify their
+that identifier and their admitted release identities in Loki. Native OTLP stores
+validation IDs as structured metadata, so use
+`{service_name=~"uwplan-api|uwplan-web"} | validation_id="validation-UUID"`
+rather than a text search of the log body. Verify their
 shared trace ID in Tempo and fresh `uwplan_health_requests_total` samples for the
 API. A healthy HTTP response alone does not prove telemetry ingestion. Keep all
 Grafana credentials in the configured credential store; do not include tokens,
