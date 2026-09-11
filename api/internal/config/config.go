@@ -2,7 +2,9 @@ package config
 
 import (
 	"errors"
+	"net"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -22,14 +24,34 @@ type Config struct {
 func Load(getenv func(string) string) (Config, error) {
 	origin := getenv("PUBLIC_ORIGIN")
 	parsed, err := url.Parse(origin)
-	if err != nil || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" || (parsed.Path != "" && parsed.Path != "/") {
+	if err != nil || parsed.Hostname() == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.ForceQuery || parsed.Fragment != "" || (parsed.Path != "" && parsed.Path != "/") {
 		return Config{}, errors.New("PUBLIC_ORIGIN must be an origin without credentials, path, query, or fragment")
 	}
+	parsed.Scheme = strings.ToLower(parsed.Scheme)
+	hostname := strings.ToLower(parsed.Hostname())
 	secure := parsed.Scheme == "https"
-	if !secure && (parsed.Scheme != "http" || (parsed.Hostname() != "localhost" && parsed.Hostname() != "127.0.0.1" && parsed.Hostname() != "::1")) {
+	if !secure && (parsed.Scheme != "http" || (hostname != "localhost" && hostname != "127.0.0.1" && hostname != "::1")) {
 		return Config{}, errors.New("PUBLIC_ORIGIN must use HTTPS except on loopback")
 	}
-	cfg := Config{HTTPAddress: getenv("HTTP_ADDR"), DatabaseURL: getenv("DATABASE_URL"), RedisURL: getenv("REDIS_URL"), PublicOrigin: strings.TrimSuffix(origin, "/"), SecureCookies: secure, SessionTTL: 30 * 24 * time.Hour, Release: health.Release{Digest: getenv("RELEASE_DIGEST"), Revision: getenv("RELEASE_REVISION")}}
+	port := parsed.Port()
+	if port != "" {
+		number, err := strconv.ParseUint(port, 10, 16)
+		if err != nil {
+			return Config{}, errors.New("PUBLIC_ORIGIN has an invalid port")
+		}
+		port = strconv.FormatUint(number, 10)
+		if (secure && port == "443") || (!secure && port == "80") {
+			port = ""
+		}
+	}
+	host := hostname
+	if port != "" {
+		host = net.JoinHostPort(hostname, port)
+	} else if strings.Contains(hostname, ":") {
+		host = "[" + hostname + "]"
+	}
+	origin = parsed.Scheme + "://" + host
+	cfg := Config{HTTPAddress: getenv("HTTP_ADDR"), DatabaseURL: getenv("DATABASE_URL"), RedisURL: getenv("REDIS_URL"), PublicOrigin: origin, SecureCookies: secure, SessionTTL: 30 * 24 * time.Hour, Release: health.Release{Digest: getenv("RELEASE_DIGEST"), Revision: getenv("RELEASE_REVISION")}}
 	if cfg.DatabaseURL == "" || cfg.RedisURL == "" {
 		return Config{}, errors.New("DATABASE_URL and REDIS_URL are required")
 	}
