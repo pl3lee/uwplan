@@ -73,7 +73,9 @@ capacity benchmark.
 
 ## Remaining verification
 
-The initial 30-minute production watch is in progress. Two error-severity web
+The initial production watch passed from 08:15:02 to 08:45:02 UTC on 2026-09-11:
+61 samples at 30-second intervals, with zero readiness or release-identity failures.
+Two error-severity web
 records correlated to unmatched requests returning 404; a focused regression
 check separates expected HTTP rejection from actual rendering/server failures.
 The observed application responses did not return 5xx during that sample window.
@@ -83,7 +85,10 @@ update is prepared, preserving its UID and notification route, and awaits
 approval for reloading it through a brief shared Grafana restart. API updates
 cannot change a file-provisioned rule's provenance.
 
-The runtime cleanup and expected-404 telemetry fix must pass review/CI, merge,
-and deploy before declaring the migration complete. Live course refresh remains
+The runtime cleanup passed review and all five CI checks and merged as PR #91,
+revision `c5fb5895d50c7a6243d081b87956529e1426e5cd`; its release is in progress.
+The expected-404 telemetry fix passed review and remains in PR #92. Its final
+checks and deployment must finish before declaring the migration complete.
+Live course refresh remains
 unverified because the upstream returns HTTP 403; controlled import tests pass
 and the stored catalog is preserved.

@@ -37,7 +37,7 @@ request authorization independently of what the UI exposes.
 | `/api/live`, `/api/ready` | Go health/telemetry tests and `tests/rewrite-images.sh`; liveness during dependency failure, dependency readiness, redaction, and both release identities |
 | Rehearsal readiness failure | `tests/paired-production-stack.py` uses a deliberately unhealthy test artifact to exercise real admission/rollback; no production readiness-control endpoint or auth bypass |
 | Migrations, backups and deployment | `tests/test_production_deploy.py`, Go schema adoption tests, and the real paired migration/rollback/usable-restore rehearsal |
-| Course refresh/seed commands | Port CLI entry points and test a controlled upstream fixture; retain the real catalog |
+| Course refresh/seed commands | Go CLI tests cover controlled upstream responses, atomic catalog updates, reference preservation, and idempotent built-in seeding; the stored catalog is retained, while live refresh remains unverified because upstream returns HTTP 403 |
 | Telemetry | Go/web OTLP and redaction tests plus unique production web/API events, linked Tempo spans, and fresh Mimir counters; see `migration-verification.md` |
 
 ## Baseline findings and replacement coverage
