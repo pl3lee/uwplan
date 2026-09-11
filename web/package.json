@@ -1,0 +1,49 @@
+{
+  "name": "@uwplan/web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "api:generate": "orval --config orval.config.ts",
+    "build": "react-router build",
+    "dev": "react-router dev",
+    "start": "node server.mjs",
+    "typecheck": "react-router typegen && tsc --noEmit",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "test": "vitest run",
+    "test:browser": "playwright test",
+    "test:server": "node --test tests/server.test.mjs"
+  },
+  "dependencies": {
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-router": "7.18.3",
+    "@react-router/node": "7.18.3",
+    "@react-router/express": "7.18.3",
+    "express": "4.22.2",
+    "@tanstack/react-query": "5.102.8",
+    "@tanstack/react-form": "1.33.5",
+    "@tanstack/react-table": "8.21.3",
+    "@base-ui/react": "1.8.0",
+    "isbot": "5.2.2",
+    "@fontsource-variable/geist": "5.3.0",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "tailwind-merge": "3.5.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@react-router/dev": "7.18.3",
+    "@tailwindcss/vite": "4.3.3",
+    "tailwindcss": "4.3.3",
+    "vite": "7.3.6",
+    "vitest": "3.2.7",
+    "orval": "7.21.0",
+    "typescript": "5.9.3",
+    "@biomejs/biome": "2.5.13",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@types/node": "24.13.4",
+    "vite-tsconfig-paths": "5.1.4"
+  }
+}

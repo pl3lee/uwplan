@@ -50,3 +50,10 @@ yarn-error.log*
 # db data
 data
 __pycache__/
+
+# React Router workspace
+/web/node_modules/
+/web/build/
+/web/.react-router/
+/output/playwright-web/
+/web/coverage/

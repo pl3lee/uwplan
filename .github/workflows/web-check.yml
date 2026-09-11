@@ -1,0 +1,36 @@
+name: Web Check
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm generate:web
+      - name: Check generated client
+        run: test -z "$(git status --porcelain -- web/app/generated)"
+      - run: pnpm check:web
+      - run: pnpm test:web
+      - run: pnpm build:web
+      - run: pnpm --filter @uwplan/web test:server
+      - run: pnpm --filter @uwplan/web exec playwright install --with-deps chromium
+      - run: pnpm --filter @uwplan/web test:browser
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-web-${{ github.run_id }}-${{ github.run_attempt }}
+          path: output/playwright-web/
+          retention-days: 7
