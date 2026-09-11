@@ -40,6 +40,10 @@ export const templatesQuery = {
   queryFn: () => readTemplates(),
 };
 export const coursesQuery = {
+  // Catalog updates are infrequent. Keep it through normal planning sessions;
+  // stale data can refresh in the background without blocking navigation.
+  staleTime: 5 * 60_000,
+  gcTime: 30 * 60_000,
   queryKey: getListCoursesQueryKey(),
   queryFn: () => readCourses(),
 };
