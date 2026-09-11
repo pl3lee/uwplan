@@ -103,3 +103,30 @@ SIGTERM. It does not run migrations at startup.
 same Huma route registration used at runtime. `make generate` includes this step;
 CI checks the complete generated output. Live specs are available under
 `/api/openapi.json` and `/api/openapi.yaml`, with documentation at `/api/docs`.
+
+## Scheduling
+
+The schedule API derives ownership from the authenticated session. Mutations
+require the exact configured Origin and reject cross-site Fetch Metadata.
+Unknown and foreign-owned schedules use the same 404 response, including CSV
+export and course assignment/removal. The schedule service validates names,
+identifiers, academic terms, and chronological term ranges before persistence.
+
+| Route | Operations |
+| --- | --- |
+| `/api/v1/schedules` | GET list; POST create |
+| `/api/v1/schedules/{schedule_id}` | GET schedule, selected courses, assignments and term range; PATCH rename; DELETE |
+| `/api/v1/schedules/{schedule_id}/courses/{course_id}` | PUT assign/move using `term`; DELETE remove |
+| `/api/v1/schedules/{schedule_id}/export` | GET CSV with selected-course and term-column sections |
+| `/api/v1/term-range` | GET; PATCH start/end season and year |
+
+Schedule views use a consistent PostgreSQL snapshot. Assignment upserts retain
+one occurrence of a course per schedule. Deletion locks the owner's plan and
+checks the domain's final-schedule rule inside the transaction, preserving one
+schedule under concurrent deletions. Term-range changes retain assignments
+outside the newly visible range. New schedules receive UUIDv7 IDs; existing
+schedule and course IDs remain unchanged.
+
+Repository and HTTP integration tests exercise ownership, movement/removal,
+term-range persistence, CSV output, and concurrent deletion. The production UI
+continues using its existing runtime until the web replacement is ready.

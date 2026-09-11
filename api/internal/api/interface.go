@@ -5,13 +5,27 @@ import (
 
 	"github.com/pl3lee/uwplan/api/internal/domain/health"
 	"github.com/pl3lee/uwplan/api/internal/domain/oauth"
+	"github.com/pl3lee/uwplan/api/internal/domain/schedule"
 	"github.com/pl3lee/uwplan/api/internal/domain/session"
+	"github.com/pl3lee/uwplan/api/internal/domain/term"
 	"github.com/pl3lee/uwplan/api/internal/domain/user"
 )
 
 type AuthService interface {
 	Authenticate(context.Context, session.Credentials) (user.User, error)
 	Logout(context.Context, session.Credentials) error
+}
+
+type ScheduleService interface {
+	List(context.Context, user.User) (schedule.Collection, error)
+	View(context.Context, schedule.Reference) (schedule.View, error)
+	Create(context.Context, schedule.Create) (schedule.Schedule, error)
+	Rename(context.Context, schedule.Rename) error
+	Delete(context.Context, schedule.Reference) error
+	Assign(context.Context, schedule.Assign) error
+	RemoveCourse(context.Context, schedule.RemoveCourse) error
+	GetTermRange(context.Context, user.User) (term.Range, error)
+	ChangeTermRange(context.Context, schedule.TermRangeChange) error
 }
 
 type HealthGateway interface {
