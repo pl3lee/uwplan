@@ -26,13 +26,11 @@ For the migrated course-selection flow, run:
 E2E_RUNTIME=go pnpm test:e2e --grep 'template choices and fixed/free course selections persist'
 ```
 
-This builds the production Go binary and React Router application, adopts the
-legacy test schema with Goose, and runs against real PostgreSQL and an isolated
-Redis container. It preserves the browser assertions and covers Chromium,
-Firefox, and WebKit. Artifacts are in `output/playwright-go/`. The complete
-legacy suite remains active during migration. The Go provider transport adapter
-is still being ported; the full replacement suite
-must pass before production cutover.
+This builds the production Go binary for the Docker host’s Linux architecture
+and the React Router production application, adopts the legacy test schema with
+Goose, and runs against real PostgreSQL and Redis. Docker, Go, pnpm, and OpenSSL
+are required. Artifacts are in `output/playwright-go/`. The complete legacy suite
+remains active during migration.
 
 `oauth-server.mjs` implements a controlled OAuth/OIDC provider with one-use codes,
 client credential checks, PKCE validation, and signed ID tokens. Auth tests use
