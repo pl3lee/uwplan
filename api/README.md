@@ -3,7 +3,35 @@
 The authenticated `GET /api/v1/courses` endpoint returns the course catalog in
 course-code order, retaining legacy IDs, descriptions, prerequisites, ratings,
 and nullable values. The catalog is shared across users; authentication is
-required. Course import/update commands are still being migrated.
+required.
+
+## Course catalog updates
+
+Export `DATABASE_URL` for the target database and run `make courses-update` from
+`api/` (or build/run `cmd/courses-update`). The command does not load `.env`
+automatically or run schema migrations. Use the application database role with
+catalog insert/update permission. The existing root update/seed scripts remain
+available during the runtime transition; built-in template seeding is still
+being migrated.
+
+The UWFlow gateway fetches the complete catalog and details before writes, with
+at most eight concurrent detail requests, bounded response bodies, 15-second
+HTTP timeouts, and bounded retries for network failures, 429, and server errors.
+An incomplete response, invalid record, or access denial fails the update.
+The command has a 20-minute overall deadline and honors SIGINT/SIGTERM.
+
+Validated courses are normalized and upserted by code in one transaction. Existing
+IDs and saved references survive metadata changes; new courses receive UUIDv7
+IDs. Courses absent from the fetched catalog remain stored. Any failed write
+rolls back the entire import. Failures return a nonzero exit code with a safe
+structured log; successful logs report the imported course count. Credentials
+and upstream response bodies are never printed.
+
+Unit and database integration tests cover controlled upstream responses,
+normalization, reference preservation, cancellation, and atomic rollback. The
+live upstream returned HTTP 403 during migration validation; live refresh
+success remains unverified until upstream access is available. Do not treat that
+denial as an empty catalog or attempt to bypass its access restrictions.
 
 The Go foundation contains the academic-term domain, PostgreSQL schema
 transition, account resolution and provisioning, and Redis session services. The existing application and release migrator remain active
