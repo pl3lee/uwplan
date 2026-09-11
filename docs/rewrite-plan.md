@@ -1,9 +1,9 @@
 # UWPlan rewrite plan
 
-Status: accepted; Step 5 production verification. Runtime cleanup is merged.
+Status: implementation and production verification complete; runtime cleanup is merged.
 The first paired release passed its 30-minute production watch; see
-`docs/migration-verification.md` for evidence and the remaining alert and
-course-source limitations. Verify each later deployment against its own manifest.
+`docs/migration-verification.md` for evidence, the activated production alert,
+and the external course-source limitation. Verify each later deployment against its own manifest.
 All 33 shared browser cases pass on the replacement production build and remain required in CI.
 
 Inspected baseline: `origin/main` at `982cee8bbff6ed21d55c7fa43a8d2e23db909dfe`.
