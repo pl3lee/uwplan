@@ -65,6 +65,8 @@ func registerOAuth(app huma.API, cfg config.Config, service OAuthService) {
 		if err != nil {
 			if errors.Is(err, user.ErrAccountNotLinked) {
 				response.Location = "/signin?error=OAuthAccountNotLinked"
+			} else if !errors.Is(err, oauth.ErrInvalidState) && !errors.Is(err, oauth.ErrInvalidReturnPath) && !errors.Is(err, user.ErrInvalidIdentity) && !errors.Is(err, oauth.ErrProviderUnavailable) {
+				return nil, huma.ErrorWithHeaders(internalError(ctx, err), http.Header{"Set-Cookie": {response.SetCookie[0].String()}})
 			}
 			return response, nil
 		}

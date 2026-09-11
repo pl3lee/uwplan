@@ -2,10 +2,13 @@ package oauth
 
 import (
 	"context"
+	"crypto"
 	"crypto/subtle"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/coreos/go-oidc/v3/oidc"
+	"github.com/go-jose/go-jose/v4"
 	"golang.org/x/oauth2"
 	"io"
 	"net/http"
@@ -22,17 +25,15 @@ type Options struct {
 	Google, GitHub Credentials
 }
 type OAuthGatewayImpl struct {
-	options        Options
-	client         *http.Client
-	googleVerifier *oidc.IDTokenVerifier
+	options Options
+	client  *http.Client
 }
 
 func NewOAuthGateway(options Options, client *http.Client) *OAuthGatewayImpl {
 	if client == nil {
 		client = &http.Client{Timeout: 10 * time.Second}
 	}
-	keys := oidc.NewRemoteKeySet(oidc.ClientContext(context.Background(), client), "https://www.googleapis.com/oauth2/v3/certs")
-	return &OAuthGatewayImpl{options: options, client: client, googleVerifier: oidc.NewVerifier("https://accounts.google.com", keys, &oidc.Config{ClientID: options.Google.ClientID})}
+	return &OAuthGatewayImpl{options: options, client: client}
 }
 func (g *OAuthGatewayImpl) AuthorizationURL(ctx context.Context, input domainoauth.Authorization) (domainoauth.Redirect, error) {
 	config, err := g.providerConfig(input.Flow.Provider)
@@ -82,6 +83,10 @@ func (g *OAuthGatewayImpl) Exchange(ctx context.Context, input domainoauth.Excha
 	ctx = context.WithValue(ctx, oauth2.HTTPClient, g.client)
 	token, err := config.Exchange(ctx, input.Code, oauth2.VerifierOption(input.Flow.Verifier))
 	if err != nil {
+		var rejection *oauth2.RetrieveError
+		if errors.As(err, &rejection) && (rejection.ErrorCode == "invalid_grant" || rejection.ErrorCode == "bad_verification_code") {
+			return user.Identity{}, user.ErrInvalidIdentity
+		}
 		return user.Identity{}, fmt.Errorf("exchange OAuth code: %w", err)
 	}
 	if input.Flow.Provider == user.GitHub {
@@ -95,7 +100,15 @@ func (g *OAuthGatewayImpl) googleIdentity(ctx context.Context, token *oauth2.Tok
 	if !ok || raw == "" {
 		return user.Identity{}, user.ErrInvalidIdentity
 	}
-	idToken, err := g.googleVerifier.Verify(ctx, raw)
+	// Fetch keys separately so transport/status/decoding failures retain their
+	// infrastructure identity. The OIDC verifier otherwise flattens these errors
+	// together with signature rejections. Each sign-in sees the current key set.
+	keys, err := g.googleKeys(ctx)
+	if err != nil {
+		return user.Identity{}, err
+	}
+	verifier := oidc.NewVerifier("https://accounts.google.com", keys, &oidc.Config{ClientID: g.options.Google.ClientID})
+	idToken, err := verifier.Verify(ctx, raw)
 	if err != nil {
 		return user.Identity{}, user.ErrInvalidIdentity
 	}
@@ -125,6 +138,35 @@ func (g *OAuthGatewayImpl) googleIdentity(ctx context.Context, token *oauth2.Tok
 		return user.Identity{}, err
 	}
 	return identity, nil
+}
+
+func (g *OAuthGatewayImpl) googleKeys(ctx context.Context) (*oidc.StaticKeySet, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://www.googleapis.com/oauth2/v3/certs", nil)
+	if err != nil {
+		return nil, fmt.Errorf("create Google keys request: %w", err)
+	}
+	response, err := g.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("fetch Google keys: %w", err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("Google keys response status %d", response.StatusCode)
+	}
+	var set jose.JSONWebKeySet
+	if err := json.NewDecoder(io.LimitReader(response.Body, 1<<20)).Decode(&set); err != nil {
+		return nil, fmt.Errorf("decode Google keys: %w", err)
+	}
+	keys := make([]crypto.PublicKey, 0, len(set.Keys))
+	for _, key := range set.Keys {
+		if key.IsPublic() && (key.Use == "" || key.Use == "sig") && (key.Algorithm == "" || key.Algorithm == "RS256") {
+			keys = append(keys, key.Key)
+		}
+	}
+	if len(keys) == 0 {
+		return nil, fmt.Errorf("Google returned no signing keys")
+	}
+	return &oidc.StaticKeySet{PublicKeys: keys}, nil
 }
 
 func (g *OAuthGatewayImpl) githubIdentity(ctx context.Context, token string) (user.Identity, error) {

@@ -54,7 +54,8 @@ func TestOAuthCallbackSetsSessionOnlyAfterSuccessfulVerification(t *testing.T) {
 		{"success", nil, "/schedule?active=legacy"},
 		{"invalid state", oauth.ErrInvalidState, "/signin?error=OAuthCallback"},
 		{"account not linked", user.ErrAccountNotLinked, "/signin?error=OAuthAccountNotLinked"},
-		{"provider failure", errors.New("provider-secret-must-not-leak"), "/signin?error=OAuthCallback"},
+		{"invalid identity", user.ErrInvalidIdentity, "/signin?error=OAuthCallback"},
+		{"provider failure", errors.New("provider-secret-must-not-leak"), ""},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
@@ -70,11 +71,15 @@ func TestOAuthCallbackSetsSessionOnlyAfterSuccessfulVerification(t *testing.T) {
 			request.AddCookie(&http.Cookie{Name: cfg.CookieName(), Value: "previous-session"})
 			response := httptest.NewRecorder()
 			router.ServeHTTP(response, request)
-			if diff := cmp.Diff(http.StatusFound, response.Code); diff != "" {
-				t.Fatal(diff)
-			}
-			if diff := cmp.Diff("", response.Body.String()); diff != "" {
-				t.Fatal(diff)
+			if tc.name == "provider failure" {
+				assertJSON(t, response, 500, map[string]any{"title": "Internal Server Error", "status": float64(500), "detail": "Internal Server Error"})
+			} else {
+				if diff := cmp.Diff(http.StatusFound, response.Code); diff != "" {
+					t.Fatal(diff)
+				}
+				if diff := cmp.Diff("", response.Body.String()); diff != "" {
+					t.Fatal(diff)
+				}
 			}
 			if diff := cmp.Diff(tc.location, response.Header().Get("Location")); diff != "" {
 				t.Fatal(diff)

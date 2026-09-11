@@ -41,6 +41,8 @@ func TestGoogleExchangeVerifiesSignedIdentity(t *testing.T) {
 		{name: "wrong authorized party", claim: "azp", value: "another-client"},
 		{name: "wrong access token", claim: "at_hash", value: "invalid"},
 		{name: "bad signature"},
+		{name: "key fetch outage"},
+		{name: "invalid code"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
@@ -72,6 +74,11 @@ func TestGoogleExchangeVerifiesSignedIdentity(t *testing.T) {
 				w.Header().Set("Content-Type", "application/json")
 				switch r.URL.Path {
 				case "/token":
+					if tc.name == "invalid code" {
+						w.WriteHeader(http.StatusBadRequest)
+						w.Write([]byte(`{"error":"invalid_grant"}`))
+						return
+					}
 					if err := r.ParseForm(); err != nil {
 						t.Error(err)
 					}
@@ -81,6 +88,10 @@ func TestGoogleExchangeVerifiesSignedIdentity(t *testing.T) {
 					}
 					json.NewEncoder(w).Encode(map[string]string{"access_token": "access", "token_type": "bearer", "id_token": signedToken})
 				case "/oauth2/v3/certs":
+					if tc.name == "key fetch outage" {
+						w.WriteHeader(http.StatusServiceUnavailable)
+						return
+					}
 					json.NewEncoder(w).Encode(map[string]any{"keys": []map[string]string{{"kty": "RSA", "kid": "fixture", "alg": "RS256", "use": "sig", "n": base64.RawURLEncoding.EncodeToString(key.N.Bytes()), "e": base64.RawURLEncoding.EncodeToString(big.NewInt(int64(key.E)).Bytes())}}})
 				default:
 					t.Errorf("unexpected path %s", r.URL.Path)
@@ -91,6 +102,12 @@ func TestGoogleExchangeVerifiesSignedIdentity(t *testing.T) {
 			target, _ := url.Parse(server.URL)
 			gateway := gatewayoauth.NewOAuthGateway(gatewayoauth.Options{PublicOrigin: "https://uwplan.com", Google: gatewayoauth.Credentials{ClientID: "client", ClientSecret: "secret"}}, &http.Client{Transport: redirectTransport{target, http.DefaultTransport}})
 			identity, err := gateway.Exchange(t.Context(), domainoauth.Exchange{Flow: domainoauth.Flow{Provider: user.Google, Verifier: "verifier", Nonce: "browser-nonce"}, Code: "code", Issuer: "https://accounts.google.com"})
+			if tc.name == "key fetch outage" {
+				if err == nil || errors.Is(err, user.ErrInvalidIdentity) {
+					t.Fatalf("expected infrastructure error, got %v", err)
+				}
+				return
+			}
 			if !tc.valid {
 				if !errors.Is(err, user.ErrInvalidIdentity) {
 					t.Fatalf("got %v", err)

@@ -91,7 +91,8 @@ Do not expose this candidate runtime through production routing yet.
 - `GET /api/auth/callback/{provider}` verifies the provider response, resolves
   the account, creates a new Redis session, revokes a previous browser session,
   and redirects to the stored return path. Rejected callbacks clear the state
-  cookie and redirect to sign-in with a generic error code.
+  cookie and redirect to sign-in with a generic error code. Infrastructure
+  failures clear the state cookie and return a generic 500 with safe error logging.
 
 API responses are not cacheable. Unexpected errors have generic response bodies;
 logs contain error types instead of raw credential-bearing errors. Request bodies
