@@ -71,7 +71,7 @@ Redis 2.4 MiB/64 MiB, and PostgreSQL 34.7 MiB/160 MiB. All four containers were
 healthy with zero restarts and no OOM kills. This is an observed sample, not a
 capacity benchmark.
 
-## Remaining verification
+## Production watch and follow-up verification
 
 The initial production watch passed from 08:15:02 to 08:45:02 UTC on 2026-09-11:
 61 samples at 30-second intervals, with zero readiness or release-identity failures.
@@ -80,10 +80,15 @@ requests returning 404; a focused regression
 check separates expected HTTP rejection from actual rendering/server failures.
 The observed application responses did not return 5xx during that sample window.
 
-The existing readiness alert is file-provisioned. Its production URL/title/label
-update is prepared, preserving its UID and notification route, and awaits
-approval for reloading it through a brief shared Grafana restart. API updates
-cannot change a file-provisioned rule's provenance.
+The approved readiness alert update was applied on 2026-09-11 through a brief
+restart of Grafana on `ubuntu-hosting-2`. The file-provisioned rule retains UID
+`uwplan-rehearsal-readiness`, uses title `UWPlan production readiness`, and queries
+`probe_success{instance="https://uwplan.com/api/ready"}` with the production label.
+Its first verified evaluation at 14:04:10 UTC was healthy and inactive, with a
+successful production probe. The existing notification receiver, intervals,
+expression/reduction pipeline, and no-data/error behavior were preserved.
+The previous provisioning file is backed up on the host. Only Grafana restarted;
+the telemetry collector and application services continued running.
 
 The runtime cleanup passed review and all five CI checks and merged as PR #91,
 revision `c5fb5895d50c7a6243d081b87956529e1426e5cd`. The expected-404 telemetry
