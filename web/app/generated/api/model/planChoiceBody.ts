@@ -4,9 +4,10 @@
  * UWPlan API
  * OpenAPI spec version: 1.0.0
  */
+import type { PlanChoiceBodyCourseId } from './planChoiceBodyCourseId';
 
 export interface PlanChoiceBody {
-  course_id: string;
+  course_id: PlanChoiceBodyCourseId;
   item_id: string;
   selected: boolean;
 }
