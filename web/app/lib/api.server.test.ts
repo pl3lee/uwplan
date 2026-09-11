@@ -1,10 +1,40 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { proxyApiRequest } from "./api.server";
+import { createSchedule } from "~/generated/api/client";
+import { proxyApiRequest, serverApiOptions } from "./api.server";
 
 beforeEach(() => vi.stubEnv("API_ORIGIN", "http://api.internal:8080"));
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
+});
+
+it("preserves authentication and Origin through generated JSON mutations", async () => {
+  const fetch = vi
+    .fn()
+    .mockResolvedValue(
+      Response.json({ id: "schedule", name: "Co-op" }, { status: 201 }),
+    );
+  vi.stubGlobal("fetch", fetch);
+  await createSchedule(
+    { name: "Co-op" },
+    serverApiOptions(
+      new Request("https://uwplan.com/schedule", {
+        method: "POST",
+        headers: {
+          Cookie: "__Host-uwplan_session=session-token",
+          Origin: "https://uwplan.com",
+          "Content-Type": "application/json",
+        },
+      }),
+    ),
+  );
+  const [url, options] = fetch.mock.calls[0];
+  expect(url).toBe("http://api.internal:8080/api/v1/schedules");
+  const headers = new Headers(options.headers);
+  expect(headers.get("Cookie")).toBe("__Host-uwplan_session=session-token");
+  expect(headers.get("Origin")).toBe("https://uwplan.com");
+  expect(headers.get("Content-Type")).toBe("application/json");
+  expect(options.body).toBe('{"name":"Co-op"}');
 });
 
 it("forwards only application cookies and preserves the browser's Origin", async () => {
@@ -27,11 +57,10 @@ it("forwards only application cookies and preserves the browser's Origin", async
   expect(url).toBe("http://api.internal:8080/api/v1/auth/logout");
   expect(options.method).toBe("POST");
   expect(options.redirect).toBe("manual");
-  expect(options.headers.get("Cookie")).toBe(
-    "__Host-uwplan_session=session-token",
-  );
-  expect(options.headers.get("Origin")).toBe("https://evil.example");
-  expect(options.headers.get("Authorization")).toBeNull();
+  const headers = new Headers(options.headers);
+  expect(headers.get("Cookie")).toBe("__Host-uwplan_session=session-token");
+  expect(headers.get("Origin")).toBe("https://evil.example");
+  expect(headers.get("Authorization")).toBeNull();
 });
 
 it("preserves separate callback cookies and redirects", async () => {

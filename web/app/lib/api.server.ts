@@ -18,10 +18,12 @@ function apiOrigin(): string {
 }
 
 export function serverApiOptions(request: Request): ApiRequestOptions {
-  const headers = new Headers();
+  // Orval merges JSON headers with object spread; use a plain record so the
+  // generated mutation functions retain cookies and Origin during that merge.
+  const headers: Record<string, string> = {};
   for (const name of ["Accept", "Content-Type", "Origin", "Sec-Fetch-Site"]) {
     const value = request.headers.get(name);
-    if (value !== null) headers.set(name, value);
+    if (value !== null) headers[name] = value;
   }
   const cookies = (request.headers.get("Cookie") ?? "")
     .split(";")
@@ -29,7 +31,7 @@ export function serverApiOptions(request: Request): ApiRequestOptions {
     .filter((part) =>
       /^(?:__Host-)?uwplan_(?:session|oauth_google|oauth_github)=/.test(part),
     );
-  if (cookies.length) headers.set("Cookie", cookies.join("; "));
+  if (cookies.length) headers.Cookie = cookies.join("; ");
   return {
     baseUrl: apiOrigin(),
     headers,

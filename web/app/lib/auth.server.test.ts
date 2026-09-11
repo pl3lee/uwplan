@@ -38,7 +38,7 @@ it("loads the current user through the generated client using only the session c
   ).toEqual(user);
   const [url, options] = fetch.mock.calls[0];
   expect(url).toBe("http://api.internal:8080/api/v1/me");
-  expect(options.headers.get("Cookie")).toBe(
+  expect(new Headers(options.headers).get("Cookie")).toBe(
     "__Host-uwplan_session=opaque-session",
   );
 });

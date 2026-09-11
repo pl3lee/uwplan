@@ -10,7 +10,8 @@
     "typecheck": "react-router typegen && tsc --noEmit",
     "lint": "biome check .",
     "format": "biome check --write .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:browser": "playwright test"
   },
   "dependencies": {
     "react": "19.3.0",
@@ -29,6 +30,7 @@
     "tailwind-merge": "3.5.0"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "@react-router/dev": "7.18.3",
     "@tailwindcss/vite": "4.3.3",
     "tailwindcss": "4.3.3",

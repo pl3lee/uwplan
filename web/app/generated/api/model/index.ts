@@ -5,7 +5,14 @@
  * OpenAPI spec version: 1.0.0
  */
 
+export * from './assignScheduleInputBody';
+export * from './assignmentBody';
 export * from './completeOAuthParams';
+export * from './courseBody';
+export * from './courseBodyEasyRating';
+export * from './courseBodyLikedRating';
+export * from './courseBodyNumRatings';
+export * from './courseBodyUsefulRating';
 export * from './errorDetail';
 export * from './errorModel';
 export * from './errorModelErrors';
@@ -17,7 +24,17 @@ export * from './readinessBodyDependenciesStructDatabase';
 export * from './readinessBodyDependenciesStructRedis';
 export * from './readinessBodyReleaseStruct';
 export * from './readinessBodyStatus';
+export * from './scheduleBody';
+export * from './scheduleListResponseBody';
+export * from './scheduleListResponseBodySchedules';
+export * from './scheduleNameBody';
+export * from './scheduleViewResponseBody';
+export * from './scheduleViewResponseBodyAssigned';
+export * from './scheduleViewResponseBodySelected';
 export * from './startOAuthParams';
+export * from './termRangeBody';
+export * from './termRangeBodyEndTerm';
+export * from './termRangeBodyStartTerm';
 export * from './userBody';
 export * from './userBodyImage';
 export * from './userBodyName';

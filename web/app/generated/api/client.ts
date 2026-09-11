@@ -24,16 +24,22 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AssignScheduleInputBody,
   CompleteOAuthParams,
   ErrorModel,
   LiveBody,
   ReadinessBody,
+  ScheduleBody,
+  ScheduleListResponseBody,
+  ScheduleNameBody,
+  ScheduleViewResponseBody,
   StartOAuthParams,
+  TermRangeBody,
   UserBody
 } from './model';
 
 import { apiFetch } from '../../lib/api-fetch';
-import type { ErrorType } from '../../lib/api-fetch';
+import type { ErrorType , BodyType } from '../../lib/api-fetch';
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
@@ -789,3 +795,1307 @@ export function useGetCurrentUser<TData = Awaited<ReturnType<typeof getCurrentUs
 
   return query;
 }
+
+
+
+
+
+/**
+ * @summary List the user's schedules
+ */
+export type listSchedulesResponse200 = {
+  data: ScheduleListResponseBody
+  status: 200
+}
+
+export type listSchedulesResponse401 = {
+  data: ErrorModel
+  status: 401
+}
+
+export type listSchedulesResponse500 = {
+  data: ErrorModel
+  status: 500
+}
+    
+export type listSchedulesResponseSuccess = (listSchedulesResponse200) & {
+  headers: Headers;
+};
+export type listSchedulesResponseError = (listSchedulesResponse401 | listSchedulesResponse500) & {
+  headers: Headers;
+};
+
+export type listSchedulesResponse = (listSchedulesResponseSuccess | listSchedulesResponseError)
+
+export const getListSchedulesUrl = () => {
+
+
+  
+
+  return `/api/v1/schedules`
+}
+
+export const listSchedules = async ( options?: RequestInit): Promise<listSchedulesResponse> => {
+  
+  return apiFetch<listSchedulesResponse>(getListSchedulesUrl(),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getListSchedulesQueryKey = () => {
+    return [
+    `/api/v1/schedules`
+    ] as const;
+    }
+
+    
+export const getListSchedulesQueryOptions = <TData = Awaited<ReturnType<typeof listSchedules>>, TError = ErrorType<ErrorModel>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSchedules>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListSchedulesQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSchedules>>> = ({ signal }) => listSchedules({ signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSchedules>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListSchedulesQueryResult = NonNullable<Awaited<ReturnType<typeof listSchedules>>>
+export type ListSchedulesQueryError = ErrorType<ErrorModel>
+
+
+export function useListSchedules<TData = Awaited<ReturnType<typeof listSchedules>>, TError = ErrorType<ErrorModel>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSchedules>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listSchedules>>,
+          TError,
+          Awaited<ReturnType<typeof listSchedules>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListSchedules<TData = Awaited<ReturnType<typeof listSchedules>>, TError = ErrorType<ErrorModel>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSchedules>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listSchedules>>,
+          TError,
+          Awaited<ReturnType<typeof listSchedules>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListSchedules<TData = Awaited<ReturnType<typeof listSchedules>>, TError = ErrorType<ErrorModel>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSchedules>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List the user's schedules
+ */
+
+export function useListSchedules<TData = Awaited<ReturnType<typeof listSchedules>>, TError = ErrorType<ErrorModel>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSchedules>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListSchedulesQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+
+/**
+ * @summary Create a schedule
+ */
+export type createScheduleResponse201 = {
+  data: ScheduleBody
+  status: 201
+}
+
+export type createScheduleResponse400 = {
+  data: ErrorModel
+  status: 400
+}
+
+export type createScheduleResponse401 = {
+  data: ErrorModel
+  status: 401
+}
+
+export type createScheduleResponse403 = {
+  data: ErrorModel
+  status: 403
+}
+
+export type createScheduleResponse404 = {
+  data: ErrorModel
+  status: 404
+}
+
+export type createScheduleResponse409 = {
+  data: ErrorModel
+  status: 409
+}
+
+export type createScheduleResponse422 = {
+  data: ErrorModel
+  status: 422
+}
+
+export type createScheduleResponse500 = {
+  data: ErrorModel
+  status: 500
+}
+    
+export type createScheduleResponseSuccess = (createScheduleResponse201) & {
+  headers: Headers;
+};
+export type createScheduleResponseError = (createScheduleResponse400 | createScheduleResponse401 | createScheduleResponse403 | createScheduleResponse404 | createScheduleResponse409 | createScheduleResponse422 | createScheduleResponse500) & {
+  headers: Headers;
+};
+
+export type createScheduleResponse = (createScheduleResponseSuccess | createScheduleResponseError)
+
+export const getCreateScheduleUrl = () => {
+
+
+  
+
+  return `/api/v1/schedules`
+}
+
+export const createSchedule = async (scheduleNameBody: ScheduleNameBody, options?: RequestInit): Promise<createScheduleResponse> => {
+  
+  return apiFetch<createScheduleResponse>(getCreateScheduleUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      scheduleNameBody,)
+  }
+);}
+
+
+
+
+export const getCreateScheduleMutationOptions = <TError = ErrorType<ErrorModel>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSchedule>>, TError,{data: BodyType<ScheduleNameBody>}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createSchedule>>, TError,{data: BodyType<ScheduleNameBody>}, TContext> => {
+
+const mutationKey = ['createSchedule'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createSchedule>>, {data: BodyType<ScheduleNameBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createSchedule(data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateScheduleMutationResult = NonNullable<Awaited<ReturnType<typeof createSchedule>>>
+    export type CreateScheduleMutationBody = BodyType<ScheduleNameBody>
+    export type CreateScheduleMutationError = ErrorType<ErrorModel>
+
+    /**
+ * @summary Create a schedule
+ */
+export const useCreateSchedule = <TError = ErrorType<ErrorModel>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSchedule>>, TError,{data: BodyType<ScheduleNameBody>}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createSchedule>>,
+        TError,
+        {data: BodyType<ScheduleNameBody>},
+        TContext
+      > => {
+
+      const mutationOptions = getCreateScheduleMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
+/**
+ * @summary Delete a schedule while retaining at least one
+ */
+export type deleteScheduleResponse204 = {
+  data: void
+  status: 204
+}
+
+export type deleteScheduleResponse400 = {
+  data: ErrorModel
+  status: 400
+}
+
+export type deleteScheduleResponse401 = {
+  data: ErrorModel
+  status: 401
+}
+
+export type deleteScheduleResponse403 = {
+  data: ErrorModel
+  status: 403
+}
+
+export type deleteScheduleResponse404 = {
+  data: ErrorModel
+  status: 404
+}
+
+export type deleteScheduleResponse409 = {
+  data: ErrorModel
+  status: 409
+}
+
+export type deleteScheduleResponse422 = {
+  data: ErrorModel
+  status: 422
+}
+
+export type deleteScheduleResponse500 = {
+  data: ErrorModel
+  status: 500
+}
+    
+export type deleteScheduleResponseSuccess = (deleteScheduleResponse204) & {
+  headers: Headers;
+};
+export type deleteScheduleResponseError = (deleteScheduleResponse400 | deleteScheduleResponse401 | deleteScheduleResponse403 | deleteScheduleResponse404 | deleteScheduleResponse409 | deleteScheduleResponse422 | deleteScheduleResponse500) & {
+  headers: Headers;
+};
+
+export type deleteScheduleResponse = (deleteScheduleResponseSuccess | deleteScheduleResponseError)
+
+export const getDeleteScheduleUrl = (scheduleId: string,) => {
+
+
+  
+
+  return `/api/v1/schedules/${scheduleId}`
+}
+
+export const deleteSchedule = async (scheduleId: string, options?: RequestInit): Promise<deleteScheduleResponse> => {
+  
+  return apiFetch<deleteScheduleResponse>(getDeleteScheduleUrl(scheduleId),
+  {      
+    ...options,
+    method: 'DELETE'
+    
+    
+  }
+);}
+
+
+
+
+export const getDeleteScheduleMutationOptions = <TError = ErrorType<ErrorModel>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteSchedule>>, TError,{scheduleId: string}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteSchedule>>, TError,{scheduleId: string}, TContext> => {
+
+const mutationKey = ['deleteSchedule'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteSchedule>>, {scheduleId: string}> = (props) => {
+          const {scheduleId} = props ?? {};
+
+          return  deleteSchedule(scheduleId,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteScheduleMutationResult = NonNullable<Awaited<ReturnType<typeof deleteSchedule>>>
+    
+    export type DeleteScheduleMutationError = ErrorType<ErrorModel>
+
+    /**
+ * @summary Delete a schedule while retaining at least one
+ */
+export const useDeleteSchedule = <TError = ErrorType<ErrorModel>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteSchedule>>, TError,{scheduleId: string}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof deleteSchedule>>,
+        TError,
+        {scheduleId: string},
+        TContext
+      > => {
+
+      const mutationOptions = getDeleteScheduleMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
+/**
+ * @summary Read an owned schedule with selections and assignments
+ */
+export type getScheduleResponse200 = {
+  data: ScheduleViewResponseBody
+  status: 200
+}
+
+export type getScheduleResponse400 = {
+  data: ErrorModel
+  status: 400
+}
+
+export type getScheduleResponse401 = {
+  data: ErrorModel
+  status: 401
+}
+
+export type getScheduleResponse403 = {
+  data: ErrorModel
+  status: 403
+}
+
+export type getScheduleResponse404 = {
+  data: ErrorModel
+  status: 404
+}
+
+export type getScheduleResponse409 = {
+  data: ErrorModel
+  status: 409
+}
+
+export type getScheduleResponse422 = {
+  data: ErrorModel
+  status: 422
+}
+
+export type getScheduleResponse500 = {
+  data: ErrorModel
+  status: 500
+}
+    
+export type getScheduleResponseSuccess = (getScheduleResponse200) & {
+  headers: Headers;
+};
+export type getScheduleResponseError = (getScheduleResponse400 | getScheduleResponse401 | getScheduleResponse403 | getScheduleResponse404 | getScheduleResponse409 | getScheduleResponse422 | getScheduleResponse500) & {
+  headers: Headers;
+};
+
+export type getScheduleResponse = (getScheduleResponseSuccess | getScheduleResponseError)
+
+export const getGetScheduleUrl = (scheduleId: string,) => {
+
+
+  
+
+  return `/api/v1/schedules/${scheduleId}`
+}
+
+export const getSchedule = async (scheduleId: string, options?: RequestInit): Promise<getScheduleResponse> => {
+  
+  return apiFetch<getScheduleResponse>(getGetScheduleUrl(scheduleId),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getGetScheduleQueryKey = (scheduleId?: string,) => {
+    return [
+    `/api/v1/schedules/${scheduleId}`
+    ] as const;
+    }
+
+    
+export const getGetScheduleQueryOptions = <TData = Awaited<ReturnType<typeof getSchedule>>, TError = ErrorType<ErrorModel>>(scheduleId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSchedule>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetScheduleQueryKey(scheduleId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSchedule>>> = ({ signal }) => getSchedule(scheduleId, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(scheduleId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSchedule>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetScheduleQueryResult = NonNullable<Awaited<ReturnType<typeof getSchedule>>>
+export type GetScheduleQueryError = ErrorType<ErrorModel>
+
+
+export function useGetSchedule<TData = Awaited<ReturnType<typeof getSchedule>>, TError = ErrorType<ErrorModel>>(
+ scheduleId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSchedule>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSchedule>>,
+          TError,
+          Awaited<ReturnType<typeof getSchedule>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetSchedule<TData = Awaited<ReturnType<typeof getSchedule>>, TError = ErrorType<ErrorModel>>(
+ scheduleId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSchedule>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSchedule>>,
+          TError,
+          Awaited<ReturnType<typeof getSchedule>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetSchedule<TData = Awaited<ReturnType<typeof getSchedule>>, TError = ErrorType<ErrorModel>>(
+ scheduleId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSchedule>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Read an owned schedule with selections and assignments
+ */
+
+export function useGetSchedule<TData = Awaited<ReturnType<typeof getSchedule>>, TError = ErrorType<ErrorModel>>(
+ scheduleId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSchedule>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetScheduleQueryOptions(scheduleId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+
+/**
+ * @summary Rename an owned schedule
+ */
+export type renameScheduleResponse204 = {
+  data: void
+  status: 204
+}
+
+export type renameScheduleResponse400 = {
+  data: ErrorModel
+  status: 400
+}
+
+export type renameScheduleResponse401 = {
+  data: ErrorModel
+  status: 401
+}
+
+export type renameScheduleResponse403 = {
+  data: ErrorModel
+  status: 403
+}
+
+export type renameScheduleResponse404 = {
+  data: ErrorModel
+  status: 404
+}
+
+export type renameScheduleResponse409 = {
+  data: ErrorModel
+  status: 409
+}
+
+export type renameScheduleResponse422 = {
+  data: ErrorModel
+  status: 422
+}
+
+export type renameScheduleResponse500 = {
+  data: ErrorModel
+  status: 500
+}
+    
+export type renameScheduleResponseSuccess = (renameScheduleResponse204) & {
+  headers: Headers;
+};
+export type renameScheduleResponseError = (renameScheduleResponse400 | renameScheduleResponse401 | renameScheduleResponse403 | renameScheduleResponse404 | renameScheduleResponse409 | renameScheduleResponse422 | renameScheduleResponse500) & {
+  headers: Headers;
+};
+
+export type renameScheduleResponse = (renameScheduleResponseSuccess | renameScheduleResponseError)
+
+export const getRenameScheduleUrl = (scheduleId: string,) => {
+
+
+  
+
+  return `/api/v1/schedules/${scheduleId}`
+}
+
+export const renameSchedule = async (scheduleId: string,
+    scheduleNameBody: ScheduleNameBody, options?: RequestInit): Promise<renameScheduleResponse> => {
+  
+  return apiFetch<renameScheduleResponse>(getRenameScheduleUrl(scheduleId),
+  {      
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      scheduleNameBody,)
+  }
+);}
+
+
+
+
+export const getRenameScheduleMutationOptions = <TError = ErrorType<ErrorModel>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof renameSchedule>>, TError,{scheduleId: string;data: BodyType<ScheduleNameBody>}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof renameSchedule>>, TError,{scheduleId: string;data: BodyType<ScheduleNameBody>}, TContext> => {
+
+const mutationKey = ['renameSchedule'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof renameSchedule>>, {scheduleId: string;data: BodyType<ScheduleNameBody>}> = (props) => {
+          const {scheduleId,data} = props ?? {};
+
+          return  renameSchedule(scheduleId,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RenameScheduleMutationResult = NonNullable<Awaited<ReturnType<typeof renameSchedule>>>
+    export type RenameScheduleMutationBody = BodyType<ScheduleNameBody>
+    export type RenameScheduleMutationError = ErrorType<ErrorModel>
+
+    /**
+ * @summary Rename an owned schedule
+ */
+export const useRenameSchedule = <TError = ErrorType<ErrorModel>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof renameSchedule>>, TError,{scheduleId: string;data: BodyType<ScheduleNameBody>}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof renameSchedule>>,
+        TError,
+        {scheduleId: string;data: BodyType<ScheduleNameBody>},
+        TContext
+      > => {
+
+      const mutationOptions = getRenameScheduleMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
+/**
+ * @summary Remove a course assignment
+ */
+export type removeScheduleCourseResponse204 = {
+  data: void
+  status: 204
+}
+
+export type removeScheduleCourseResponse400 = {
+  data: ErrorModel
+  status: 400
+}
+
+export type removeScheduleCourseResponse401 = {
+  data: ErrorModel
+  status: 401
+}
+
+export type removeScheduleCourseResponse403 = {
+  data: ErrorModel
+  status: 403
+}
+
+export type removeScheduleCourseResponse404 = {
+  data: ErrorModel
+  status: 404
+}
+
+export type removeScheduleCourseResponse409 = {
+  data: ErrorModel
+  status: 409
+}
+
+export type removeScheduleCourseResponse422 = {
+  data: ErrorModel
+  status: 422
+}
+
+export type removeScheduleCourseResponse500 = {
+  data: ErrorModel
+  status: 500
+}
+    
+export type removeScheduleCourseResponseSuccess = (removeScheduleCourseResponse204) & {
+  headers: Headers;
+};
+export type removeScheduleCourseResponseError = (removeScheduleCourseResponse400 | removeScheduleCourseResponse401 | removeScheduleCourseResponse403 | removeScheduleCourseResponse404 | removeScheduleCourseResponse409 | removeScheduleCourseResponse422 | removeScheduleCourseResponse500) & {
+  headers: Headers;
+};
+
+export type removeScheduleCourseResponse = (removeScheduleCourseResponseSuccess | removeScheduleCourseResponseError)
+
+export const getRemoveScheduleCourseUrl = (scheduleId: string,
+    courseId: string,) => {
+
+
+  
+
+  return `/api/v1/schedules/${scheduleId}/courses/${courseId}`
+}
+
+export const removeScheduleCourse = async (scheduleId: string,
+    courseId: string, options?: RequestInit): Promise<removeScheduleCourseResponse> => {
+  
+  return apiFetch<removeScheduleCourseResponse>(getRemoveScheduleCourseUrl(scheduleId,courseId),
+  {      
+    ...options,
+    method: 'DELETE'
+    
+    
+  }
+);}
+
+
+
+
+export const getRemoveScheduleCourseMutationOptions = <TError = ErrorType<ErrorModel>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeScheduleCourse>>, TError,{scheduleId: string;courseId: string}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof removeScheduleCourse>>, TError,{scheduleId: string;courseId: string}, TContext> => {
+
+const mutationKey = ['removeScheduleCourse'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof removeScheduleCourse>>, {scheduleId: string;courseId: string}> = (props) => {
+          const {scheduleId,courseId} = props ?? {};
+
+          return  removeScheduleCourse(scheduleId,courseId,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RemoveScheduleCourseMutationResult = NonNullable<Awaited<ReturnType<typeof removeScheduleCourse>>>
+    
+    export type RemoveScheduleCourseMutationError = ErrorType<ErrorModel>
+
+    /**
+ * @summary Remove a course assignment
+ */
+export const useRemoveScheduleCourse = <TError = ErrorType<ErrorModel>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeScheduleCourse>>, TError,{scheduleId: string;courseId: string}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof removeScheduleCourse>>,
+        TError,
+        {scheduleId: string;courseId: string},
+        TContext
+      > => {
+
+      const mutationOptions = getRemoveScheduleCourseMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
+/**
+ * @summary Assign or move a course to a term
+ */
+export type assignScheduleCourseResponse204 = {
+  data: void
+  status: 204
+}
+
+export type assignScheduleCourseResponse400 = {
+  data: ErrorModel
+  status: 400
+}
+
+export type assignScheduleCourseResponse401 = {
+  data: ErrorModel
+  status: 401
+}
+
+export type assignScheduleCourseResponse403 = {
+  data: ErrorModel
+  status: 403
+}
+
+export type assignScheduleCourseResponse404 = {
+  data: ErrorModel
+  status: 404
+}
+
+export type assignScheduleCourseResponse409 = {
+  data: ErrorModel
+  status: 409
+}
+
+export type assignScheduleCourseResponse422 = {
+  data: ErrorModel
+  status: 422
+}
+
+export type assignScheduleCourseResponse500 = {
+  data: ErrorModel
+  status: 500
+}
+    
+export type assignScheduleCourseResponseSuccess = (assignScheduleCourseResponse204) & {
+  headers: Headers;
+};
+export type assignScheduleCourseResponseError = (assignScheduleCourseResponse400 | assignScheduleCourseResponse401 | assignScheduleCourseResponse403 | assignScheduleCourseResponse404 | assignScheduleCourseResponse409 | assignScheduleCourseResponse422 | assignScheduleCourseResponse500) & {
+  headers: Headers;
+};
+
+export type assignScheduleCourseResponse = (assignScheduleCourseResponseSuccess | assignScheduleCourseResponseError)
+
+export const getAssignScheduleCourseUrl = (scheduleId: string,
+    courseId: string,) => {
+
+
+  
+
+  return `/api/v1/schedules/${scheduleId}/courses/${courseId}`
+}
+
+export const assignScheduleCourse = async (scheduleId: string,
+    courseId: string,
+    assignScheduleInputBody: AssignScheduleInputBody, options?: RequestInit): Promise<assignScheduleCourseResponse> => {
+  
+  return apiFetch<assignScheduleCourseResponse>(getAssignScheduleCourseUrl(scheduleId,courseId),
+  {      
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      assignScheduleInputBody,)
+  }
+);}
+
+
+
+
+export const getAssignScheduleCourseMutationOptions = <TError = ErrorType<ErrorModel>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assignScheduleCourse>>, TError,{scheduleId: string;courseId: string;data: BodyType<AssignScheduleInputBody>}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof assignScheduleCourse>>, TError,{scheduleId: string;courseId: string;data: BodyType<AssignScheduleInputBody>}, TContext> => {
+
+const mutationKey = ['assignScheduleCourse'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof assignScheduleCourse>>, {scheduleId: string;courseId: string;data: BodyType<AssignScheduleInputBody>}> = (props) => {
+          const {scheduleId,courseId,data} = props ?? {};
+
+          return  assignScheduleCourse(scheduleId,courseId,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AssignScheduleCourseMutationResult = NonNullable<Awaited<ReturnType<typeof assignScheduleCourse>>>
+    export type AssignScheduleCourseMutationBody = BodyType<AssignScheduleInputBody>
+    export type AssignScheduleCourseMutationError = ErrorType<ErrorModel>
+
+    /**
+ * @summary Assign or move a course to a term
+ */
+export const useAssignScheduleCourse = <TError = ErrorType<ErrorModel>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assignScheduleCourse>>, TError,{scheduleId: string;courseId: string;data: BodyType<AssignScheduleInputBody>}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof assignScheduleCourse>>,
+        TError,
+        {scheduleId: string;courseId: string;data: BodyType<AssignScheduleInputBody>},
+        TContext
+      > => {
+
+      const mutationOptions = getAssignScheduleCourseMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
+/**
+ * @summary Download an owned schedule as CSV
+ */
+export type exportScheduleResponse200 = {
+  data: Blob
+  status: 200
+}
+
+export type exportScheduleResponse400 = {
+  data: ErrorModel
+  status: 400
+}
+
+export type exportScheduleResponse401 = {
+  data: ErrorModel
+  status: 401
+}
+
+export type exportScheduleResponse403 = {
+  data: ErrorModel
+  status: 403
+}
+
+export type exportScheduleResponse404 = {
+  data: ErrorModel
+  status: 404
+}
+
+export type exportScheduleResponse409 = {
+  data: ErrorModel
+  status: 409
+}
+
+export type exportScheduleResponse422 = {
+  data: ErrorModel
+  status: 422
+}
+
+export type exportScheduleResponse500 = {
+  data: ErrorModel
+  status: 500
+}
+    
+export type exportScheduleResponseSuccess = (exportScheduleResponse200) & {
+  headers: Headers;
+};
+export type exportScheduleResponseError = (exportScheduleResponse400 | exportScheduleResponse401 | exportScheduleResponse403 | exportScheduleResponse404 | exportScheduleResponse409 | exportScheduleResponse422 | exportScheduleResponse500) & {
+  headers: Headers;
+};
+
+export type exportScheduleResponse = (exportScheduleResponseSuccess | exportScheduleResponseError)
+
+export const getExportScheduleUrl = (scheduleId: string,) => {
+
+
+  
+
+  return `/api/v1/schedules/${scheduleId}/export`
+}
+
+export const exportSchedule = async (scheduleId: string, options?: RequestInit): Promise<exportScheduleResponse> => {
+  
+  return apiFetch<exportScheduleResponse>(getExportScheduleUrl(scheduleId),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getExportScheduleQueryKey = (scheduleId?: string,) => {
+    return [
+    `/api/v1/schedules/${scheduleId}/export`
+    ] as const;
+    }
+
+    
+export const getExportScheduleQueryOptions = <TData = Awaited<ReturnType<typeof exportSchedule>>, TError = ErrorType<ErrorModel>>(scheduleId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportSchedule>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExportScheduleQueryKey(scheduleId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof exportSchedule>>> = ({ signal }) => exportSchedule(scheduleId, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(scheduleId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exportSchedule>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ExportScheduleQueryResult = NonNullable<Awaited<ReturnType<typeof exportSchedule>>>
+export type ExportScheduleQueryError = ErrorType<ErrorModel>
+
+
+export function useExportSchedule<TData = Awaited<ReturnType<typeof exportSchedule>>, TError = ErrorType<ErrorModel>>(
+ scheduleId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportSchedule>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof exportSchedule>>,
+          TError,
+          Awaited<ReturnType<typeof exportSchedule>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useExportSchedule<TData = Awaited<ReturnType<typeof exportSchedule>>, TError = ErrorType<ErrorModel>>(
+ scheduleId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportSchedule>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof exportSchedule>>,
+          TError,
+          Awaited<ReturnType<typeof exportSchedule>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useExportSchedule<TData = Awaited<ReturnType<typeof exportSchedule>>, TError = ErrorType<ErrorModel>>(
+ scheduleId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportSchedule>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Download an owned schedule as CSV
+ */
+
+export function useExportSchedule<TData = Awaited<ReturnType<typeof exportSchedule>>, TError = ErrorType<ErrorModel>>(
+ scheduleId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportSchedule>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getExportScheduleQueryOptions(scheduleId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+
+/**
+ * @summary Read the user's planning term range
+ */
+export type getTermRangeResponse200 = {
+  data: TermRangeBody
+  status: 200
+}
+
+export type getTermRangeResponse400 = {
+  data: ErrorModel
+  status: 400
+}
+
+export type getTermRangeResponse401 = {
+  data: ErrorModel
+  status: 401
+}
+
+export type getTermRangeResponse403 = {
+  data: ErrorModel
+  status: 403
+}
+
+export type getTermRangeResponse404 = {
+  data: ErrorModel
+  status: 404
+}
+
+export type getTermRangeResponse409 = {
+  data: ErrorModel
+  status: 409
+}
+
+export type getTermRangeResponse500 = {
+  data: ErrorModel
+  status: 500
+}
+    
+export type getTermRangeResponseSuccess = (getTermRangeResponse200) & {
+  headers: Headers;
+};
+export type getTermRangeResponseError = (getTermRangeResponse400 | getTermRangeResponse401 | getTermRangeResponse403 | getTermRangeResponse404 | getTermRangeResponse409 | getTermRangeResponse500) & {
+  headers: Headers;
+};
+
+export type getTermRangeResponse = (getTermRangeResponseSuccess | getTermRangeResponseError)
+
+export const getGetTermRangeUrl = () => {
+
+
+  
+
+  return `/api/v1/term-range`
+}
+
+export const getTermRange = async ( options?: RequestInit): Promise<getTermRangeResponse> => {
+  
+  return apiFetch<getTermRangeResponse>(getGetTermRangeUrl(),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getGetTermRangeQueryKey = () => {
+    return [
+    `/api/v1/term-range`
+    ] as const;
+    }
+
+    
+export const getGetTermRangeQueryOptions = <TData = Awaited<ReturnType<typeof getTermRange>>, TError = ErrorType<ErrorModel>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTermRange>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTermRangeQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTermRange>>> = ({ signal }) => getTermRange({ signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTermRange>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetTermRangeQueryResult = NonNullable<Awaited<ReturnType<typeof getTermRange>>>
+export type GetTermRangeQueryError = ErrorType<ErrorModel>
+
+
+export function useGetTermRange<TData = Awaited<ReturnType<typeof getTermRange>>, TError = ErrorType<ErrorModel>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTermRange>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getTermRange>>,
+          TError,
+          Awaited<ReturnType<typeof getTermRange>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetTermRange<TData = Awaited<ReturnType<typeof getTermRange>>, TError = ErrorType<ErrorModel>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTermRange>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getTermRange>>,
+          TError,
+          Awaited<ReturnType<typeof getTermRange>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetTermRange<TData = Awaited<ReturnType<typeof getTermRange>>, TError = ErrorType<ErrorModel>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTermRange>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Read the user's planning term range
+ */
+
+export function useGetTermRange<TData = Awaited<ReturnType<typeof getTermRange>>, TError = ErrorType<ErrorModel>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTermRange>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetTermRangeQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+
+/**
+ * @summary Change the user's planning term range
+ */
+export type changeTermRangeResponse204 = {
+  data: void
+  status: 204
+}
+
+export type changeTermRangeResponse400 = {
+  data: ErrorModel
+  status: 400
+}
+
+export type changeTermRangeResponse401 = {
+  data: ErrorModel
+  status: 401
+}
+
+export type changeTermRangeResponse403 = {
+  data: ErrorModel
+  status: 403
+}
+
+export type changeTermRangeResponse404 = {
+  data: ErrorModel
+  status: 404
+}
+
+export type changeTermRangeResponse409 = {
+  data: ErrorModel
+  status: 409
+}
+
+export type changeTermRangeResponse422 = {
+  data: ErrorModel
+  status: 422
+}
+
+export type changeTermRangeResponse500 = {
+  data: ErrorModel
+  status: 500
+}
+    
+export type changeTermRangeResponseSuccess = (changeTermRangeResponse204) & {
+  headers: Headers;
+};
+export type changeTermRangeResponseError = (changeTermRangeResponse400 | changeTermRangeResponse401 | changeTermRangeResponse403 | changeTermRangeResponse404 | changeTermRangeResponse409 | changeTermRangeResponse422 | changeTermRangeResponse500) & {
+  headers: Headers;
+};
+
+export type changeTermRangeResponse = (changeTermRangeResponseSuccess | changeTermRangeResponseError)
+
+export const getChangeTermRangeUrl = () => {
+
+
+  
+
+  return `/api/v1/term-range`
+}
+
+export const changeTermRange = async (termRangeBody: TermRangeBody, options?: RequestInit): Promise<changeTermRangeResponse> => {
+  
+  return apiFetch<changeTermRangeResponse>(getChangeTermRangeUrl(),
+  {      
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      termRangeBody,)
+  }
+);}
+
+
+
+
+export const getChangeTermRangeMutationOptions = <TError = ErrorType<ErrorModel>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changeTermRange>>, TError,{data: BodyType<TermRangeBody>}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof changeTermRange>>, TError,{data: BodyType<TermRangeBody>}, TContext> => {
+
+const mutationKey = ['changeTermRange'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof changeTermRange>>, {data: BodyType<TermRangeBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  changeTermRange(data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ChangeTermRangeMutationResult = NonNullable<Awaited<ReturnType<typeof changeTermRange>>>
+    export type ChangeTermRangeMutationBody = BodyType<TermRangeBody>
+    export type ChangeTermRangeMutationError = ErrorType<ErrorModel>
+
+    /**
+ * @summary Change the user's planning term range
+ */
+export const useChangeTermRange = <TError = ErrorType<ErrorModel>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changeTermRange>>, TError,{data: BodyType<TermRangeBody>}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof changeTermRange>>,
+        TError,
+        {data: BodyType<TermRangeBody>},
+        TContext
+      > => {
+
+      const mutationOptions = getChangeTermRangeMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }

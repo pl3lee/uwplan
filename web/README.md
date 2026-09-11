@@ -37,6 +37,8 @@ Build and run the production server:
 
 ```sh
 pnpm build:web
+pnpm --filter @uwplan/web exec playwright install chromium
+pnpm --filter @uwplan/web test:browser
 API_ORIGIN=http://127.0.0.1:8080 pnpm --filter @uwplan/web start
 ```
 
@@ -56,6 +58,9 @@ pnpm build:web
 ```
 
 Commit `app/generated/` with API changes. CI regenerates it and rejects drift.
-Vitest covers the transport and proxy boundary. Shared Playwright assertions
+Vitest covers the transport, session lookup, and proxy boundary. The web browser
+checks exercise public pages and native provider form submission on the production
+build in desktop/mobile Chromium. They intercept provider-entry navigation and
+do not claim OAuth or planner parity. Shared Playwright assertions
 remain in the repository's `e2e/` directory and must pass against the replacement
 production build before it is deployed.
