@@ -1,5 +1,5 @@
 import { useForm } from "@tanstack/react-form";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { useNavigate } from "react-router";
 import { createTemplate } from "~/generated/api/client";
 import type {
@@ -52,9 +52,11 @@ function draftItem(item: EditorItem): TemplateDraftItemBody {
 
 export function TemplateEditor({
   courses,
+  copyControl,
   initial = { name: "", description: "", items: [] },
 }: {
   courses: CourseBody[];
+  copyControl?: ReactNode;
   initial?: TemplateEditorValues;
 }) {
   const navigate = useNavigate();
@@ -101,6 +103,14 @@ export function TemplateEditor({
         <section className="mt-6 rounded-xl border bg-card shadow">
           <h2 className="p-6 text-lg font-semibold">Academic Plan Details</h2>
           <div className="space-y-4 px-6 pb-6">
+            {copyControl && (
+              <div className="mb-4 flex flex-col gap-2">
+                <span className="text-sm font-medium">
+                  Start from template (optional)
+                </span>
+                {copyControl}
+              </div>
+            )}
             <form.Field name="name">
               {(field) => (
                 <label className="block space-y-2">
