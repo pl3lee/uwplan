@@ -108,10 +108,12 @@ jobs:
             --arg revision "$RELEASE_REVISION" \
             '{schemaVersion: 2, revision: $revision, api: {image: $api_image, digest: $api_digest, manifestReference: ($api_image + "@" + $api_digest)}, web: {image: $web_image, digest: $web_digest, manifestReference: ($web_image + "@" + $web_digest)}}' \
             > release-manifest.json
-          echo "### Immutable UWPlan release" >> "$GITHUB_STEP_SUMMARY"
-          echo '```json' >> "$GITHUB_STEP_SUMMARY"
-          cat release-manifest.json >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "### Immutable UWPlan release"
+            echo '```json'
+            cat release-manifest.json
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@v4
         with:
