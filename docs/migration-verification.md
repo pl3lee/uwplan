@@ -4,7 +4,7 @@
 
 Release workflow [34577280447](https://github.com/pl3lee/uwplan/actions/runs/34577280447)
 passed its prerequisite suites, publication, exact-artifact smoke checks, and
-restricted production admission. The deployed revision is
+restricted production admission. The cutover revision was
 `97e09dd783005e225e0cb08338e5a876f0040fe3` from PR #89.
 
 | Artifact | Published and independently observed production digest |
@@ -75,8 +75,8 @@ capacity benchmark.
 
 The initial production watch passed from 08:15:02 to 08:45:02 UTC on 2026-09-11:
 61 samples at 30-second intervals, with zero readiness or release-identity failures.
-Two error-severity web
-records correlated to unmatched requests returning 404; a focused regression
+Four error-severity web records during that window correlated to unmatched
+requests returning 404; a focused regression
 check separates expected HTTP rejection from actual rendering/server failures.
 The observed application responses did not return 5xx during that sample window.
 
@@ -86,9 +86,15 @@ approval for reloading it through a brief shared Grafana restart. API updates
 cannot change a file-provisioned rule's provenance.
 
 The runtime cleanup passed review and all five CI checks and merged as PR #91,
-revision `c5fb5895d50c7a6243d081b87956529e1426e5cd`; its release is in progress.
-The expected-404 telemetry fix passed review and remains in PR #92. Its final
-checks and deployment must finish before declaring the migration complete.
+revision `c5fb5895d50c7a6243d081b87956529e1426e5cd`. The expected-404 telemetry
+fix also passed both reviews and all five checks, merging as PR #92, revision
+`1c83dd93c7f010c50574295dddcd240bde347c33`. Its production-server regression
+asserts that unmatched 404 requests retain their correlated request log without
+an error-severity rendering event, while actual 500 failures still reach the
+collector. Later releases must be checked against their own archived manifests,
+including session persistence and a fresh Grafana validation request; the digests
+above identify the first cutover, not every subsequent deployment.
+
 Live course refresh remains
 unverified because the upstream returns HTTP 403; controlled import tests pass
 and the stored catalog is preserved.
