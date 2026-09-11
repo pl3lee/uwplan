@@ -1,0 +1,27 @@
+// Add to the existing collector that owns prometheus.remote_write.mimir.
+prometheus.exporter.blackbox "uwplan_production_readiness" {
+  config = "{ modules: { https_ready: { prober: http, timeout: 5s, http: { method: GET, valid_status_codes: [200], fail_if_not_ssl: true, preferred_ip_protocol: ip4 } } } }"
+
+  target {
+    name    = "uwplan_production"
+    address = "https://uwplan.com/api/ready"
+    module  = "https_ready"
+    labels  = { service = "uwplan", environment = "production" }
+  }
+}
+
+discovery.relabel "uwplan_production_readiness" {
+  targets = prometheus.exporter.blackbox.uwplan_production_readiness.targets
+
+  rule {
+    source_labels = ["__param_target"]
+    target_label  = "instance"
+  }
+}
+
+prometheus.scrape "uwplan_production_readiness" {
+  targets         = discovery.relabel.uwplan_production_readiness.output
+  forward_to      = [prometheus.remote_write.mimir.receiver]
+  scrape_interval = "30s"
+  scrape_timeout  = "10s"
+}
