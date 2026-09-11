@@ -154,7 +154,14 @@ def deploy(digest, revision, web_digest=None):
                 raise RuntimeError('Candidate failed readiness')
         except Exception:
             if web_digest or old_release.web_digest:
-                compose(candidate, 'stop', *new_release.services)
+                try:
+                    compose(candidate, 'stop', *new_release.services)
+                except Exception:
+                    try:
+                        # Remove only candidate containers; keep all data volumes.
+                        compose(candidate, 'rm', '--stop', '--force', *new_release.services)
+                    except Exception as cleanup_error:
+                        raise RuntimeError('Rollback could not stop candidate services; manual recovery required') from cleanup_error
             atomic_write(RELEASE, previous)
             compose(RELEASE, 'up', '-d', '--no-deps', '--force-recreate', *old_release.services)
             if not ready(*release_identity(previous)):

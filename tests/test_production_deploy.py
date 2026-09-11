@@ -53,7 +53,7 @@ class DeploymentTests(unittest.TestCase):
                 deploy.parse_command(command)
         self.assertEqual(deploy.parse_command(f'deploy {DIGEST} {REVISION}'), (DIGEST, REVISION))
 
-    def exercise(self, ready_results, migrate_fails=False, frozen=False, architecture='amd64', web_digest=None, old_web_digest=None, web_revision=REVISION):
+    def exercise(self, ready_results, migrate_fails=False, frozen=False, architecture='amd64', web_digest=None, old_web_digest=None, web_revision=REVISION, candidate_stop_fails=False, candidate_remove_fails=False):
         with tempfile.TemporaryDirectory() as temporary:
             state = Path(temporary)
             release = state/'release.env'
@@ -69,6 +69,8 @@ class DeploymentTests(unittest.TestCase):
             def compose(env, *args):
                 calls.append(args)
                 if 'migrator' in args and migrate_fails: raise RuntimeError('migration rejected')
+                if args == ('stop', 'api', 'web') and candidate_stop_fails: raise RuntimeError('stop failed')
+                if args == ('rm', '--stop', '--force', 'api', 'web') and candidate_remove_fails: raise RuntimeError('remove failed')
                 return SimpleNamespace(stdout=b'backup')
             def run(args):
                 image_revision = web_revision if args[-1].startswith(f'{deploy.REPOSITORY}-web@') else REVISION
@@ -119,6 +121,21 @@ class DeploymentTests(unittest.TestCase):
         self.assertIn('previous image restored', str(error))
         self.assertEqual(calls[-1], ('up', '-d', '--no-deps', '--force-recreate', 'api', 'web'))
         self.assertEqual(sum('migrator' in call for call in calls), 1)
+
+    def test_candidate_stop_failure_removes_only_candidate_containers_before_restoring(self):
+        current, previous, calls, error, _ = self.exercise([False, True], web_digest=WEB_DIGEST, candidate_stop_fails=True)
+        self.assertEqual(current, previous)
+        self.assertIn('previous image restored', str(error))
+        self.assertEqual(calls[-2:], [('rm', '--stop', '--force', 'api', 'web'),
+                                     ('up', '-d', '--no-deps', '--force-recreate', 'app')])
+        self.assertFalse(any('down' in call or '--volumes' in call for call in calls))
+
+    def test_unstoppable_candidate_reports_recovery_failure_without_starting_other_writers(self):
+        current, previous, calls, error, _ = self.exercise([False], web_digest=WEB_DIGEST, candidate_stop_fails=True, candidate_remove_fails=True)
+        self.assertNotEqual(current, previous)
+        self.assertIn('could not stop candidate services; manual recovery required', str(error))
+        self.assertEqual(calls[-1], ('rm', '--stop', '--force', 'api', 'web'))
+        self.assertNotIn(('up', '-d', '--no-deps', '--force-recreate', 'app'), calls)
 
     def test_mismatched_web_revision_is_rejected_before_backup_or_activation(self):
         current, previous, calls, error, backups = self.exercise([], web_digest=WEB_DIGEST, web_revision=OLD_REVISION)
