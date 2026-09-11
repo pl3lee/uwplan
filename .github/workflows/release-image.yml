@@ -17,12 +17,21 @@ jobs:
   e2e:
     uses: ./.github/workflows/browser-tests.yml
 
+  api:
+    uses: ./.github/workflows/api-check.yml
+
+  web:
+    uses: ./.github/workflows/web-check.yml
+
+  images:
+    uses: ./.github/workflows/rewrite-images.yml
+
   release:
-    needs: e2e
+    needs: [e2e, api, web, images]
     runs-on: ubuntu-latest
     outputs:
-      manifest_digest: ${{ steps.image.outputs.digest }}
-      manifest_reference: ${{ steps.record.outputs.manifest_reference }}
+      api_digest: ${{ steps.api.outputs.digest }}
+      web_digest: ${{ steps.web.outputs.digest }}
     steps:
       - uses: actions/checkout@v4
 
@@ -49,45 +58,73 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
 
-      - name: Build and publish once
-        id: image
+      - name: Build and publish the API
+        id: api
         uses: docker/build-push-action@v6
         with:
           context: .
+          file: api/Dockerfile
           build-args: |
             RELEASE_REVISION=${{ github.sha }}
             SOURCE_DATE_EPOCH=${{ steps.source.outputs.epoch }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=uwplan-api
+          cache-to: type=gha,scope=uwplan-api,mode=max
           outputs: type=image,push=true,rewrite-timestamp=true
           platforms: linux/amd64
           provenance: false
           sbom: false
-          tags: docker.io/${{ github.repository }}:${{ github.sha }}
+          tags: docker.io/${{ github.repository }}-api:${{ github.sha }}
 
-      - name: Record immutable manifest
-        id: record
+      - name: Build and publish the web application
+        id: web
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: web/Dockerfile
+          build-args: |
+            RELEASE_REVISION=${{ github.sha }}
+            SOURCE_DATE_EPOCH=${{ steps.source.outputs.epoch }}
+          cache-from: type=gha,scope=uwplan-web
+          cache-to: type=gha,scope=uwplan-web,mode=max
+          outputs: type=image,push=true,rewrite-timestamp=true
+          platforms: linux/amd64
+          provenance: false
+          sbom: false
+          tags: docker.io/${{ github.repository }}-web:${{ github.sha }}
+
+      - name: Verify the published immutable artifacts
         env:
-          IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
+          UWPLAN_API_IMAGE: docker.io/${{ github.repository }}-api@${{ steps.api.outputs.digest }}
+          UWPLAN_WEB_IMAGE: docker.io/${{ github.repository }}-web@${{ steps.web.outputs.digest }}
+        run: |
+          docker pull --platform linux/amd64 "$UWPLAN_API_IMAGE"
+          docker pull --platform linux/amd64 "$UWPLAN_WEB_IMAGE"
+          bash tests/rewrite-images.sh
+
+      - name: Record the immutable paired manifest
+        env:
+          API_DIGEST: ${{ steps.api.outputs.digest }}
+          WEB_DIGEST: ${{ steps.web.outputs.digest }}
           IMAGE_NAME: docker.io/${{ github.repository }}
           RELEASE_REVISION: ${{ github.sha }}
         run: |
-          if [[ ! "$IMAGE_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
-            echo "Image build did not return a valid manifest digest" >&2
-            exit 1
-          fi
-          MANIFEST_REFERENCE="${IMAGE_NAME}@${IMAGE_DIGEST}"
+          for DIGEST in "$API_DIGEST" "$WEB_DIGEST"; do
+            if [[ ! "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+              echo "Image build did not return a valid manifest digest" >&2
+              exit 1
+            fi
+          done
           jq -n \
-            --arg image "$IMAGE_NAME" \
-            --arg digest "$IMAGE_DIGEST" \
-            --arg manifest_reference "$MANIFEST_REFERENCE" \
+            --arg api_image "${IMAGE_NAME}-api" \
+            --arg api_digest "$API_DIGEST" \
+            --arg web_image "${IMAGE_NAME}-web" \
+            --arg web_digest "$WEB_DIGEST" \
             --arg revision "$RELEASE_REVISION" \
-            '{image: $image, digest: $digest, manifestReference: $manifest_reference, revision: $revision}' \
+            '{schemaVersion: 2, revision: $revision, api: {image: $api_image, digest: $api_digest, manifestReference: ($api_image + "@" + $api_digest)}, web: {image: $web_image, digest: $web_digest, manifestReference: ($web_image + "@" + $web_digest)}}' \
             > release-manifest.json
-          echo "manifest_reference=$MANIFEST_REFERENCE" >> "$GITHUB_OUTPUT"
           echo "### Immutable UWPlan release" >> "$GITHUB_STEP_SUMMARY"
-          echo '```text' >> "$GITHUB_STEP_SUMMARY"
-          echo "$MANIFEST_REFERENCE" >> "$GITHUB_STEP_SUMMARY"
+          echo '```json' >> "$GITHUB_STEP_SUMMARY"
+          cat release-manifest.json >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@v4
@@ -124,16 +161,19 @@ jobs:
 
       - name: Validate access or admit the immutable release
         env:
-          DEPLOY_DIGEST: ${{ needs.release.outputs.manifest_digest }}
+          DEPLOY_API_DIGEST: ${{ needs.release.outputs.api_digest }}
+          DEPLOY_WEB_DIGEST: ${{ needs.release.outputs.web_digest }}
           DEPLOY_HOST: ${{ vars.UWPLAN_DEPLOY_HOST }}
           DEPLOY_REVISION: ${{ github.sha }}
           DEPLOY_REF: ${{ github.ref }}
         run: |
-          if [[ ! "$DEPLOY_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
-            echo "Refusing to deploy an invalid manifest digest" >&2
-            exit 1
-          fi
-          COMMAND="deploy $DEPLOY_DIGEST $DEPLOY_REVISION"
+          for DIGEST in "$DEPLOY_API_DIGEST" "$DEPLOY_WEB_DIGEST"; do
+            if [[ ! "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+              echo "Refusing to deploy an invalid manifest digest" >&2
+              exit 1
+            fi
+          done
+          COMMAND="deploy-pair $DEPLOY_API_DIGEST $DEPLOY_WEB_DIGEST $DEPLOY_REVISION"
           if [[ "$DEPLOY_REF" != "refs/heads/main" ]]; then COMMAND="status"; fi
           ssh \
             -i "$RUNNER_TEMP/uwplan-ssh/id_ed25519" \
