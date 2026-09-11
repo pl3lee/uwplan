@@ -1,0 +1,28 @@
+name: Replacement Images
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  rewrite-images:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build immutable-source API and web artifacts
+        env:
+          RELEASE_REVISION: ${{ github.sha }}
+        run: |
+          docker build --build-arg RELEASE_REVISION="$RELEASE_REVISION" -f api/Dockerfile -t uwplan-api:ci .
+          docker build --build-arg RELEASE_REVISION="$RELEASE_REVISION" -f web/Dockerfile -t uwplan-web:ci .
+      - name: Verify the images with isolated PostgreSQL and Redis
+        env:
+          UWPLAN_API_IMAGE: uwplan-api:ci
+          UWPLAN_WEB_IMAGE: uwplan-web:ci
+        run: bash tests/rewrite-images.sh

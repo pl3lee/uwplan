@@ -2,6 +2,7 @@
   "name": "@uwplan/web",
   "private": true,
   "type": "module",
+  "files": ["build", "server.mjs", "observability.mjs"],
   "scripts": {
     "api:generate": "orval --config orval.config.ts",
     "build": "react-router build",
