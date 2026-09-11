@@ -10,3 +10,6 @@ packages:
   github.com/pl3lee/uwplan/api/internal/service/auth:
     config:
       all: true
+  github.com/pl3lee/uwplan/api/internal/api:
+    config:
+      all: true

@@ -4,6 +4,8 @@ go 1.26.0
 
 require (
 	github.com/alicebob/miniredis/v2 v2.37.0
+	github.com/danielgtaylor/huma/v2 v2.34.1
+	github.com/go-chi/chi/v5 v5.2.3
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.9.2

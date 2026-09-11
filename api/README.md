@@ -52,7 +52,32 @@ Redis, with a positive expiry; logout deletes that session. Authentication reads
 the user's current role from PostgreSQL, so role changes are not cached in a
 session. Missing or expired sessions are distinct from dependency outages.
 
-These services are not exposed over HTTP yet. OAuth verification, state and CSRF
-protection, secure cookie handling, and Huma endpoints are the next layer. The
-existing authentication runtime remains active until the complete replacement
+Huma exposes liveness/readiness, the current authenticated user, and logout.
+OAuth provider verification and login callbacks are the next layer. The existing
+production authentication runtime remains active until the complete replacement
 passes the shared browser suite.
+
+## HTTP runtime and contract
+
+Set `DATABASE_URL`, `REDIS_URL`, and `PUBLIC_ORIGIN`, then run `make run` from
+`api/`. `HTTP_ADDR` defaults to `:8080`. The public origin must use HTTPS except
+on loopback. HTTPS uses a `__Host-uwplan_session` HttpOnly cookie; loopback uses
+`uwplan_session`. Cookies are SameSite=Lax, scoped to `/`, and have no Domain.
+Do not expose this candidate runtime through production routing yet.
+
+- `GET /api/live` stays live when dependencies are unavailable.
+- `GET /api/ready` requires PostgreSQL, Redis, and valid release identity; probes under a two-second
+  deadline, and reports release identity from `RELEASE_DIGEST`/`RELEASE_REVISION`.
+- `GET /api/v1/me` requires a valid Redis session and returns the current user.
+- `POST /api/v1/auth/logout` requires an exact `PUBLIC_ORIGIN` Origin header,
+  rejects cross-site Fetch Metadata, revokes the session, and clears its cookie.
+
+API responses are not cacheable. Unexpected errors have generic response bodies;
+logs contain error types instead of raw credential-bearing errors. Request bodies
+are bounded, dependency operations have timeouts, and the server shuts down on
+SIGTERM. It does not run migrations at startup.
+
+`make openapi` writes `openapi/openapi.json` and `openapi/openapi.yaml` from the
+same Huma route registration used at runtime. `make generate` includes this step;
+CI checks the complete generated output. Live specs are available under
+`/api/openapi.json` and `/api/openapi.yaml`, with documentation at `/api/docs`.

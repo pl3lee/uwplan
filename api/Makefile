@@ -17,8 +17,16 @@ migrate:
 	$(GO) run ./cmd/migrate
 
 .PHONY: generate sqlc mocks
-generate: sqlc mocks
+generate: sqlc mocks openapi
 sqlc:
 	$(GO) tool sqlc generate
 mocks:
 	$(GO) tool mockery --config .mockery.yaml
+
+.PHONY: openapi run build
+openapi:
+	$(GO) run ./cmd/openapi
+run:
+	$(GO) run ./cmd/api
+build:
+	$(GO) build ./...
