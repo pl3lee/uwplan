@@ -8,6 +8,7 @@ import {
   type SortingState,
   useReactTable,
 } from "@tanstack/react-table";
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import {
   changeFreeCourse,
@@ -184,11 +185,13 @@ function CourseTable({
                         header.getContext(),
                       )}
                       <span aria-hidden="true">
-                        {header.column.getIsSorted() === "asc"
-                          ? "↑"
-                          : header.column.getIsSorted() === "desc"
-                            ? "↓"
-                            : "↕"}
+                        {header.column.getIsSorted() === "asc" ? (
+                          <ArrowUp className="h-4 w-4" />
+                        ) : header.column.getIsSorted() === "desc" ? (
+                          <ArrowDown className="h-4 w-4" />
+                        ) : (
+                          <ArrowUpDown className="h-4 w-4" />
+                        )}
                       </span>
                     </Button>
                   ) : (
