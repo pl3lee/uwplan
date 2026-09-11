@@ -143,6 +143,11 @@ export function injectTraceHeaders(headers, request) {
 }
 
 export function requestTelemetry(req, res, next) {
+  if (req.path === "/api/ready") {
+    const identity = release();
+    res.setHeader("X-UWPlan-Web-Release-Digest", identity.release_digest);
+    res.setHeader("X-UWPlan-Web-Release-Revision", identity.release_revision);
+  }
   const parent = propagation.extract(context.active(), req.headers);
   const path = req.path;
   const route = routes.has(path)

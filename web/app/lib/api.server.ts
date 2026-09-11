@@ -111,6 +111,8 @@ export async function proxyApiRequest(request: Request): Promise<Response> {
       "trailer",
       "upgrade",
       "set-cookie",
+      "x-uwplan-web-release-digest",
+      "x-uwplan-web-release-revision",
     ])
       responseHeaders.delete(name);
     for (const cookie of response.headers.getSetCookie())

@@ -33,7 +33,23 @@ test("production web exports safe correlated requests and forwards API trace con
   let apiTraceparent;
   let apiValidation;
   const api = createServer((req, res) => {
-    if (req.url.startsWith("/api/failure")) {
+    if (req.url === "/api/ready") {
+      res
+        .writeHead(200, {
+          "content-type": "application/json",
+          "X-UWPlan-Web-Release-Digest": "upstream-must-not-identify-web",
+          "X-UWPlan-Web-Release-Revision": "upstream-must-not-identify-web",
+        })
+        .end(
+          JSON.stringify({
+            status: "ready",
+            release: {
+              digest: `sha256:${"c".repeat(64)}`,
+              revision: "b".repeat(40),
+            },
+          }),
+        );
+    } else if (req.url.startsWith("/api/failure")) {
       req.socket.destroy();
     } else if (req.url.startsWith("/api/live")) {
       apiTraceparent = req.headers.traceparent;
@@ -62,6 +78,17 @@ test("production web exports safe correlated requests and forwards API trace con
     apiOrigin,
   );
   await waitReady(origin);
+  const readiness = await fetch(`${origin}/api/ready`);
+  assert.equal(readiness.status, 200);
+  assert.deepEqual(await readiness.json(), {
+    status: "ready",
+    release: { digest: `sha256:${"c".repeat(64)}`, revision },
+  });
+  assert.equal(readiness.headers.get("X-UWPlan-Web-Release-Digest"), digest);
+  assert.equal(
+    readiness.headers.get("X-UWPlan-Web-Release-Revision"),
+    revision,
+  );
   const validation = "validation-33333333-3333-3333-3333-333333333333";
   const response = await fetch(
     `${origin}/api/live?code=private-canary&state=private-canary`,
