@@ -16,6 +16,10 @@ test-integration:
 migrate:
 	$(GO) run ./cmd/migrate
 
+.PHONY: courses-update
+courses-update:
+	$(GO) run ./cmd/courses-update
+
 .PHONY: generate sqlc mocks
 generate: sqlc mocks openapi
 sqlc:
