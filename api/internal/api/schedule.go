@@ -6,7 +6,6 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
 	"github.com/pl3lee/uwplan/api/internal/config"
-	"github.com/pl3lee/uwplan/api/internal/domain/course"
 	"github.com/pl3lee/uwplan/api/internal/domain/schedule"
 	"github.com/pl3lee/uwplan/api/internal/domain/session"
 	"github.com/pl3lee/uwplan/api/internal/domain/term"
@@ -53,19 +52,6 @@ type TermRangeBody struct {
 }
 type ChangeTermRangeInput struct{ Body TermRangeBody }
 
-type CourseBody struct {
-	ID           uuid.UUID `json:"id"`
-	Code         string    `json:"code"`
-	Name         string    `json:"name"`
-	Description  string    `json:"description"`
-	Prereqs      string    `json:"prereqs"`
-	Antireqs     string    `json:"antireqs"`
-	Coreqs       string    `json:"coreqs"`
-	UsefulRating *string   `json:"useful_rating"`
-	LikedRating  *string   `json:"liked_rating"`
-	EasyRating   *string   `json:"easy_rating"`
-	NumRatings   *int32    `json:"num_ratings"`
-}
 type AssignmentBody struct {
 	Course CourseBody `json:"course"`
 	Term   string     `json:"term"`
@@ -85,9 +71,6 @@ type ScheduleCSVResponse struct {
 	Body               []byte
 }
 
-func courseBody(item course.Course) CourseBody {
-	return CourseBody{ID: item.ID, Code: item.Code, Name: item.Name, Description: item.Description, Prereqs: item.Prereqs, Antireqs: item.Antireqs, Coreqs: item.Coreqs, UsefulRating: item.UsefulRating, LikedRating: item.LikedRating, EasyRating: item.EasyRating, NumRatings: item.NumRatings}
-}
 func termRangeBody(value term.Range) TermRangeBody {
 	return TermRangeBody{StartTerm: string(value.Start.Season), StartYear: value.Start.Year, EndTerm: string(value.End.Season), EndYear: value.End.Year}
 }

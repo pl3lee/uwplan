@@ -68,6 +68,18 @@ components:
         - easy_rating
         - num_ratings
       type: object
+    CourseListResponseBody:
+      additionalProperties: false
+      properties:
+        courses:
+          items:
+            $ref: "#/components/schemas/CourseBody"
+          type:
+            - array
+            - "null"
+      required:
+        - courses
+      type: object
     ErrorDetail:
       additionalProperties: false
       properties:
@@ -564,6 +576,31 @@ paths:
         - session: []
         - {}
       summary: Revoke the current session
+  /api/v1/courses:
+    get:
+      operationId: listCourses
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CourseListResponseBody"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: List the course catalog
   /api/v1/me:
     get:
       operationId: getCurrentUser

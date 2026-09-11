@@ -16,11 +16,13 @@ import (
 	"github.com/pl3lee/uwplan/api/internal/config"
 	healthgateway "github.com/pl3lee/uwplan/api/internal/gateway/health"
 	oauthgateway "github.com/pl3lee/uwplan/api/internal/gateway/oauth"
+	courserepository "github.com/pl3lee/uwplan/api/internal/repository/course"
 	oauthrepository "github.com/pl3lee/uwplan/api/internal/repository/oauth"
 	schedulerepository "github.com/pl3lee/uwplan/api/internal/repository/schedule"
 	sessionrepository "github.com/pl3lee/uwplan/api/internal/repository/session"
 	userrepository "github.com/pl3lee/uwplan/api/internal/repository/user"
 	authservice "github.com/pl3lee/uwplan/api/internal/service/auth"
+	courseservice "github.com/pl3lee/uwplan/api/internal/service/course"
 	oauthservice "github.com/pl3lee/uwplan/api/internal/service/oauth"
 	scheduleservice "github.com/pl3lee/uwplan/api/internal/service/schedule"
 	"github.com/redis/go-redis/v9"
@@ -74,7 +76,8 @@ func run() error {
 	providerGateway := oauthgateway.NewOAuthGateway(oauthgateway.Options{PublicOrigin: cfg.PublicOrigin, Google: oauthgateway.Credentials{ClientID: cfg.Google.ClientID, ClientSecret: cfg.Google.ClientSecret}, GitHub: oauthgateway.Credentials{ClientID: cfg.GitHub.ClientID, ClientSecret: cfg.GitHub.ClientSecret}}, nil)
 	oauth := oauthservice.NewOAuthService(oauthrepository.NewOAuthRepository(redisClient), providerGateway, auth)
 	schedules := scheduleservice.NewScheduleService(schedulerepository.NewScheduleRepository(database))
-	router, _ := api.NewRouter(cfg, api.Dependencies{Auth: auth, Health: healthgateway.NewHealthGateway(database, redisClient), OAuth: oauth, Schedules: schedules})
+	courses := courseservice.NewCourseService(courserepository.NewCourseRepository(database))
+	router, _ := api.NewRouter(cfg, api.Dependencies{Auth: auth, Health: healthgateway.NewHealthGateway(database, redisClient), OAuth: oauth, Schedules: schedules, Courses: courses})
 	server := &http.Server{Addr: cfg.HTTPAddress, Handler: router, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 20 * time.Second, WriteTimeout: 20 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16 << 10}
 	stopped := make(chan error, 1)
 	go func() { stopped <- server.ListenAndServe() }()

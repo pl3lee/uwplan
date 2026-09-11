@@ -26,6 +26,7 @@ import type {
 import type {
   AssignScheduleInputBody,
   CompleteOAuthParams,
+  CourseListResponseBody,
   ErrorModel,
   LiveBody,
   ReadinessBody,
@@ -675,6 +676,131 @@ export const useLogout = <TError = ErrorType<ErrorModel>,
       return useMutation(mutationOptions, queryClient);
     }
     
+/**
+ * @summary List the course catalog
+ */
+export type listCoursesResponse200 = {
+  data: CourseListResponseBody
+  status: 200
+}
+
+export type listCoursesResponse401 = {
+  data: ErrorModel
+  status: 401
+}
+
+export type listCoursesResponse500 = {
+  data: ErrorModel
+  status: 500
+}
+    
+export type listCoursesResponseSuccess = (listCoursesResponse200) & {
+  headers: Headers;
+};
+export type listCoursesResponseError = (listCoursesResponse401 | listCoursesResponse500) & {
+  headers: Headers;
+};
+
+export type listCoursesResponse = (listCoursesResponseSuccess | listCoursesResponseError)
+
+export const getListCoursesUrl = () => {
+
+
+  
+
+  return `/api/v1/courses`
+}
+
+export const listCourses = async ( options?: RequestInit): Promise<listCoursesResponse> => {
+  
+  return apiFetch<listCoursesResponse>(getListCoursesUrl(),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getListCoursesQueryKey = () => {
+    return [
+    `/api/v1/courses`
+    ] as const;
+    }
+
+    
+export const getListCoursesQueryOptions = <TData = Awaited<ReturnType<typeof listCourses>>, TError = ErrorType<ErrorModel>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCourses>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListCoursesQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listCourses>>> = ({ signal }) => listCourses({ signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listCourses>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListCoursesQueryResult = NonNullable<Awaited<ReturnType<typeof listCourses>>>
+export type ListCoursesQueryError = ErrorType<ErrorModel>
+
+
+export function useListCourses<TData = Awaited<ReturnType<typeof listCourses>>, TError = ErrorType<ErrorModel>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCourses>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCourses>>,
+          TError,
+          Awaited<ReturnType<typeof listCourses>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListCourses<TData = Awaited<ReturnType<typeof listCourses>>, TError = ErrorType<ErrorModel>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCourses>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCourses>>,
+          TError,
+          Awaited<ReturnType<typeof listCourses>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListCourses<TData = Awaited<ReturnType<typeof listCourses>>, TError = ErrorType<ErrorModel>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCourses>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List the course catalog
+ */
+
+export function useListCourses<TData = Awaited<ReturnType<typeof listCourses>>, TError = ErrorType<ErrorModel>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCourses>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListCoursesQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+
 /**
  * @summary Get the signed-in user
  */

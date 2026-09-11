@@ -14,6 +14,7 @@ type Dependencies struct {
 	Health    HealthGateway
 	OAuth     OAuthService
 	Schedules ScheduleService
+	Courses   CourseService
 }
 
 func NewRouter(cfg config.Config, deps Dependencies) (http.Handler, huma.API) {
@@ -32,5 +33,6 @@ func NewRouter(cfg config.Config, deps Dependencies) (http.Handler, huma.API) {
 	registerAuth(app, cfg, deps.Auth)
 	registerOAuth(app, cfg, deps.OAuth)
 	registerSchedules(app, cfg, deps.Auth, deps.Schedules)
+	registerCourses(app, cfg, deps.Auth, deps.Courses)
 	return router, app
 }
