@@ -88,6 +88,10 @@ export async function startGoStack({
     const isolation = [
       "--network",
       network,
+      // The per-run private key is mode 0600 inside a mode 0700 directory.
+      // Match its owner instead of granting containers DAC override capability.
+      "--user",
+      `${process.getuid()}:${process.getgid()}`,
       "--read-only",
       "--cap-drop",
       "ALL",
