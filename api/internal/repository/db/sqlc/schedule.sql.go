@@ -11,6 +11,33 @@ import (
 	"github.com/google/uuid"
 )
 
+const assignOwnedScheduleCourse = `-- name: AssignOwnedScheduleCourse :execrows
+INSERT INTO schedule_course(schedule_id,course_id,term)
+SELECT s.id,c.id,$1 FROM schedule s JOIN plan p ON p.id=s.plan_id JOIN course c ON c.id=$2
+WHERE p.user_id=$3 AND s.id=$4
+ON CONFLICT(schedule_id,course_id) DO UPDATE SET term=excluded.term
+`
+
+type AssignOwnedScheduleCourseParams struct {
+	Term       string
+	CourseID   uuid.UUID
+	UserID     string
+	ScheduleID uuid.UUID
+}
+
+func (q *Queries) AssignOwnedScheduleCourse(ctx context.Context, arg AssignOwnedScheduleCourseParams) (int64, error) {
+	result, err := q.db.Exec(ctx, assignOwnedScheduleCourse,
+		arg.Term,
+		arg.CourseID,
+		arg.UserID,
+		arg.ScheduleID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const createOwnedSchedule = `-- name: CreateOwnedSchedule :one
 INSERT INTO schedule(id,name,plan_id) SELECT $1,$2,p.id FROM plan p WHERE p.user_id=$3 RETURNING id,name
 `
@@ -50,6 +77,50 @@ func (q *Queries) DeleteOwnedSchedule(ctx context.Context, arg DeleteOwnedSchedu
 	return result.RowsAffected(), nil
 }
 
+const getOwnedSchedule = `-- name: GetOwnedSchedule :one
+SELECT s.id,s.name FROM schedule s JOIN plan p ON p.id=s.plan_id WHERE p.user_id=$1 AND s.id=$2
+`
+
+type GetOwnedScheduleParams struct {
+	UserID string
+	ID     uuid.UUID
+}
+
+type GetOwnedScheduleRow struct {
+	ID   uuid.UUID
+	Name string
+}
+
+func (q *Queries) GetOwnedSchedule(ctx context.Context, arg GetOwnedScheduleParams) (GetOwnedScheduleRow, error) {
+	row := q.db.QueryRow(ctx, getOwnedSchedule, arg.UserID, arg.ID)
+	var i GetOwnedScheduleRow
+	err := row.Scan(&i.ID, &i.Name)
+	return i, err
+}
+
+const getUserTermRange = `-- name: GetUserTermRange :one
+SELECT start_term,start_year,end_term,end_year FROM user_term_range WHERE user_id=$1
+`
+
+type GetUserTermRangeRow struct {
+	StartTerm Season
+	StartYear int32
+	EndTerm   Season
+	EndYear   int32
+}
+
+func (q *Queries) GetUserTermRange(ctx context.Context, userID string) (GetUserTermRangeRow, error) {
+	row := q.db.QueryRow(ctx, getUserTermRange, userID)
+	var i GetUserTermRangeRow
+	err := row.Scan(
+		&i.StartTerm,
+		&i.StartYear,
+		&i.EndTerm,
+		&i.EndYear,
+	)
+	return i, err
+}
+
 const listOwnedSchedules = `-- name: ListOwnedSchedules :many
 SELECT s.id,s.name FROM schedule s JOIN plan p ON p.id=s.plan_id WHERE p.user_id=$1 ORDER BY s.id
 `
@@ -79,6 +150,93 @@ func (q *Queries) ListOwnedSchedules(ctx context.Context, userID string) ([]List
 	return items, nil
 }
 
+const listScheduleAssignments = `-- name: ListScheduleAssignments :many
+SELECT c.id, c.code, c.name, c.useful_rating, c.liked_rating, c.easy_rating, c.num_ratings, c.description, c.prereqs, c.antireqs, c.coreqs,sc.term FROM schedule_course sc JOIN course c ON c.id=sc.course_id WHERE sc.schedule_id=$1 ORDER BY c.code
+`
+
+type ListScheduleAssignmentsRow struct {
+	Course Course
+	Term   string
+}
+
+func (q *Queries) ListScheduleAssignments(ctx context.Context, scheduleID uuid.UUID) ([]ListScheduleAssignmentsRow, error) {
+	rows, err := q.db.Query(ctx, listScheduleAssignments, scheduleID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListScheduleAssignmentsRow{}
+	for rows.Next() {
+		var i ListScheduleAssignmentsRow
+		if err := rows.Scan(
+			&i.Course.ID,
+			&i.Course.Code,
+			&i.Course.Name,
+			&i.Course.UsefulRating,
+			&i.Course.LikedRating,
+			&i.Course.EasyRating,
+			&i.Course.NumRatings,
+			&i.Course.Description,
+			&i.Course.Prereqs,
+			&i.Course.Antireqs,
+			&i.Course.Coreqs,
+			&i.Term,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listSelectedCatalogCourses = `-- name: ListSelectedCatalogCourses :many
+SELECT c.id, c.code, c.name, c.useful_rating, c.liked_rating, c.easy_rating, c.num_ratings, c.description, c.prereqs, c.antireqs, c.coreqs FROM selected_course selected
+JOIN plan p ON p.id=selected.plan_id
+JOIN course_item item ON item.id=selected.course_item_id
+LEFT JOIN free_course free ON free.course_item_id=item.id AND free.user_id=p.user_id
+JOIN course c ON c.id=CASE WHEN item.type='fixed' THEN item.course_id ELSE free.filled_course_id END
+WHERE p.user_id=$1 AND selected.selected=true ORDER BY c.code,item.id
+`
+
+type ListSelectedCatalogCoursesRow struct {
+	Course Course
+}
+
+func (q *Queries) ListSelectedCatalogCourses(ctx context.Context, userID string) ([]ListSelectedCatalogCoursesRow, error) {
+	rows, err := q.db.Query(ctx, listSelectedCatalogCourses, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListSelectedCatalogCoursesRow{}
+	for rows.Next() {
+		var i ListSelectedCatalogCoursesRow
+		if err := rows.Scan(
+			&i.Course.ID,
+			&i.Course.Code,
+			&i.Course.Name,
+			&i.Course.UsefulRating,
+			&i.Course.LikedRating,
+			&i.Course.EasyRating,
+			&i.Course.NumRatings,
+			&i.Course.Description,
+			&i.Course.Prereqs,
+			&i.Course.Antireqs,
+			&i.Course.Coreqs,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const lockOwnedPlan = `-- name: LockOwnedPlan :one
 SELECT id FROM plan WHERE user_id=$1 FOR UPDATE
 `
@@ -88,6 +246,24 @@ func (q *Queries) LockOwnedPlan(ctx context.Context, userID string) (uuid.UUID, 
 	var id uuid.UUID
 	err := row.Scan(&id)
 	return id, err
+}
+
+const removeOwnedScheduleCourse = `-- name: RemoveOwnedScheduleCourse :execrows
+DELETE FROM schedule_course sc USING schedule s,plan p WHERE sc.schedule_id=s.id AND s.plan_id=p.id AND p.user_id=$1 AND s.id=$2 AND sc.course_id=$3
+`
+
+type RemoveOwnedScheduleCourseParams struct {
+	UserID   string
+	ID       uuid.UUID
+	CourseID uuid.UUID
+}
+
+func (q *Queries) RemoveOwnedScheduleCourse(ctx context.Context, arg RemoveOwnedScheduleCourseParams) (int64, error) {
+	result, err := q.db.Exec(ctx, removeOwnedScheduleCourse, arg.UserID, arg.ID, arg.CourseID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const renameOwnedSchedule = `-- name: RenameOwnedSchedule :execrows
@@ -102,6 +278,32 @@ type RenameOwnedScheduleParams struct {
 
 func (q *Queries) RenameOwnedSchedule(ctx context.Context, arg RenameOwnedScheduleParams) (int64, error) {
 	result, err := q.db.Exec(ctx, renameOwnedSchedule, arg.UserID, arg.ID, arg.Name)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const updateUserTermRange = `-- name: UpdateUserTermRange :execrows
+UPDATE user_term_range SET start_term=$2,start_year=$3,end_term=$4,end_year=$5 WHERE user_id=$1
+`
+
+type UpdateUserTermRangeParams struct {
+	UserID    string
+	StartTerm Season
+	StartYear int32
+	EndTerm   Season
+	EndYear   int32
+}
+
+func (q *Queries) UpdateUserTermRange(ctx context.Context, arg UpdateUserTermRangeParams) (int64, error) {
+	result, err := q.db.Exec(ctx, updateUserTermRange,
+		arg.UserID,
+		arg.StartTerm,
+		arg.StartYear,
+		arg.EndTerm,
+		arg.EndYear,
+	)
 	if err != nil {
 		return 0, err
 	}

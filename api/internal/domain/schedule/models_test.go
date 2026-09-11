@@ -2,6 +2,7 @@ package schedule_test
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -21,6 +22,37 @@ func TestScheduleExportPreservesCSVSectionsAndEscapesNames(t *testing.T) {
 	want := "Selected Courses:\nCS135 - Designing Functional Programs\n\"CS136 - Topics, \"\"Algorithms\"\"\"\n\nScheduled Courses:\nWinter 2027,Fall 2027\nCS135,CS136\n"
 	if diff := cmp.Diff(want, string(data)); diff != "" {
 		t.Fatal(diff)
+	}
+}
+
+func TestScheduleMutationValidation(t *testing.T) {
+	t.Parallel()
+	id := uuid.MustParse("11111111-1111-4111-8111-111111111111")
+	ref := schedule.Reference{UserID: "legacy-user", ID: id}
+	for _, tc := range []struct {
+		name     string
+		validate func() error
+		valid    bool
+	}{
+		{"valid name", (schedule.Create{UserID: "legacy-user", Name: "My Schedule"}).Validate, true},
+		{"empty name", (schedule.Create{UserID: "legacy-user", Name: " "}).Validate, false},
+		{"long name", (schedule.Create{UserID: "legacy-user", Name: strings.Repeat("x", 256)}).Validate, false},
+		{"missing owner", (schedule.Create{Name: "Schedule"}).Validate, false},
+		{"rename", (schedule.Rename{Reference: ref, Name: "New name"}).Validate, true},
+		{"missing schedule", (schedule.Rename{Name: "New name"}).Validate, false},
+		{"valid assignment", (schedule.Assign{Reference: ref, CourseID: id, Term: term.Term{Season: term.Fall, Year: 2027}}).Validate, true},
+		{"invalid term", (schedule.Assign{Reference: ref, CourseID: id, Term: term.Term{Season: "Summer", Year: 2027}}).Validate, false},
+		{"missing course", (schedule.Assign{Reference: ref, Term: term.Term{Season: term.Fall, Year: 2027}}).Validate, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.validate()
+			if tc.valid && err != nil {
+				t.Fatal(err)
+			}
+			if !tc.valid && !errors.Is(err, schedule.ErrInvalid) {
+				t.Fatalf("expected invalid input, got %v", err)
+			}
+		})
 	}
 }
 

@@ -6,6 +6,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/pl3lee/uwplan/api/internal/domain/course"
 	"github.com/pl3lee/uwplan/api/internal/domain/term"
+	"strings"
+	"unicode/utf8"
 )
 
 type Schedule struct {
@@ -38,6 +40,44 @@ type RemoveCourse struct {
 type Export struct {
 	Selected []course.Course
 	Assigned []Assignment
+}
+type View struct {
+	Schedule  Schedule
+	Selected  []course.Course
+	Assigned  []Assignment
+	TermRange term.Range
+}
+type TermRangeChange struct {
+	UserID string
+	Range  term.Range
+}
+
+func (c Create) Validate() error {
+	if c.UserID == "" || strings.TrimSpace(c.Name) == "" || utf8.RuneCountInString(c.Name) > 255 {
+		return ErrInvalid
+	}
+	return nil
+}
+func (r Reference) Validate() error {
+	if r.UserID == "" || r.ID == uuid.Nil {
+		return ErrInvalid
+	}
+	return nil
+}
+func (r Rename) Validate() error {
+	if err := r.Reference.Validate(); err != nil {
+		return err
+	}
+	return (Create{UserID: r.Reference.UserID, Name: r.Name}).Validate()
+}
+func (a Assign) Validate() error {
+	if err := a.Reference.Validate(); err != nil {
+		return err
+	}
+	if a.CourseID == uuid.Nil || !a.Term.Valid() {
+		return ErrInvalid
+	}
+	return nil
 }
 
 func (c Collection) ValidateRemoval(id uuid.UUID) error {
