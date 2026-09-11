@@ -7,9 +7,11 @@ import (
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
 	"github.com/go-chi/chi/v5"
 	"github.com/pl3lee/uwplan/api/internal/config"
+	"github.com/pl3lee/uwplan/api/internal/observability"
 )
 
 type Dependencies struct {
+	Telemetry  *observability.Telemetry
 	Auth       AuthService
 	Admin      AdminService
 	Health     HealthGateway
@@ -22,6 +24,9 @@ type Dependencies struct {
 
 func NewRouter(cfg config.Config, deps Dependencies) (http.Handler, huma.API) {
 	router := chi.NewRouter()
+	if deps.Telemetry != nil {
+		router.Use(deps.Telemetry.Middleware)
+	}
 	router.Use(requestContext(cfg))
 	hc := huma.DefaultConfig("UWPlan API", "1.0.0")
 	// Keep response bodies exactly equal to the documented DTOs, without a
