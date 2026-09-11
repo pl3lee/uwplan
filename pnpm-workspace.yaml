@@ -1,6 +1,8 @@
 packages:
   - web
 
+injectWorkspacePackages: true
+
 onlyBuiltDependencies:
   - esbuild
   - sharp
