@@ -20,6 +20,10 @@ type AuthService interface {
 	Logout(context.Context, session.Credentials) error
 }
 
+type AdminService interface {
+	ListUsers(context.Context, user.User) ([]user.User, error)
+}
+
 type CourseService interface {
 	List(context.Context) ([]course.Course, error)
 }

@@ -23,6 +23,7 @@ import (
 	sessionrepository "github.com/pl3lee/uwplan/api/internal/repository/session"
 	templaterepository "github.com/pl3lee/uwplan/api/internal/repository/template"
 	userrepository "github.com/pl3lee/uwplan/api/internal/repository/user"
+	adminservice "github.com/pl3lee/uwplan/api/internal/service/admin"
 	authservice "github.com/pl3lee/uwplan/api/internal/service/auth"
 	courseservice "github.com/pl3lee/uwplan/api/internal/service/course"
 	oauthservice "github.com/pl3lee/uwplan/api/internal/service/oauth"
@@ -83,7 +84,8 @@ func run() error {
 	courses := courseservice.NewCourseService(courserepository.NewCourseRepository(database))
 	templates := templateservice.NewTemplateService(templaterepository.NewTemplateRepository(database))
 	selections := selectionservice.NewSelectionService(selectionrepository.NewSelectionRepository(database))
-	router, _ := api.NewRouter(cfg, api.Dependencies{Auth: auth, Health: healthgateway.NewHealthGateway(database, redisClient), OAuth: oauth, Schedules: schedules, Courses: courses, Templates: templates, Selections: selections})
+	admin := adminservice.NewAdminService(userrepository.NewUserRepository(database))
+	router, _ := api.NewRouter(cfg, api.Dependencies{Auth: auth, Admin: admin, Health: healthgateway.NewHealthGateway(database, redisClient), OAuth: oauth, Schedules: schedules, Courses: courses, Templates: templates, Selections: selections})
 	server := &http.Server{Addr: cfg.HTTPAddress, Handler: router, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 20 * time.Second, WriteTimeout: 20 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16 << 10}
 	stopped := make(chan error, 1)
 	go func() { stopped <- server.ListenAndServe() }()

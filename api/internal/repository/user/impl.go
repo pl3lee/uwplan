@@ -102,3 +102,15 @@ func (r *UserRepositoryImpl) GetUser(ctx context.Context, input domainuser.User)
 func toDomain(row sqlc.GetUserRow) domainuser.User {
 	return domainuser.User{ID: row.ID, Email: row.Email, Name: row.Name, Image: row.Image, Role: domainuser.Role(row.Role)}
 }
+
+func (r *UserRepositoryImpl) List(ctx context.Context) ([]domainuser.User, error) {
+	rows, err := sqlc.New(r.pool).ListUsers(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list user profiles: %w", err)
+	}
+	result := make([]domainuser.User, 0, len(rows))
+	for _, row := range rows {
+		result = append(result, toDomain(sqlc.GetUserRow(row)))
+	}
+	return result, nil
+}

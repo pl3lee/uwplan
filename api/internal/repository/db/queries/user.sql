@@ -1,6 +1,9 @@
 -- name: GetUser :one
 SELECT id, email, name, image, role FROM "user" WHERE id=$1;
 
+-- name: ListUsers :many
+SELECT id,email,name,image,role FROM "user" ORDER BY email,id;
+
 -- name: GetProviderUser :one
 SELECT u.id, u.email, u.name, u.image, u.role FROM "user" u JOIN account a ON a.user_id=u.id WHERE a.provider=$1 AND a.provider_account_id=$2;
 
