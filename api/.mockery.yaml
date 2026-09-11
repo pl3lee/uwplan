@@ -10,6 +10,9 @@ packages:
   github.com/pl3lee/uwplan/api/internal/service/course:
     config:
       all: true
+  github.com/pl3lee/uwplan/api/internal/service/template:
+    config:
+      all: true
   github.com/pl3lee/uwplan/api/internal/service/schedule:
     config:
       all: true

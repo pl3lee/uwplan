@@ -9,6 +9,7 @@ import (
 	"github.com/pl3lee/uwplan/api/internal/domain/oauth"
 	"github.com/pl3lee/uwplan/api/internal/domain/schedule"
 	"github.com/pl3lee/uwplan/api/internal/domain/session"
+	"github.com/pl3lee/uwplan/api/internal/domain/template"
 	"github.com/pl3lee/uwplan/api/internal/domain/term"
 	"github.com/pl3lee/uwplan/api/internal/domain/user"
 )
@@ -20,6 +21,14 @@ type AuthService interface {
 
 type CourseService interface {
 	List(context.Context) ([]course.Course, error)
+}
+
+type TemplateService interface {
+	List(context.Context, template.List) ([]template.Template, error)
+	Get(context.Context, template.Reference) (template.Definition, error)
+	Create(context.Context, template.Draft) (template.Template, error)
+	Rename(context.Context, template.Rename) error
+	Delete(context.Context, template.Reference) error
 }
 
 type ScheduleService interface {

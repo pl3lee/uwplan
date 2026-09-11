@@ -28,6 +28,7 @@ import type {
   CompleteOAuthParams,
   CourseListResponseBody,
   ErrorModel,
+  ListTemplatesParams,
   LiveBody,
   ReadinessBody,
   ScheduleBody,
@@ -35,6 +36,11 @@ import type {
   ScheduleNameBody,
   ScheduleViewResponseBody,
   StartOAuthParams,
+  TemplateBody,
+  TemplateDefinitionResponseBody,
+  TemplateDraftBody,
+  TemplateListResponseBody,
+  TemplateNameBody,
   TermRangeBody,
   UserBody
 } from './model';
@@ -1960,6 +1966,676 @@ export function useExportSchedule<TData = Awaited<ReturnType<typeof exportSchedu
 
 
 
+/**
+ * @summary List academic plan templates
+ */
+export type listTemplatesResponse200 = {
+  data: TemplateListResponseBody
+  status: 200
+}
+
+export type listTemplatesResponse400 = {
+  data: ErrorModel
+  status: 400
+}
+
+export type listTemplatesResponse401 = {
+  data: ErrorModel
+  status: 401
+}
+
+export type listTemplatesResponse403 = {
+  data: ErrorModel
+  status: 403
+}
+
+export type listTemplatesResponse404 = {
+  data: ErrorModel
+  status: 404
+}
+
+export type listTemplatesResponse409 = {
+  data: ErrorModel
+  status: 409
+}
+
+export type listTemplatesResponse422 = {
+  data: ErrorModel
+  status: 422
+}
+
+export type listTemplatesResponse500 = {
+  data: ErrorModel
+  status: 500
+}
+    
+export type listTemplatesResponseSuccess = (listTemplatesResponse200) & {
+  headers: Headers;
+};
+export type listTemplatesResponseError = (listTemplatesResponse400 | listTemplatesResponse401 | listTemplatesResponse403 | listTemplatesResponse404 | listTemplatesResponse409 | listTemplatesResponse422 | listTemplatesResponse500) & {
+  headers: Headers;
+};
+
+export type listTemplatesResponse = (listTemplatesResponseSuccess | listTemplatesResponseError)
+
+export const getListTemplatesUrl = (params?: ListTemplatesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/templates?${stringifiedParams}` : `/api/v1/templates`
+}
+
+export const listTemplates = async (params?: ListTemplatesParams, options?: RequestInit): Promise<listTemplatesResponse> => {
+  
+  return apiFetch<listTemplatesResponse>(getListTemplatesUrl(params),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getListTemplatesQueryKey = (params?: ListTemplatesParams,) => {
+    return [
+    `/api/v1/templates`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getListTemplatesQueryOptions = <TData = Awaited<ReturnType<typeof listTemplates>>, TError = ErrorType<ErrorModel>>(params?: ListTemplatesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTemplates>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListTemplatesQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listTemplates>>> = ({ signal }) => listTemplates(params, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listTemplates>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListTemplatesQueryResult = NonNullable<Awaited<ReturnType<typeof listTemplates>>>
+export type ListTemplatesQueryError = ErrorType<ErrorModel>
+
+
+export function useListTemplates<TData = Awaited<ReturnType<typeof listTemplates>>, TError = ErrorType<ErrorModel>>(
+ params: undefined |  ListTemplatesParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTemplates>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listTemplates>>,
+          TError,
+          Awaited<ReturnType<typeof listTemplates>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListTemplates<TData = Awaited<ReturnType<typeof listTemplates>>, TError = ErrorType<ErrorModel>>(
+ params?: ListTemplatesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTemplates>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listTemplates>>,
+          TError,
+          Awaited<ReturnType<typeof listTemplates>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListTemplates<TData = Awaited<ReturnType<typeof listTemplates>>, TError = ErrorType<ErrorModel>>(
+ params?: ListTemplatesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTemplates>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List academic plan templates
+ */
+
+export function useListTemplates<TData = Awaited<ReturnType<typeof listTemplates>>, TError = ErrorType<ErrorModel>>(
+ params?: ListTemplatesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTemplates>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListTemplatesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+
+/**
+ * @summary Create an owned academic plan template
+ */
+export type createTemplateResponse201 = {
+  data: TemplateBody
+  status: 201
+}
+
+export type createTemplateResponse400 = {
+  data: ErrorModel
+  status: 400
+}
+
+export type createTemplateResponse401 = {
+  data: ErrorModel
+  status: 401
+}
+
+export type createTemplateResponse403 = {
+  data: ErrorModel
+  status: 403
+}
+
+export type createTemplateResponse404 = {
+  data: ErrorModel
+  status: 404
+}
+
+export type createTemplateResponse409 = {
+  data: ErrorModel
+  status: 409
+}
+
+export type createTemplateResponse422 = {
+  data: ErrorModel
+  status: 422
+}
+
+export type createTemplateResponse500 = {
+  data: ErrorModel
+  status: 500
+}
+    
+export type createTemplateResponseSuccess = (createTemplateResponse201) & {
+  headers: Headers;
+};
+export type createTemplateResponseError = (createTemplateResponse400 | createTemplateResponse401 | createTemplateResponse403 | createTemplateResponse404 | createTemplateResponse409 | createTemplateResponse422 | createTemplateResponse500) & {
+  headers: Headers;
+};
+
+export type createTemplateResponse = (createTemplateResponseSuccess | createTemplateResponseError)
+
+export const getCreateTemplateUrl = () => {
+
+
+  
+
+  return `/api/v1/templates`
+}
+
+export const createTemplate = async (templateDraftBody: TemplateDraftBody, options?: RequestInit): Promise<createTemplateResponse> => {
+  
+  return apiFetch<createTemplateResponse>(getCreateTemplateUrl(),
+  {      
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      templateDraftBody,)
+  }
+);}
+
+
+
+
+export const getCreateTemplateMutationOptions = <TError = ErrorType<ErrorModel>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTemplate>>, TError,{data: BodyType<TemplateDraftBody>}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createTemplate>>, TError,{data: BodyType<TemplateDraftBody>}, TContext> => {
+
+const mutationKey = ['createTemplate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createTemplate>>, {data: BodyType<TemplateDraftBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createTemplate(data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateTemplateMutationResult = NonNullable<Awaited<ReturnType<typeof createTemplate>>>
+    export type CreateTemplateMutationBody = BodyType<TemplateDraftBody>
+    export type CreateTemplateMutationError = ErrorType<ErrorModel>
+
+    /**
+ * @summary Create an owned academic plan template
+ */
+export const useCreateTemplate = <TError = ErrorType<ErrorModel>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTemplate>>, TError,{data: BodyType<TemplateDraftBody>}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createTemplate>>,
+        TError,
+        {data: BodyType<TemplateDraftBody>},
+        TContext
+      > => {
+
+      const mutationOptions = getCreateTemplateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
+/**
+ * @summary Delete an owned template or administer a template
+ */
+export type deleteTemplateResponse204 = {
+  data: void
+  status: 204
+}
+
+export type deleteTemplateResponse400 = {
+  data: ErrorModel
+  status: 400
+}
+
+export type deleteTemplateResponse401 = {
+  data: ErrorModel
+  status: 401
+}
+
+export type deleteTemplateResponse403 = {
+  data: ErrorModel
+  status: 403
+}
+
+export type deleteTemplateResponse404 = {
+  data: ErrorModel
+  status: 404
+}
+
+export type deleteTemplateResponse409 = {
+  data: ErrorModel
+  status: 409
+}
+
+export type deleteTemplateResponse422 = {
+  data: ErrorModel
+  status: 422
+}
+
+export type deleteTemplateResponse500 = {
+  data: ErrorModel
+  status: 500
+}
+    
+export type deleteTemplateResponseSuccess = (deleteTemplateResponse204) & {
+  headers: Headers;
+};
+export type deleteTemplateResponseError = (deleteTemplateResponse400 | deleteTemplateResponse401 | deleteTemplateResponse403 | deleteTemplateResponse404 | deleteTemplateResponse409 | deleteTemplateResponse422 | deleteTemplateResponse500) & {
+  headers: Headers;
+};
+
+export type deleteTemplateResponse = (deleteTemplateResponseSuccess | deleteTemplateResponseError)
+
+export const getDeleteTemplateUrl = (templateId: string,) => {
+
+
+  
+
+  return `/api/v1/templates/${templateId}`
+}
+
+export const deleteTemplate = async (templateId: string, options?: RequestInit): Promise<deleteTemplateResponse> => {
+  
+  return apiFetch<deleteTemplateResponse>(getDeleteTemplateUrl(templateId),
+  {      
+    ...options,
+    method: 'DELETE'
+    
+    
+  }
+);}
+
+
+
+
+export const getDeleteTemplateMutationOptions = <TError = ErrorType<ErrorModel>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteTemplate>>, TError,{templateId: string}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteTemplate>>, TError,{templateId: string}, TContext> => {
+
+const mutationKey = ['deleteTemplate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteTemplate>>, {templateId: string}> = (props) => {
+          const {templateId} = props ?? {};
+
+          return  deleteTemplate(templateId,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteTemplateMutationResult = NonNullable<Awaited<ReturnType<typeof deleteTemplate>>>
+    
+    export type DeleteTemplateMutationError = ErrorType<ErrorModel>
+
+    /**
+ * @summary Delete an owned template or administer a template
+ */
+export const useDeleteTemplate = <TError = ErrorType<ErrorModel>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteTemplate>>, TError,{templateId: string}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof deleteTemplate>>,
+        TError,
+        {templateId: string},
+        TContext
+      > => {
+
+      const mutationOptions = getDeleteTemplateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
+/**
+ * @summary Read a template and its ordered items
+ */
+export type getTemplateResponse200 = {
+  data: TemplateDefinitionResponseBody
+  status: 200
+}
+
+export type getTemplateResponse400 = {
+  data: ErrorModel
+  status: 400
+}
+
+export type getTemplateResponse401 = {
+  data: ErrorModel
+  status: 401
+}
+
+export type getTemplateResponse403 = {
+  data: ErrorModel
+  status: 403
+}
+
+export type getTemplateResponse404 = {
+  data: ErrorModel
+  status: 404
+}
+
+export type getTemplateResponse409 = {
+  data: ErrorModel
+  status: 409
+}
+
+export type getTemplateResponse422 = {
+  data: ErrorModel
+  status: 422
+}
+
+export type getTemplateResponse500 = {
+  data: ErrorModel
+  status: 500
+}
+    
+export type getTemplateResponseSuccess = (getTemplateResponse200) & {
+  headers: Headers;
+};
+export type getTemplateResponseError = (getTemplateResponse400 | getTemplateResponse401 | getTemplateResponse403 | getTemplateResponse404 | getTemplateResponse409 | getTemplateResponse422 | getTemplateResponse500) & {
+  headers: Headers;
+};
+
+export type getTemplateResponse = (getTemplateResponseSuccess | getTemplateResponseError)
+
+export const getGetTemplateUrl = (templateId: string,) => {
+
+
+  
+
+  return `/api/v1/templates/${templateId}`
+}
+
+export const getTemplate = async (templateId: string, options?: RequestInit): Promise<getTemplateResponse> => {
+  
+  return apiFetch<getTemplateResponse>(getGetTemplateUrl(templateId),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getGetTemplateQueryKey = (templateId?: string,) => {
+    return [
+    `/api/v1/templates/${templateId}`
+    ] as const;
+    }
+
+    
+export const getGetTemplateQueryOptions = <TData = Awaited<ReturnType<typeof getTemplate>>, TError = ErrorType<ErrorModel>>(templateId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTemplate>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTemplateQueryKey(templateId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTemplate>>> = ({ signal }) => getTemplate(templateId, { signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(templateId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTemplate>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetTemplateQueryResult = NonNullable<Awaited<ReturnType<typeof getTemplate>>>
+export type GetTemplateQueryError = ErrorType<ErrorModel>
+
+
+export function useGetTemplate<TData = Awaited<ReturnType<typeof getTemplate>>, TError = ErrorType<ErrorModel>>(
+ templateId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTemplate>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getTemplate>>,
+          TError,
+          Awaited<ReturnType<typeof getTemplate>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetTemplate<TData = Awaited<ReturnType<typeof getTemplate>>, TError = ErrorType<ErrorModel>>(
+ templateId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTemplate>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getTemplate>>,
+          TError,
+          Awaited<ReturnType<typeof getTemplate>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetTemplate<TData = Awaited<ReturnType<typeof getTemplate>>, TError = ErrorType<ErrorModel>>(
+ templateId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTemplate>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Read a template and its ordered items
+ */
+
+export function useGetTemplate<TData = Awaited<ReturnType<typeof getTemplate>>, TError = ErrorType<ErrorModel>>(
+ templateId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTemplate>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetTemplateQueryOptions(templateId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+
+/**
+ * @summary Rename an owned template or administer a template
+ */
+export type renameTemplateResponse204 = {
+  data: void
+  status: 204
+}
+
+export type renameTemplateResponse400 = {
+  data: ErrorModel
+  status: 400
+}
+
+export type renameTemplateResponse401 = {
+  data: ErrorModel
+  status: 401
+}
+
+export type renameTemplateResponse403 = {
+  data: ErrorModel
+  status: 403
+}
+
+export type renameTemplateResponse404 = {
+  data: ErrorModel
+  status: 404
+}
+
+export type renameTemplateResponse409 = {
+  data: ErrorModel
+  status: 409
+}
+
+export type renameTemplateResponse422 = {
+  data: ErrorModel
+  status: 422
+}
+
+export type renameTemplateResponse500 = {
+  data: ErrorModel
+  status: 500
+}
+    
+export type renameTemplateResponseSuccess = (renameTemplateResponse204) & {
+  headers: Headers;
+};
+export type renameTemplateResponseError = (renameTemplateResponse400 | renameTemplateResponse401 | renameTemplateResponse403 | renameTemplateResponse404 | renameTemplateResponse409 | renameTemplateResponse422 | renameTemplateResponse500) & {
+  headers: Headers;
+};
+
+export type renameTemplateResponse = (renameTemplateResponseSuccess | renameTemplateResponseError)
+
+export const getRenameTemplateUrl = (templateId: string,) => {
+
+
+  
+
+  return `/api/v1/templates/${templateId}`
+}
+
+export const renameTemplate = async (templateId: string,
+    templateNameBody: TemplateNameBody, options?: RequestInit): Promise<renameTemplateResponse> => {
+  
+  return apiFetch<renameTemplateResponse>(getRenameTemplateUrl(templateId),
+  {      
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      templateNameBody,)
+  }
+);}
+
+
+
+
+export const getRenameTemplateMutationOptions = <TError = ErrorType<ErrorModel>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof renameTemplate>>, TError,{templateId: string;data: BodyType<TemplateNameBody>}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof renameTemplate>>, TError,{templateId: string;data: BodyType<TemplateNameBody>}, TContext> => {
+
+const mutationKey = ['renameTemplate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof renameTemplate>>, {templateId: string;data: BodyType<TemplateNameBody>}> = (props) => {
+          const {templateId,data} = props ?? {};
+
+          return  renameTemplate(templateId,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RenameTemplateMutationResult = NonNullable<Awaited<ReturnType<typeof renameTemplate>>>
+    export type RenameTemplateMutationBody = BodyType<TemplateNameBody>
+    export type RenameTemplateMutationError = ErrorType<ErrorModel>
+
+    /**
+ * @summary Rename an owned template or administer a template
+ */
+export const useRenameTemplate = <TError = ErrorType<ErrorModel>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof renameTemplate>>, TError,{templateId: string;data: BodyType<TemplateNameBody>}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof renameTemplate>>,
+        TError,
+        {templateId: string;data: BodyType<TemplateNameBody>},
+        TContext
+      > => {
+
+      const mutationOptions = getRenameTemplateMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
 /**
  * @summary Read the user's planning term range
  */
