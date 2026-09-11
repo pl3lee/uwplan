@@ -29,6 +29,7 @@ export function SelectField({
         <Select.Value />
         <Select.Icon aria-hidden="true">
           <svg
+            aria-hidden="true"
             viewBox="0 0 24 24"
             className="size-4"
             fill="none"

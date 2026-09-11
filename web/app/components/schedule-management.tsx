@@ -12,6 +12,7 @@ import type { ScheduleBody } from "~/generated/api/model";
 import { usePlanningMutation } from "~/lib/planning-mutation";
 import { ApiErrorMessage } from "./api-error";
 import { Button, buttonVariants } from "./button";
+import { ExportSchedule } from "./export-schedule";
 
 const popupClass =
   "fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 space-y-4 rounded-lg border bg-background p-6 shadow-lg";
@@ -161,6 +162,7 @@ export function ScheduleManagement({
       <div className="flex flex-col gap-2 md:flex-row">
         <ScheduleNameDialog />
         <ScheduleNameDialog key={active.id} schedule={active} />
+        <ExportSchedule id={active.id} />
         <DeleteSchedule
           key={`delete-${active.id}`}
           schedule={active}

@@ -120,9 +120,11 @@ export async function mutate(page: Page, action: () => Promise<unknown>) {
     page.waitForResponse(
       (response) =>
         new URL(response.url()).origin === origin &&
-        ["POST", "PUT", "PATCH", "DELETE"].includes(
+        (["POST", "PUT", "PATCH", "DELETE"].includes(
           response.request().method(),
-        ),
+        ) ||
+          (response.request().method() === "GET" &&
+            Boolean(response.headers()["content-type"]?.includes("text/csv")))),
     ),
     action(),
   ]);

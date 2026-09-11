@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { data, useSearchParams } from "react-router";
 import { ApiErrorMessage } from "~/components/api-error";
+import { CourseScheduler } from "~/components/course-scheduler";
 import { ScheduleManagement } from "~/components/schedule-management";
 import { ScrollToTopButton } from "~/components/scroll-to-top";
-import { TermRangeSelector, termLabels } from "~/components/term-range";
+import { TermRangeSelector } from "~/components/term-range";
 import type {
   ScheduleBody,
   ScheduleViewResponseBody,
@@ -79,17 +80,7 @@ function ScheduleWorkspace({
         <ApiErrorMessage error={result.error} />
         <TermRangeSelector range={result.data.term_range} year={year} />
         <ScheduleManagement schedules={schedules} active={active} />
-        <div className="grid grid-cols-3 gap-4">
-          {termLabels(result.data.term_range).map((term) => (
-            <section
-              key={term}
-              aria-label={term}
-              className="min-h-40 rounded-xl border bg-card p-6 shadow"
-            >
-              <h2 className="font-semibold">{term}</h2>
-            </section>
-          ))}
-        </div>
+        <CourseScheduler view={result.data} />
       </div>
       <ScrollToTopButton />
     </div>
