@@ -31,7 +31,7 @@ legacy test schema with Goose, and runs against real PostgreSQL and an isolated
 Redis container. It preserves the browser assertions and covers Chromium,
 Firefox, and WebKit. Artifacts are in `output/playwright-go/`. The complete
 legacy suite remains active during migration. The Go provider transport adapter
-and the other private pages are still being ported; the full replacement suite
+and template/admin pages are still being ported; the full replacement suite
 must pass before production cutover.
 
 `oauth-server.mjs` implements a controlled OAuth/OIDC provider with one-use codes,
@@ -54,3 +54,8 @@ run the same behavior assertions against its production build before cutover.
 The landing-page video iframe uses a local browser response fixture, so third-party
 video/ad requests cannot hold the page load event open. Application requests and
 behavior assertions remain unchanged.
+
+The scheduling assertions also run unchanged with `E2E_RUNTIME=go pnpm test:e2e e2e/scheduling.spec.ts`. The response helper recognizes a CSV GET
+response for export as well as legacy POST actions; the exact downloaded content
+assertion is shared. Selection, scheduling, and expired-session/logout flows are
+required replacement-runtime CI checks during the remaining migration.

@@ -71,8 +71,12 @@ build with the real Go API, PostgreSQL, and Redis in Chromium, Firefox, and WebK
 This includes visible updates before reload, saved free-course changes, sorting,
 selection removal, and template detachment. A delayed-save regression also verifies
 character-by-character entry of a course whose prefix is another valid course,
-including retained focus and the complete saved choice after reload. The remaining flows still require
-replacement-runtime verification before cutover.
+including retained focus and the complete saved choice after reload. Scheduling also passes its original assertions against the replacement production
+build: create/rename/delete with a retained final schedule, drag/move/remove,
+term-range persistence, exact CSV export, and mobile navigation/assignment.
+The shared response helper recognizes CSV downloads served by GET as well as
+legacy action responses. The remaining flows still require replacement-runtime
+verification before cutover.
 
 The baseline also found that the drag context generated different accessibility
 IDs during SSR and hydration. A stable ID derived from the active schedule fixes
