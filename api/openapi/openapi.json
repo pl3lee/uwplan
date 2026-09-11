@@ -220,7 +220,10 @@
         "additionalProperties": false,
         "properties": {
           "course_id": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "item_id": {
             "type": "string"
@@ -474,7 +477,10 @@
             ]
           },
           "course_id": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "id": {
             "type": "string"

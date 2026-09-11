@@ -5,11 +5,12 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { TemplateCourseItemBodyCourseCode } from './templateCourseItemBodyCourseCode';
+import type { TemplateCourseItemBodyCourseId } from './templateCourseItemBodyCourseId';
 import type { TemplateCourseItemBodyType } from './templateCourseItemBodyType';
 
 export interface TemplateCourseItemBody {
   course_code: TemplateCourseItemBodyCourseCode;
-  course_id: string;
+  course_id: TemplateCourseItemBodyCourseId;
   id: string;
   type: TemplateCourseItemBodyType;
 }

@@ -14,8 +14,13 @@ TEST_POSTGRES_PORT="$(docker port "$container" 5432/tcp | awk -F: '{print $NF}')
 export TEST_POSTGRES_USER=postgres
 export TEST_POSTGRES_PASSWORD="$password"
 for attempt in {1..60}; do
-  if docker exec "$container" pg_isready -U postgres -d uwplan_api_test >/dev/null; then break; fi
+  # The image uses a temporary socket-only server during initialization. Wait
+  # for the final TCP listener that the integration clients actually use.
+  if docker exec "$container" pg_isready -h 127.0.0.1 -U postgres -d uwplan_api_test >/dev/null; then break; fi
   sleep 0.5
 done
-docker exec "$container" pg_isready -U postgres -d uwplan_api_test >/dev/null
+if ! docker exec "$container" pg_isready -h 127.0.0.1 -U postgres -d uwplan_api_test >/dev/null; then
+  echo "Integration PostgreSQL did not become ready on TCP" >&2
+  exit 1
+fi
 "${GO:-go}" test -tags=integration ./...

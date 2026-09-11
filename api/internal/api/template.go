@@ -52,7 +52,7 @@ type RenameTemplateInput struct {
 type TemplateCourseItemBody struct {
 	ID         uuid.UUID  `json:"id"`
 	Type       string     `json:"type" enum:"fixed,free"`
-	CourseID   *uuid.UUID `json:"course_id"`
+	CourseID   *uuid.UUID `json:"course_id" nullable:"true"`
 	CourseCode *string    `json:"course_code"`
 }
 type TemplateItemBody struct {

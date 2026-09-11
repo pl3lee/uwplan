@@ -13,7 +13,7 @@ import (
 
 type PlanChoiceBody struct {
 	ItemID   uuid.UUID  `json:"item_id"`
-	CourseID *uuid.UUID `json:"course_id"`
+	CourseID *uuid.UUID `json:"course_id" nullable:"true"`
 	Selected bool       `json:"selected"`
 }
 
