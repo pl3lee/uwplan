@@ -1,4 +1,4 @@
-import { test, expect, chooseTemplate } from "./fixtures";
+import { test, expect, chooseTemplate, mutate } from "./fixtures";
 
 test("copy an academic plan and reject its duplicate name", async ({
   page,
@@ -168,13 +168,52 @@ test("create a plan with each item type, rename it, and delete it", async ({
     .click();
   await expect(renamed).toBeVisible();
   await renamed.getByRole("button", { name: "Delete", exact: true }).click();
-  await page
-    .getByRole("alertdialog")
-    .getByRole("button", { name: "Delete", exact: true })
-    .click();
+  // An open confirmation hides background regions from the accessibility tree.
+  // Wait for the write before treating the missing card as a completed deletion.
+  await mutate(page, () =>
+    page
+      .getByRole("alertdialog")
+      .getByRole("button", { name: "Delete", exact: true })
+      .click(),
+  );
   await expect(renamed).toHaveCount(0);
   await page.goto("/select");
   await expect(
     page.getByText("Required programming", { exact: true }),
   ).toHaveCount(0);
+});
+
+test("Enter keeps the template editor open until explicit creation", async ({
+  page,
+  user,
+  signIn,
+}) => {
+  await signIn(user);
+  await page.goto("/create/template");
+  const name = `Enter ${user.id.slice(0, 8)}`;
+  await page.getByPlaceholder("Template Name", { exact: true }).fill(name);
+  await page
+    .getByRole("button", { name: "Add Instruction", exact: true })
+    .click();
+  const instruction = page.getByPlaceholder(
+    "e.g. Complete all of the following",
+    { exact: true },
+  );
+  await instruction.fill("Keep editing after Enter");
+  await instruction.press("Enter");
+  // Settle any accidental submit before checking that the editor stayed open.
+  await page.waitForLoadState("networkidle");
+  await expect(page).toHaveURL(/\/create\/template$/);
+  await expect(instruction).toHaveValue("Keep editing after Enter");
+  await page
+    .getByRole("button", { name: "Add Separator", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Create Academic Plan", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/select$/);
+  await chooseTemplate(page, name);
+  await expect(
+    page.getByText("Keep editing after Enter", { exact: true }),
+  ).toBeVisible();
 });
