@@ -1,4 +1,4 @@
-import { test, expect, chooseTemplate } from "./fixtures";
+import { test, expect, chooseTemplate, mutate } from "./fixtures";
 
 test("copy an academic plan and reject its duplicate name", async ({
   page,
@@ -168,10 +168,14 @@ test("create a plan with each item type, rename it, and delete it", async ({
     .click();
   await expect(renamed).toBeVisible();
   await renamed.getByRole("button", { name: "Delete", exact: true }).click();
-  await page
-    .getByRole("alertdialog")
-    .getByRole("button", { name: "Delete", exact: true })
-    .click();
+  // An open confirmation hides background regions from the accessibility tree.
+  // Wait for the write before treating the missing card as a completed deletion.
+  await mutate(page, () =>
+    page
+      .getByRole("alertdialog")
+      .getByRole("button", { name: "Delete", exact: true })
+      .click(),
+  );
   await expect(renamed).toHaveCount(0);
   await page.goto("/select");
   await expect(
