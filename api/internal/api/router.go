@@ -35,5 +35,6 @@ func NewRouter(cfg config.Config, deps Dependencies) (http.Handler, huma.API) {
 	registerOAuth(app, cfg, deps.OAuth)
 	registerSchedules(app, cfg, deps.Auth, deps.Schedules)
 	registerCourses(app, cfg, deps.Auth, deps.Courses)
+	registerTemplates(app, cfg, deps.Auth, deps.Templates)
 	return router, app
 }

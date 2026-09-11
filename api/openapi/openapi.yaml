@@ -245,6 +245,167 @@ components:
         - assigned
         - term_range
       type: object
+    TemplateBody:
+      additionalProperties: false
+      properties:
+        created_by:
+          type:
+            - string
+            - "null"
+        description:
+          type:
+            - string
+            - "null"
+        id:
+          type: string
+        name:
+          type: string
+      required:
+        - id
+        - name
+        - description
+        - created_by
+      type: object
+    TemplateCourseItemBody:
+      additionalProperties: false
+      properties:
+        course_code:
+          type:
+            - string
+            - "null"
+        course_id:
+          type: string
+        id:
+          type: string
+        type:
+          enum:
+            - fixed
+            - free
+          type: string
+      required:
+        - id
+        - type
+        - course_id
+        - course_code
+      type: object
+    TemplateDefinitionResponseBody:
+      additionalProperties: false
+      properties:
+        items:
+          items:
+            $ref: "#/components/schemas/TemplateItemBody"
+          type:
+            - array
+            - "null"
+        template:
+          $ref: "#/components/schemas/TemplateBody"
+      required:
+        - template
+        - items
+      type: object
+    TemplateDraftBody:
+      additionalProperties: false
+      properties:
+        description:
+          type: string
+        items:
+          items:
+            $ref: "#/components/schemas/TemplateDraftItemBody"
+          type:
+            - array
+            - "null"
+        name:
+          maxLength: 255
+          minLength: 1
+          type: string
+      required:
+        - items
+        - name
+      type: object
+    TemplateDraftItemBody:
+      additionalProperties: false
+      properties:
+        course_codes:
+          items:
+            type: string
+          type:
+            - array
+            - "null"
+        course_count:
+          format: int64
+          minimum: 0
+          type: integer
+        course_type:
+          enum:
+            - fixed
+            - free
+          type: string
+        description:
+          type: string
+        type:
+          enum:
+            - instruction
+            - requirement
+            - separator
+          type: string
+      required:
+        - type
+      type: object
+    TemplateItemBody:
+      additionalProperties: false
+      properties:
+        courses:
+          items:
+            $ref: "#/components/schemas/TemplateCourseItemBody"
+          type:
+            - array
+            - "null"
+        description:
+          type:
+            - string
+            - "null"
+        id:
+          type: string
+        order_index:
+          format: int32
+          type: integer
+        type:
+          enum:
+            - instruction
+            - requirement
+            - separator
+          type: string
+      required:
+        - id
+        - type
+        - description
+        - order_index
+        - courses
+      type: object
+    TemplateListResponseBody:
+      additionalProperties: false
+      properties:
+        templates:
+          items:
+            $ref: "#/components/schemas/TemplateBody"
+          type:
+            - array
+            - "null"
+      required:
+        - templates
+      type: object
+    TemplateNameBody:
+      additionalProperties: false
+      properties:
+        description:
+          type: string
+        name:
+          maxLength: 255
+          minLength: 1
+          type: string
+      required:
+        - name
+      type: object
     TermRangeBody:
       additionalProperties: false
       properties:
@@ -1089,6 +1250,310 @@ paths:
       security:
         - session: []
       summary: Download an owned schedule as CSV
+  /api/v1/templates:
+    get:
+      operationId: listTemplates
+      parameters:
+        - explode: false
+          in: query
+          name: scope
+          schema:
+            default: all
+            enum:
+              - all
+              - mine
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TemplateListResponseBody"
+          description: OK
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Bad Request
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: List academic plan templates
+    post:
+      operationId: createTemplate
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TemplateDraftBody"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TemplateBody"
+          description: Created
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Bad Request
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: Create an owned academic plan template
+  /api/v1/templates/{template_id}:
+    delete:
+      operationId: deleteTemplate
+      parameters:
+        - in: path
+          name: template_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Bad Request
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: Delete an owned template or administer a template
+    get:
+      operationId: getTemplate
+      parameters:
+        - in: path
+          name: template_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TemplateDefinitionResponseBody"
+          description: OK
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Bad Request
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: Read a template and its ordered items
+    patch:
+      operationId: renameTemplate
+      parameters:
+        - in: path
+          name: template_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TemplateNameBody"
+        required: true
+      responses:
+        "204":
+          description: No Content
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Bad Request
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: Rename an owned template or administer a template
   /api/v1/term-range:
     get:
       operationId: getTermRange

@@ -3,8 +3,8 @@
 The authenticated `GET /api/v1/courses` endpoint returns the course catalog in
 course-code order, retaining legacy IDs, descriptions, prerequisites, ratings,
 and nullable values. The catalog is shared across users; authentication is
-required. Course import/update commands and template/selection endpoints are
-still being migrated.
+required. Course import/update commands and selection endpoints are still being
+migrated.
 
 The Go foundation contains the academic-term domain, PostgreSQL schema
 transition, account resolution and provisioning, and Redis session services. The existing application and release migrator remain active
@@ -136,3 +136,26 @@ schedule and course IDs remain unchanged.
 Repository and HTTP integration tests exercise ownership, movement/removal,
 term-range persistence, CSV output, and concurrent deletion. The production UI
 continues using its existing runtime until the web replacement is ready.
+
+## Templates
+
+Authenticated users can list all templates or their own templates with
+`GET /api/v1/templates?scope=all` or `scope=mine`. Reading
+`GET /api/v1/templates/{template_id}` returns the template, ordered items, and
+fixed/free course slots, including nullable legacy values. Shared definitions
+allow the web application to populate the copy form.
+
+`POST /api/v1/templates` creates an owned template from a name, optional
+description, and ordered item array. Instruction, separator, fixed requirement,
+and free requirement rules are validated in the domain. Course codes are
+normalized before catalog lookup. Creation assigns fresh UUIDv7 IDs and commits
+the whole definition atomically; a missing course or duplicate name leaves no
+partial template. Copying submits a new definition through this same operation.
+
+`PATCH /api/v1/templates/{template_id}` updates name and description, and
+`DELETE` removes the template with the existing database cascades. Both enforce
+owner/admin access in the mutation query. Unknown and foreign-owned templates
+return the same 404, duplicate names return 409, and invalid definitions or
+unknown course codes return 400. Every mutation requires the configured Origin.
+Integration tests cover complete definitions, rollback, ownership, and a role
+change taking effect for an already issued session.
