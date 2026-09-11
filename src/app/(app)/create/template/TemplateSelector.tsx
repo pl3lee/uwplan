@@ -70,6 +70,7 @@ export function TemplateSelector({
           <Button
             variant="outline"
             role="combobox"
+            aria-label="Copy academic plan"
             aria-expanded={open}
             className="w-full justify-between overflow-hidden"
           >

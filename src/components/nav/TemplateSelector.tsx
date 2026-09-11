@@ -65,6 +65,7 @@ export function TemplateSelector({ templates, selectedTemplates }: Props) {
         <Button
           variant="outline"
           role="combobox"
+          aria-label="Academic plans"
           aria-expanded={open}
           className="w-60 justify-between"
         >

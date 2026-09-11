@@ -5,7 +5,7 @@ import { RenameTemplateButton } from "./RenameTemplateButton";
 
 export function TemplateCard({ template }: { template: Template }) {
   return (
-    <Card key={template.id}>
+    <Card key={template.id} role="region" aria-label={template.name}>
       <CardHeader className="w-full flex-col justify-between p-4 md:flex-row">
         <div className="flex w-3/4 items-center justify-between">
           <div className="flex items-center gap-2">
