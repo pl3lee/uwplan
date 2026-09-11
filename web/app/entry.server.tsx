@@ -2,12 +2,19 @@ import { PassThrough } from "node:stream";
 import { createReadableStreamFromReadable } from "@react-router/node";
 import { isbot } from "isbot";
 import { renderToPipeableStream } from "react-dom/server";
-import { type EntryContext, ServerRouter } from "react-router";
+import {
+  type EntryContext,
+  isRouteErrorResponse,
+  ServerRouter,
+} from "react-router";
 import { logEvent } from "../observability.mjs";
 
 export const streamTimeout = 5000;
 
 export function handleError(error: unknown) {
+  // Expected HTTP rejections already have a correlated request log and status.
+  if (isRouteErrorResponse(error) && error.status >= 400 && error.status < 500)
+    return;
   logEvent("error", "render.failed", {
     error_type: error instanceof Error ? error.name : "unknown",
   });
