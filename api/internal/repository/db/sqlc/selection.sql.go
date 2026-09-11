@@ -145,3 +145,26 @@ func (q *Queries) LockAvailableTemplate(ctx context.Context, id uuid.UUID) (uuid
 	err := row.Scan(&id)
 	return id, err
 }
+
+const setPlanChoice = `-- name: SetPlanChoice :execrows
+INSERT INTO selected_course(plan_id,course_item_id,selected)
+SELECT pt.plan_id,ci.id,$1 FROM plan_template pt
+JOIN template_item ti ON ti.template_id=pt.template_id
+JOIN course_item ci ON ci.requirement_id=ti.id
+WHERE pt.plan_id=$2 AND ci.id=$3
+ON CONFLICT(plan_id,course_item_id) DO UPDATE SET selected=excluded.selected
+`
+
+type SetPlanChoiceParams struct {
+	Selected     bool
+	PlanID       uuid.UUID
+	CourseItemID uuid.UUID
+}
+
+func (q *Queries) SetPlanChoice(ctx context.Context, arg SetPlanChoiceParams) (int64, error) {
+	result, err := q.db.Exec(ctx, setPlanChoice, arg.Selected, arg.PlanID, arg.CourseItemID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}

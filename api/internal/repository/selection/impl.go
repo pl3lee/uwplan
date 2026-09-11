@@ -95,3 +95,30 @@ func (r *SelectionRepositoryImpl) SetTemplate(ctx context.Context, input domains
 	}
 	return nil
 }
+
+func (r *SelectionRepositoryImpl) SetChoice(ctx context.Context, input domainselection.Toggle) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin course selection: %w", err)
+	}
+	defer tx.Rollback(ctx)
+	q := sqlc.New(tx)
+	planID, err := q.LockOwnedPlan(ctx, input.UserID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domainselection.ErrNotFound
+	}
+	if err != nil {
+		return fmt.Errorf("lock course selection plan: %w", err)
+	}
+	rows, err := q.SetPlanChoice(ctx, sqlc.SetPlanChoiceParams{PlanID: planID, CourseItemID: input.ItemID, Selected: input.Selected})
+	if err != nil {
+		return fmt.Errorf("set course selection: %w", err)
+	}
+	if rows == 0 {
+		return domainselection.ErrNotFound
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit course selection: %w", err)
+	}
+	return nil
+}

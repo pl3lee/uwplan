@@ -18,3 +18,9 @@ type State struct {
 	TemplateIDs []uuid.UUID
 	Choices     []Choice
 }
+
+type Toggle struct {
+	UserID   string
+	ItemID   uuid.UUID
+	Selected bool
+}

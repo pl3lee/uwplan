@@ -27,3 +27,11 @@ DELETE FROM plan_template WHERE plan_id=$1 AND template_id=$2;
 -- name: DeselectTemplateChoices :exec
 UPDATE selected_course sc SET selected=false FROM course_item ci,template_item ti
 WHERE sc.course_item_id=ci.id AND ci.requirement_id=ti.id AND sc.plan_id=$1 AND ti.template_id=$2;
+
+-- name: SetPlanChoice :execrows
+INSERT INTO selected_course(plan_id,course_item_id,selected)
+SELECT pt.plan_id,ci.id,sqlc.arg(selected) FROM plan_template pt
+JOIN template_item ti ON ti.template_id=pt.template_id
+JOIN course_item ci ON ci.requirement_id=ti.id
+WHERE pt.plan_id=sqlc.arg(plan_id) AND ci.id=sqlc.arg(course_item_id)
+ON CONFLICT(plan_id,course_item_id) DO UPDATE SET selected=excluded.selected;
