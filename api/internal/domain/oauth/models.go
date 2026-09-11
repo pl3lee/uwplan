@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pl3lee/uwplan/api/internal/domain/session"
 	"github.com/pl3lee/uwplan/api/internal/domain/user"
 )
 
@@ -33,4 +34,32 @@ func ReturnPath(value string) (string, error) {
 	default:
 		return "", ErrInvalidReturnPath
 	}
+}
+
+const Lifetime = 10 * time.Minute
+
+type Start struct {
+	Provider user.Provider
+	ReturnTo string
+}
+type Authorization struct {
+	Flow  Flow
+	State string
+}
+type Redirect struct {
+	URL, State string
+	ExpiresAt  time.Time
+}
+type Exchange struct {
+	Flow         Flow
+	Code, Issuer string
+}
+type Callback struct {
+	Provider                          user.Provider
+	State, BrowserState, Code, Issuer string
+	PreviousSession                   session.Credentials
+}
+type Login struct {
+	Grant    session.Grant
+	ReturnTo string
 }

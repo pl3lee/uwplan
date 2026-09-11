@@ -4,6 +4,7 @@ go 1.26.0
 
 require (
 	github.com/alicebob/miniredis/v2 v2.37.0
+	github.com/coreos/go-oidc/v3 v3.21.0
 	github.com/danielgtaylor/huma/v2 v2.34.1
 	github.com/go-chi/chi/v5 v5.2.3
 	github.com/google/go-cmp v0.7.0
@@ -13,6 +14,7 @@ require (
 	github.com/pressly/goose/v3 v3.27.0
 	github.com/redis/go-redis/v9 v9.18.0
 	github.com/stretchr/testify v1.11.1
+	golang.org/x/oauth2 v0.36.0
 )
 
 require (
@@ -29,6 +31,7 @@ require (
 	github.com/fatih/structs v1.1.0 // indirect
 	github.com/fatih/structtag v1.2.0 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
 	github.com/go-sql-driver/mysql v1.9.3 // indirect
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
 	github.com/google/cel-go v0.26.1 // indirect

@@ -12,14 +12,17 @@ import (
 )
 
 type Config struct {
-	HTTPAddress   string
-	DatabaseURL   string
-	RedisURL      string
-	PublicOrigin  string
-	SecureCookies bool
-	SessionTTL    time.Duration
-	Release       health.Release
+	HTTPAddress    string
+	DatabaseURL    string
+	RedisURL       string
+	PublicOrigin   string
+	SecureCookies  bool
+	SessionTTL     time.Duration
+	Release        health.Release
+	Google, GitHub ProviderCredentials
 }
+
+type ProviderCredentials struct{ ClientID, ClientSecret string }
 
 func Load(getenv func(string) string) (Config, error) {
 	origin := getenv("PUBLIC_ORIGIN")
@@ -57,6 +60,13 @@ func Load(getenv func(string) string) (Config, error) {
 	}
 	if cfg.HTTPAddress == "" {
 		cfg.HTTPAddress = ":8080"
+	}
+	cfg.Google = ProviderCredentials{ClientID: getenv("AUTH_GOOGLE_ID"), ClientSecret: getenv("AUTH_GOOGLE_SECRET")}
+	cfg.GitHub = ProviderCredentials{ClientID: getenv("AUTH_GITHUB_ID"), ClientSecret: getenv("AUTH_GITHUB_SECRET")}
+	for _, provider := range []ProviderCredentials{cfg.Google, cfg.GitHub} {
+		if (provider.ClientID == "") != (provider.ClientSecret == "") {
+			return Config{}, errors.New("OAuth providers require both client ID and secret")
+		}
 	}
 	return cfg, nil
 }

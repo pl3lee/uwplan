@@ -54,3 +54,28 @@ func TestConfigurationRequiresSecurePublicOrigin(t *testing.T) {
 		})
 	}
 }
+
+func TestOAuthCredentialsKeepExistingEnvironmentNames(t *testing.T) {
+	t.Parallel()
+	for _, provider := range []string{"GOOGLE", "GITHUB"} {
+		t.Run(provider, func(t *testing.T) {
+			t.Parallel()
+			values := map[string]string{"DATABASE_URL": "postgres://fixture", "REDIS_URL": "redis://fixture", "PUBLIC_ORIGIN": "https://uwplan.com", "AUTH_" + provider + "_ID": "fixture-id", "AUTH_" + provider + "_SECRET": "fixture-secret"}
+			got, err := config.Load(func(key string) string { return values[key] })
+			if err != nil {
+				t.Fatal(err)
+			}
+			credentials := got.Google
+			if provider == "GITHUB" {
+				credentials = got.GitHub
+			}
+			if diff := cmp.Diff(config.ProviderCredentials{ClientID: "fixture-id", ClientSecret: "fixture-secret"}, credentials); diff != "" {
+				t.Fatal(diff)
+			}
+			delete(values, "AUTH_"+provider+"_SECRET")
+			if _, err := config.Load(func(key string) string { return values[key] }); err == nil {
+				t.Fatal("partial provider configuration must fail")
+			}
+		})
+	}
+}

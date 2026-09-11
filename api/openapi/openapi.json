@@ -206,6 +206,320 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/auth/callback/{provider}": {
+      "get": {
+        "description": "Requires the matching browser state cookie. Invalid callbacks redirect to sign-in without creating a session.",
+        "operationId": "completeOAuth",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "provider",
+            "required": true,
+            "schema": {
+              "enum": [
+                "google",
+                "github"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "code",
+            "schema": {
+              "maxLength": 4096,
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "state",
+            "schema": {
+              "maxLength": 128,
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "iss",
+            "schema": {
+              "maxLength": 256,
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "error",
+            "schema": {
+              "maxLength": 256,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Found",
+            "headers": {
+              "Domain": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "HttpOnly": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "MaxAge": {
+                "schema": {
+                  "format": "int64",
+                  "type": "integer"
+                }
+              },
+              "Name": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Partitioned": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "Path": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Quoted": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "Raw": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RawExpires": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "SameSite": {
+                "schema": {
+                  "format": "int64",
+                  "type": "integer"
+                }
+              },
+              "Secure": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "Set-Cookie": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Unparsed": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Value": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Complete provider sign-in"
+      }
+    },
+    "/api/auth/signin/{provider}": {
+      "get": {
+        "operationId": "startOAuth",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "provider",
+            "required": true,
+            "schema": {
+              "enum": [
+                "google",
+                "github"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "return_to",
+            "schema": {
+              "maxLength": 2048,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Found",
+            "headers": {
+              "Domain": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Expires": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "HttpOnly": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "MaxAge": {
+                "schema": {
+                  "format": "int64",
+                  "type": "integer"
+                }
+              },
+              "Name": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Partitioned": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "Path": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Quoted": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "Raw": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RawExpires": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "SameSite": {
+                "schema": {
+                  "format": "int64",
+                  "type": "integer"
+                }
+              },
+              "Secure": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "Set-Cookie": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Unparsed": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Value": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Start provider sign-in"
+      }
+    },
     "/api/live": {
       "get": {
         "operationId": "getLiveness",

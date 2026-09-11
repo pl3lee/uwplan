@@ -52,10 +52,25 @@ Redis, with a positive expiry; logout deletes that session. Authentication reads
 the user's current role from PostgreSQL, so role changes are not cached in a
 session. Missing or expired sessions are distinct from dependency outages.
 
-Huma exposes liveness/readiness, the current authenticated user, and logout.
-OAuth provider verification and login callbacks are the next layer. The existing
+Huma exposes liveness/readiness, OAuth sign-in and callbacks, the current
+authenticated user, and logout. The existing
 production authentication runtime remains active until the complete replacement
 passes the shared browser suite.
+
+OAuth flows expire after ten minutes. Redis stores the state hash, PKCE verifier,
+Google nonce, provider, and validated local return path. Callback processing
+requires the matching HttpOnly browser cookie and consumes the state atomically,
+so a callback cannot be replayed. Google identities require a verified ID-token
+signature, issuer, audience, expiry, nonce, and email. GitHub identities use the
+stable numeric account ID and a verified email from its authenticated API.
+Provider tokens are used only during verification and are not stored.
+
+Configure each enabled provider with its existing environment names:
+`AUTH_GOOGLE_ID`/`AUTH_GOOGLE_SECRET` and
+`AUTH_GITHUB_ID`/`AUTH_GITHUB_SECRET`. Both values must be supplied together;
+an unconfigured provider is unavailable. Register callbacks at
+`PUBLIC_ORIGIN/api/auth/callback/google` and
+`PUBLIC_ORIGIN/api/auth/callback/github`.
 
 ## HTTP runtime and contract
 
@@ -71,6 +86,12 @@ Do not expose this candidate runtime through production routing yet.
 - `GET /api/v1/me` requires a valid Redis session and returns the current user.
 - `POST /api/v1/auth/logout` requires an exact `PUBLIC_ORIGIN` Origin header,
   rejects cross-site Fetch Metadata, revokes the session, and clears its cookie.
+- `GET /api/auth/signin/{provider}?return_to=/select` begins Google or GitHub
+  sign-in. Return paths are restricted to the application's protected pages.
+- `GET /api/auth/callback/{provider}` verifies the provider response, resolves
+  the account, creates a new Redis session, revokes a previous browser session,
+  and redirects to the stored return path. Rejected callbacks clear the state
+  cookie and redirect to sign-in with a generic error code.
 
 API responses are not cacheable. Unexpected errors have generic response bodies;
 logs contain error types instead of raw credential-bearing errors. Request bodies
