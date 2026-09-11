@@ -1,6 +1,6 @@
 # UWPlan rewrite plan
 
-Status: accepted; implementation underway. Step 1: browser behavior baseline.
+Status: accepted; implementation underway. Step 2: API and authentication transition.
 
 Inspected baseline: `origin/main` at `982cee8bbff6ed21d55c7fa43a8d2e23db909dfe`.
 Fetch again before implementation and base the first branch on the latest
