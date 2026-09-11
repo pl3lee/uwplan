@@ -103,3 +103,15 @@ window, and a delayed background refresh leaves saved rows usable. Course
 selection, free-course typing, previews, and mutation invalidation retain their
 existing behavior. `pnpm test:e2e` now runs 35 cases, including initial catalog
 failure recovery.
+
+## Optimistic scheduling regression
+
+The replacement scheduler initially waited for the save and query refresh before
+moving a course. It now previews assignment, movement, and removal immediately,
+keeps the preview through a delayed refresh, and restores the saved position on
+failure. Desktop browser tests hold both requests open, reject each operation,
+retry against the real API, and check persistence after reload. The mobile term
+selector also verifies immediate feedback, rollback, and retry. A confirmed save
+updates the cached assignment before refreshing; a separate regression verifies
+that refresh failures preserve successful assignments, movements, and removals.
+These additions bring the shared suite to 43 cases.
