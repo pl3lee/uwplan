@@ -41,7 +41,12 @@ test("create, rename, and delete schedules while retaining the final schedule @s
   await page.getByRole("button", { name: "Add Schedule", exact: true }).click();
   await page.getByLabel("Schedule Name", { exact: true }).fill("Alternative");
   await page.getByRole("button", { name: "Create", exact: true }).click();
-  await page.getByRole("link", { name: "Alternative", exact: true }).click();
+  const alternative = page.getByRole("link", {
+    name: "Alternative",
+    exact: true,
+  });
+  await alternative.click();
+  await expect(alternative).toHaveAttribute("aria-current", "page");
   await page
     .getByRole("button", { name: "Rename Schedule", exact: true })
     .click();

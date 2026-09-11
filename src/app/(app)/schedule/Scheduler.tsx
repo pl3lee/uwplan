@@ -484,7 +484,12 @@ export function Scheduler({
                 }
                 asChild
               >
-                <Link href={`/schedule?scheduleId=${schedule.id}`}>
+                <Link
+                  href={`/schedule?scheduleId=${schedule.id}`}
+                  aria-current={
+                    schedule.id === activeScheduleId ? "page" : undefined
+                  }
+                >
                   {schedule.name}
                 </Link>
               </Button>
