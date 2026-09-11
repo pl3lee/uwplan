@@ -1,16 +1,19 @@
 import { Dialog } from "@base-ui/react/dialog";
 import { PreviewCard } from "@base-ui/react/preview-card";
 import { DndContext, useDraggable, useDroppable } from "@dnd-kit/core";
+import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
   assignScheduleCourse,
   removeScheduleCourse,
 } from "~/generated/api/client";
 import type {
+  AssignmentBody,
   CourseBody,
   ScheduleViewResponseBody,
 } from "~/generated/api/model";
 import { usePlanningMutation } from "~/lib/planning-mutation";
+import { scheduleQuery } from "~/lib/scheduling";
 import { cn } from "~/lib/utils";
 import { ApiErrorMessage } from "./api-error";
 import { Button } from "./button";
@@ -138,23 +141,24 @@ function TermBoard({
   );
 }
 
+function withAssignment(assigned: AssignmentBody[], next: AssignmentBody) {
+  const remaining = assigned.filter(
+    (item) => item.course.id !== next.course.id,
+  );
+  return next.term === "available" ? remaining : [...remaining, next];
+}
+
 export function CourseScheduler({ view }: { view: ScheduleViewResponseBody }) {
+  const client = useQueryClient();
   const mutation = usePlanningMutation(`schedule:${view.schedule.id}`);
-  const [pendingAssignment, setPendingAssignment] = useState<{
-    course: CourseBody;
-    term: string;
-  } | null>(null);
+  const [pendingAssignment, setPendingAssignment] =
+    useState<AssignmentBody | null>(null);
   const terms = termLabels(view.term_range);
-  // Keep the preview through the mutation's query refresh. Clearing it after a
-  // failed save restores server data without changing the shared query cache.
-  let assigned = view.assigned ?? [];
-  if (pendingAssignment) {
-    assigned = assigned.filter(
-      (item) => item.course.id !== pendingAssignment.course.id,
-    );
-    if (pendingAssignment.term !== "available")
-      assigned = [...assigned, pendingAssignment];
-  }
+  // Keep the local preview through saving and refresh; failed saves restore the
+  // unchanged cached data when the preview clears.
+  const assigned = pendingAssignment
+    ? withAssignment(view.assigned ?? [], pendingAssignment)
+    : (view.assigned ?? []);
   const selected = [
     ...new Map(
       (view.selected ?? []).map((course) => [course.id, course]),
@@ -180,10 +184,26 @@ export function CourseScheduler({ view }: { view: ScheduleViewResponseBody }) {
     if (!course || mutation.isPending) return;
     setPendingAssignment({ course, term });
     mutation.mutate(
-      () =>
-        term === "available"
+      async () => {
+        await (term === "available"
           ? removeScheduleCourse(view.schedule.id, courseId)
-          : assignScheduleCourse(view.schedule.id, courseId, { term }),
+          : assignScheduleCourse(view.schedule.id, courseId, { term }));
+        // Record the confirmed write before refreshing, so a failed refresh
+        // cannot restore stale assignments. Discard any older in-flight read.
+        const { queryKey } = scheduleQuery(view.schedule.id);
+        await client.cancelQueries({ queryKey, exact: true });
+        client.setQueryData<ScheduleViewResponseBody>(queryKey, (saved) =>
+          saved
+            ? {
+                ...saved,
+                assigned: withAssignment(saved.assigned ?? [], {
+                  course,
+                  term,
+                }),
+              }
+            : saved,
+        );
+      },
       { onSettled: () => setPendingAssignment(null) },
     );
   };

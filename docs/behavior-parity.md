@@ -111,5 +111,7 @@ moving a course. It now previews assignment, movement, and removal immediately,
 keeps the preview through a delayed refresh, and restores the saved position on
 failure. Desktop browser tests hold both requests open, reject each operation,
 retry against the real API, and check persistence after reload. The mobile term
-selector also verifies immediate feedback, rollback, and retry. These additions
-bring the shared suite to 40 cases.
+selector also verifies immediate feedback, rollback, and retry. A confirmed save
+updates the cached assignment before refreshing; a separate regression verifies
+that refresh failures preserve successful assignments, movements, and removals.
+These additions bring the shared suite to 43 cases.

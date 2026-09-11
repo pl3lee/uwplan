@@ -110,6 +110,33 @@ test("schedule drag updates immediately and rolls back failed saves @smoke", asy
   }
 });
 
+test("confirmed schedule changes survive a failed refresh @smoke", async ({
+  page,
+  user,
+  signIn,
+}) => {
+  await signIn(user);
+  await selectCoreCourse(page, user);
+  await page.goto("/schedule");
+  const boards = ["Available Courses", "Fall 2026", "Winter 2027", "Available Courses"]
+    .map((name) => page.getByRole("region", { name, exact: true }));
+  const course = (board: Locator) => board.getByRole("button", { name: /CS135/ });
+  const scheduleURL = `**/api/v1/schedules/${user.scheduleId}`;
+  for (let index = 0; index < boards.length - 1; index++) {
+    await page.waitForLoadState("networkidle");
+    await page.route(scheduleURL, (route) =>
+      route.fulfill({ status: 500, body: "Refresh failed" }),
+    );
+    await dragCourse(page, course(boards[index]), boards[index + 1]);
+    await expect(page.getByRole("alert")).toBeVisible();
+    await expect(course(boards[index + 1])).toBeEnabled();
+    await expect(course(boards[index])).toHaveCount(0);
+    await page.unroute(scheduleURL);
+    await reloadSavedPage(page);
+    await expect(course(boards[index + 1])).toBeVisible();
+  }
+});
+
 test("mobile course assignment previews and restores a failed save @mobile", async ({
   page,
   user,
