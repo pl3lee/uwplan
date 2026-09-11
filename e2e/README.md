@@ -26,19 +26,19 @@ For the migrated course-selection flow, run:
 E2E_RUNTIME=go pnpm test:e2e --grep 'template choices and fixed/free course selections persist'
 ```
 
-This builds the production Go binary and React Router application, adopts the
-legacy test schema with Goose, and runs against real PostgreSQL and an isolated
-Redis container. It preserves the browser assertions and covers Chromium,
-Firefox, and WebKit. Artifacts are in `output/playwright-go/`. The complete
-legacy suite remains active during migration. The Go provider transport adapter
-is still being ported; the full replacement suite
-must pass before production cutover.
+This builds the production Go binary for the Docker host’s Linux architecture
+and the React Router production application, adopts the legacy test schema with
+Goose, and runs against real PostgreSQL and Redis. Docker, Go, pnpm, and OpenSSL
+are required. Artifacts are in `output/playwright-go/`. The complete legacy suite
+remains active during migration.
 
 `oauth-server.mjs` implements a controlled OAuth/OIDC provider with one-use codes,
 client credential checks, PKCE validation, and signed ID tokens. Auth tests use
 the real login forms, callback handlers, provisioning, and account lookup. The
 `provider-fetch.mjs` Node preload redirects provider network requests only in
-Playwright's server process. Browser routing redirects GitHub's fixed login URL.
+Playwright's legacy server process. `provider-browser.ts` handles external
+authorization navigation for both runtimes, retaining the real sign-in response
+and its state cookie for the native Go redirect.
 No login-bypass endpoint or test flag is added to the application. All these
 fixtures are excluded from the production image context.
 
@@ -60,14 +60,24 @@ response for export as well as legacy POST actions; the exact downloaded content
 assertion is shared. Selection, scheduling, and expired-session/logout flows are
 required replacement-runtime CI checks during the remaining migration.
 
-All 27 shared cases outside the provider callbacks are required on the replacement
-production build, including template creation/copy/management and admin access:
+All 33 shared cases are required on the replacement production build, including
+provider callbacks, template creation/copy/management, and admin access:
 
 ```sh
-E2E_RUNTIME=go pnpm test:e2e --grep-invert 'callback provisions a user'
+E2E_RUNTIME=go pnpm test:e2e
 ```
 
-This temporary exclusion covers only the six provider callbacks; it does not
-establish complete authentication parity. Those six cases remain required on the
-legacy runtime until the Go provider fixture is ready, and the complete shared
-suite must pass on the replacement before cutover.
+The Go runner creates an owned Docker network, a production API process, and a
+provider fixture with bounded memory and read-only filesystems. Its HTTPS CONNECT
+proxy accepts only the fixed Google/GitHub token, key, profile, and email routes;
+it never forwards to real providers. A one-day certificate is generated per run
+and trusted only by the API container through `SSL_CERT_FILE`/`SSL_CERT_DIR`.
+Certificate verification stays enabled. The operator’s trust store and production
+configuration are unchanged, and API handlers have no fixture flag or auth bypass.
+Only loopback ports are published. Containers, network attachments, binary, and
+certificate files are removed on completion, including failed test runs.
+
+A release trace exposed a confirmation race in the legacy CRUD test: background
+regions disappear from accessibility queries while a modal is open. The test now
+waits for deletion acknowledgment before checking removal and navigating; its
+saved-content assertions remain unchanged.

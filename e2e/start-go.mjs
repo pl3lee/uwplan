@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 
 if (
   process.env.E2E_RUNTIME !== "go" ||
-  !process.env.E2E_API_BINARY ||
+  !process.env.E2E_API_CONTAINER?.startsWith("uwplan-e2e-api-") ||
   !process.env.E2E_DATABASE_URL
 )
   throw new Error("Use the disposable Go E2E runner");
@@ -34,12 +34,10 @@ const launch = (command, args, env) => {
   });
   return child;
 };
-const api = launch(process.env.E2E_API_BINARY, [], {
-  HTTP_ADDR: `127.0.0.1:${process.env.E2E_API_PORT}`,
-  PUBLIC_ORIGIN: process.env.E2E_BASE_URL,
-});
+const api = launch("docker", ["attach", process.env.E2E_API_CONTAINER], {});
 for (let attempt = 0; attempt < 100; attempt++) {
-  if (api.exitCode !== null) throw new Error("Go API exited before readiness");
+  if (stopping || api.exitCode !== null || api.signalCode !== null)
+    throw new Error("Go API exited before readiness");
   try {
     if ((await fetch(`${process.env.API_ORIGIN}/api/ready`)).ok) break;
   } catch {}

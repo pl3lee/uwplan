@@ -25,9 +25,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium firefox webkit
       - name: Verify public and private flows on the replacement production build
-        # The six provider callback cases await the Go provider transport fixture.
-        # The complete legacy suite, including those callbacks, still runs in PR CI.
-        run: pnpm test:e2e --grep-invert 'callback provisions a user'
+        run: pnpm test:e2e
         env:
           E2E_RUNTIME: go
       - uses: actions/upload-artifact@v4

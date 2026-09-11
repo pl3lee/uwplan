@@ -6,7 +6,7 @@ const issuers = {
   github: "https://github.com/login/oauth",
 };
 
-export async function startOAuthFixture() {
+export async function startOAuthFixture({ host = "127.0.0.1", port = 0 } = {}) {
   const { publicKey, privateKey } = generateKeyPairSync("rsa", {
     modulusLength: 2048,
   });
@@ -26,6 +26,7 @@ export async function startOAuthFixture() {
       res.writeHead(status, { "Content-Type": "application/json" });
       res.end(JSON.stringify(body));
     };
+    if (url.pathname === "/health") return json({ status: "ok" });
     if (!Object.hasOwn(issuers, provider))
       return json({ error: "unknown_provider" }, 404);
     if (operation === "discovery")
@@ -146,13 +147,19 @@ export async function startOAuthFixture() {
         scope: "openid profile email read:user user:email",
       });
     }
-    if (operation === "user") {
+    if (operation === "user" || operation === "emails") {
       const account = tokens.get(
         req.headers.authorization?.replace(/^Bearer /i, ""),
       );
       if (!account) return json({ error: "invalid_token" }, 401);
+      if (operation === "emails")
+        return json([{ email: account, primary: true, verified: true }]);
       return json({
-        id: account,
+        id:
+          Number.parseInt(
+            createHash("sha256").update(account).digest("hex").slice(0, 12),
+            16,
+          ) + 1,
         sub: account,
         login: account,
         name: "OAuth Student",
@@ -162,7 +169,7 @@ export async function startOAuthFixture() {
     }
     return json({ error: "not_found" }, 404);
   });
-  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  await new Promise((resolve) => server.listen(port, host, resolve));
   origin = `http://127.0.0.1:${server.address().port}`;
   return {
     origin,

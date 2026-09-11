@@ -8,6 +8,7 @@ import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { startOAuthFixture } from "./oauth-server.mjs";
+import { startGoStack } from "./go-stack.mjs";
 
 // This runner owns its database. It never uses DATABASE_URL from a developer's env.
 const container = `uwplan-e2e-${randomUUID()}`;
@@ -18,6 +19,7 @@ let child;
 let oauth;
 let temporaryDirectory;
 let redisContainer;
+let goStack;
 let goEnvironment = {};
 const docker = (...args) =>
   execFileSync("docker", args, { encoding: "utf8" }).trim();
@@ -87,32 +89,27 @@ try {
       "--maxmemory",
       "64mb",
     );
-    const redisPort = docker("port", redisContainer, "6379/tcp")
-      .split(":")
-      .at(-1);
-    const apiPort = await availablePort();
-    const binary = join(temporaryDirectory, "uwplan-api");
-    execFileSync("go", ["build", "-o", binary, "./cmd/api"], {
-      cwd: "api",
-      stdio: "inherit",
-    });
     execFileSync("go", ["run", "./cmd/migrate"], {
       cwd: "api",
       stdio: "inherit",
       env: { ...process.env, DATABASE_URL: databaseURL },
     });
     execFileSync("pnpm", ["build:web"], { stdio: "inherit" });
+    goStack = await startGoStack({
+      directory: temporaryDirectory,
+      database: container,
+      redis: redisContainer,
+      password,
+      publicOrigin: process.env.E2E_BASE_URL,
+    });
     goEnvironment = {
-      E2E_API_BINARY: binary,
-      E2E_API_PORT: String(apiPort),
-      API_ORIGIN: `http://127.0.0.1:${apiPort}`,
-      REDIS_URL: `redis://127.0.0.1:${redisPort}`,
+      ...goStack.environment,
       E2E_REDIS_CONTAINER: redisContainer,
       RELEASE_DIGEST: `sha256:${"a".repeat(64)}`,
       RELEASE_REVISION: "b".repeat(40),
     };
   }
-  oauth = await startOAuthFixture();
+  if (runtime === "next") oauth = await startOAuthFixture();
   child = spawn("npx", ["playwright", "test", ...process.argv.slice(2)], {
     stdio: "inherit",
     env: {
@@ -121,7 +118,7 @@ try {
       DATABASE_URL: databaseURL,
       E2E_DATABASE_URL: databaseURL,
       E2E_PORT: String(appPort),
-      E2E_OAUTH_ORIGIN: oauth.origin,
+      E2E_OAUTH_ORIGIN: goStack?.providerOrigin ?? oauth.origin,
       E2E_BASE_URL: process.env.E2E_BASE_URL,
       AUTH_URL: process.env.E2E_BASE_URL,
       AUTH_TRUST_HOST: "true",
@@ -140,6 +137,7 @@ try {
   });
 } finally {
   await oauth?.close();
+  goStack?.close();
   if (redisContainer) docker("rm", "--force", redisContainer);
   if (temporaryDirectory)
     rmSync(temporaryDirectory, { recursive: true, force: true });
