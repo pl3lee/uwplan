@@ -29,6 +29,14 @@ type Fixtures = {
 };
 
 export const test = base.extend<Fixtures>({
+  page: async ({ page }, use) => {
+    // The landing-page demo is external media. Keep its frame deterministic so
+    // the browser load event cannot hang on video advertising requests.
+    await page.route("https://www.youtube.com/embed/**", (route) =>
+      route.fulfill({ contentType: "text/html", body: "<!doctype html><title>Demo video fixture</title>" }),
+    );
+    await use(page);
+  },
   createUser: async ({}, use) => {
     const url = process.env.E2E_DATABASE_URL;
     if (!url || new URL(url).pathname !== "/uwplan_e2e") {

@@ -50,3 +50,7 @@ failure (see `docs/behavior-parity.md`). Reproduce it with
 `E2E_PRODUCTION=1 npm run test:e2e`. The development baseline captures the intended
 flows; it does not certify the legacy production runtime. The replacement must
 run the same behavior assertions against its production build before cutover.
+
+The landing-page video iframe uses a local browser response fixture, so third-party
+video/ad requests cannot hold the page load event open. Application requests and
+behavior assertions remain unchanged.
