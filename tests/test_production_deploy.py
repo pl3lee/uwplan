@@ -13,19 +13,37 @@ DIGEST = 'sha256:' + 'a' * 64
 REVISION = 'b' * 40
 OLD_DIGEST = 'sha256:' + 'c' * 64
 OLD_REVISION = 'd' * 40
+WEB_DIGEST = 'sha256:' + 'e' * 64
 
 class DeploymentTests(unittest.TestCase):
+    def test_paired_command_accepts_only_two_digests_and_one_revision(self):
+        self.assertEqual(deploy.parse_command(f'deploy-pair {DIGEST} {WEB_DIGEST} {REVISION}'), (DIGEST, REVISION, WEB_DIGEST))
+        for command in [
+            f'deploy-pair {DIGEST} {REVISION}',
+            f'deploy-pair {DIGEST} latest {REVISION}',
+            f'deploy-pair {DIGEST} evil/repo@{WEB_DIGEST} {REVISION}',
+            f'deploy-pair {DIGEST} {WEB_DIGEST} {REVISION};id',
+            f'deploy-pair {DIGEST} {WEB_DIGEST} {REVISION} extra',
+        ]:
+            with self.subTest(command=command), self.assertRaises(ValueError):
+                deploy.parse_command(command)
+
     def test_rejects_arbitrary_commands_and_injection(self):
         for command in ['bash', 'deploy latest main', f'deploy {DIGEST} {REVISION};id', f'deploy evil/repo@{DIGEST} {REVISION}', f'deploy {DIGEST} {REVISION} extra']:
             with self.subTest(command=command), self.assertRaises(ValueError):
                 deploy.parse_command(command)
         self.assertEqual(deploy.parse_command(f'deploy {DIGEST} {REVISION}'), (DIGEST, REVISION))
 
-    def exercise(self, ready_results, migrate_fails=False, frozen=False, architecture='amd64'):
+    def exercise(self, ready_results, migrate_fails=False, frozen=False, architecture='amd64', web_digest=None, old_web_digest=None, web_revision=REVISION):
         with tempfile.TemporaryDirectory() as temporary:
             state = Path(temporary)
             release = state/'release.env'
             previous = f'UWPLAN_IMAGE={deploy.REPOSITORY}@{OLD_DIGEST}\nRELEASE_DIGEST={OLD_DIGEST}\nRELEASE_REVISION={OLD_REVISION}\n'.encode()
+            if old_web_digest:
+                previous = (f'UWPLAN_API_IMAGE={deploy.REPOSITORY}-api@{OLD_DIGEST}\n'
+                            f'UWPLAN_WEB_IMAGE={deploy.REPOSITORY}-web@{old_web_digest}\n'
+                            f'RELEASE_DIGEST={OLD_DIGEST}\nRELEASE_WEB_DIGEST={old_web_digest}\n'
+                            f'RELEASE_REVISION={OLD_REVISION}\n').encode()
             release.write_bytes(previous)
             if frozen: (state/'frozen').touch()
             calls=[]
@@ -34,12 +52,29 @@ class DeploymentTests(unittest.TestCase):
                 if 'migrator' in args and migrate_fails: raise RuntimeError('migration rejected')
                 return SimpleNamespace(stdout=b'backup')
             def run(args):
-                return SimpleNamespace(stdout=json.dumps([{'Architecture':architecture, 'Config':{'Labels':{'org.opencontainers.image.revision':REVISION}}}]).encode())
+                image_revision = web_revision if args[-1].startswith(f'{deploy.REPOSITORY}-web@') else REVISION
+                return SimpleNamespace(stdout=json.dumps([{'Architecture':architecture, 'Config':{'Labels':{'org.opencontainers.image.revision':image_revision}}}]).encode())
             with patch.multiple(deploy, STATE=state, RELEASE=release), patch.object(deploy,'compose',side_effect=compose), patch.object(deploy,'run',side_effect=run), patch.object(deploy,'ready',side_effect=ready_results):
                 error=None
-                try: deploy.deploy(DIGEST,REVISION)
+                try: deploy.deploy(DIGEST,REVISION,web_digest) if web_digest else deploy.deploy(DIGEST,REVISION)
                 except Exception as caught: error=caught
             return release.read_bytes(), previous, calls, error, list((state/'backups').glob('*.dump'))
+
+    def test_paired_release_records_both_images_and_stops_the_legacy_writer(self):
+        current, previous, calls, error, backups = self.exercise([True], web_digest=WEB_DIGEST)
+        self.assertIsNone(error)
+        self.assertEqual(current.decode(), (
+            f'UWPLAN_API_IMAGE=docker.io/pl3lee/uwplan-api@{DIGEST}\n'
+            f'UWPLAN_WEB_IMAGE=docker.io/pl3lee/uwplan-web@{WEB_DIGEST}\n'
+            f'RELEASE_DIGEST={DIGEST}\n'
+            f'RELEASE_WEB_DIGEST={WEB_DIGEST}\n'
+            f'RELEASE_REVISION={REVISION}\n'
+        ))
+        self.assertEqual(len(backups), 1)
+        stop = calls.index(('stop', 'app'))
+        start = calls.index(('up', '-d', '--no-deps', '--force-recreate', 'api', 'web'))
+        self.assertLess(stop, start)
+        self.assertNotIn('down', [part for call in calls for part in call])
 
     def test_healthy_release_records_previous_and_backup(self):
         current,previous,calls,error,backups=self.exercise([True])
@@ -47,6 +82,31 @@ class DeploymentTests(unittest.TestCase):
         self.assertIn(DIGEST.encode(),current)
         self.assertEqual(len(backups),1)
         self.assertEqual(sum('app' in call for call in calls),1)
+
+    def test_failed_pair_restores_legacy_without_reversing_schema(self):
+        current, previous, calls, error, _ = self.exercise([False, True], web_digest=WEB_DIGEST)
+        self.assertEqual(current, previous)
+        self.assertIn('previous image restored', str(error))
+        self.assertIn(('stop', 'api', 'web'), calls)
+        self.assertEqual(calls[-1], ('up', '-d', '--no-deps', '--force-recreate', 'app'))
+        self.assertEqual(sum('migrator' in call for call in calls), 1)
+        self.assertFalse(any('down' in call for call in calls))
+
+    def test_failed_pair_restores_both_previous_images(self):
+        old_web = 'sha256:' + 'f' * 64
+        current, previous, calls, error, _ = self.exercise([False, True], web_digest=WEB_DIGEST, old_web_digest=old_web)
+        self.assertEqual(current, previous)
+        self.assertIn(old_web.encode(), current)
+        self.assertIn('previous image restored', str(error))
+        self.assertEqual(calls[-1], ('up', '-d', '--no-deps', '--force-recreate', 'api', 'web'))
+        self.assertEqual(sum('migrator' in call for call in calls), 1)
+
+    def test_mismatched_web_revision_is_rejected_before_backup_or_activation(self):
+        current, previous, calls, error, backups = self.exercise([], web_digest=WEB_DIGEST, web_revision=OLD_REVISION)
+        self.assertEqual(current, previous)
+        self.assertIn('source revision mismatch', str(error))
+        self.assertEqual(calls, [])
+        self.assertEqual(backups, [])
 
     def test_failed_readiness_restores_previous_image(self):
         current,previous,calls,error,_=self.exercise([False,True])
