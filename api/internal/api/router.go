@@ -10,12 +10,13 @@ import (
 )
 
 type Dependencies struct {
-	Auth      AuthService
-	Health    HealthGateway
-	OAuth     OAuthService
-	Schedules ScheduleService
-	Courses   CourseService
-	Templates TemplateService
+	Auth       AuthService
+	Health     HealthGateway
+	OAuth      OAuthService
+	Schedules  ScheduleService
+	Courses    CourseService
+	Templates  TemplateService
+	Selections SelectionService
 }
 
 func NewRouter(cfg config.Config, deps Dependencies) (http.Handler, huma.API) {
@@ -36,5 +37,6 @@ func NewRouter(cfg config.Config, deps Dependencies) (http.Handler, huma.API) {
 	registerSchedules(app, cfg, deps.Auth, deps.Schedules)
 	registerCourses(app, cfg, deps.Auth, deps.Courses)
 	registerTemplates(app, cfg, deps.Auth, deps.Templates)
+	registerSelections(app, cfg, deps.Auth, deps.Selections)
 	return router, app
 }

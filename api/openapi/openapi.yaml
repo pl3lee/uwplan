@@ -132,6 +132,16 @@ components:
           format: uri
           type: string
       type: object
+    FreeCourseBody:
+      additionalProperties: false
+      properties:
+        course_id:
+          type:
+            - string
+            - "null"
+      required:
+        - course_id
+      type: object
     LiveBody:
       additionalProperties: false
       properties:
@@ -141,6 +151,46 @@ components:
           type: string
       required:
         - status
+      type: object
+    PlanChoiceBody:
+      additionalProperties: false
+      properties:
+        course_id:
+          type: string
+        item_id:
+          type: string
+        selected:
+          type: boolean
+      required:
+        - item_id
+        - course_id
+        - selected
+      type: object
+    PlanStateBody:
+      additionalProperties: false
+      properties:
+        choices:
+          items:
+            $ref: "#/components/schemas/PlanChoiceBody"
+          type:
+            - array
+            - "null"
+        selected_course_ids:
+          items:
+            type: string
+          type:
+            - array
+            - "null"
+        template_ids:
+          items:
+            type: string
+          type:
+            - array
+            - "null"
+      required:
+        - template_ids
+        - choices
+        - selected_course_ids
       type: object
     ReadinessBody:
       additionalProperties: false
@@ -244,6 +294,14 @@ components:
         - selected
         - assigned
         - term_range
+      type: object
+    SelectionFlagBody:
+      additionalProperties: false
+      properties:
+        selected:
+          type: boolean
+      required:
+        - selected
       type: object
     TemplateBody:
       additionalProperties: false
@@ -787,6 +845,271 @@ paths:
       security:
         - session: []
       summary: Get the signed-in user
+  /api/v1/plan:
+    get:
+      operationId: getPlanState
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlanStateBody"
+          description: OK
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Bad Request
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: Read the current user's template membership and course choices
+  /api/v1/plan/courses/{course_id}:
+    delete:
+      operationId: removeSelectedCourse
+      parameters:
+        - in: path
+          name: course_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Bad Request
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: Remove every matching selection and assignment from the current user's plan
+  /api/v1/plan/items/{item_id}/course:
+    put:
+      operationId: changeFreeCourse
+      parameters:
+        - in: path
+          name: item_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FreeCourseBody"
+        required: true
+      responses:
+        "204":
+          description: No Content
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Bad Request
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: Fill or clear a free-course slot in the current user's plan
+  /api/v1/plan/items/{item_id}/selection:
+    put:
+      operationId: setCourseSelection
+      parameters:
+        - in: path
+          name: item_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SelectionFlagBody"
+        required: true
+      responses:
+        "204":
+          description: No Content
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Bad Request
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: Select or deselect a course item in the current user's plan
+  /api/v1/plan/templates/{template_id}:
+    put:
+      operationId: setTemplateMembership
+      parameters:
+        - in: path
+          name: template_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SelectionFlagBody"
+        required: true
+      responses:
+        "204":
+          description: No Content
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Bad Request
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: Add or remove a template from the current user's plan
   /api/v1/schedules:
     get:
       operationId: listSchedules
