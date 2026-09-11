@@ -94,6 +94,14 @@ export function TemplateEditor({
   });
   return (
     <form
+      onKeyDown={(event) => {
+        if (
+          event.key === "Enter" &&
+          event.target instanceof HTMLInputElement &&
+          event.currentTarget.contains(event.target)
+        )
+          event.preventDefault();
+      }}
       onSubmit={(event) => {
         event.preventDefault();
         void form.handleSubmit();

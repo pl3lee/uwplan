@@ -60,7 +60,7 @@ response for export as well as legacy POST actions; the exact downloaded content
 assertion is shared. Selection, scheduling, and expired-session/logout flows are
 required replacement-runtime CI checks during the remaining migration.
 
-All 26 shared cases outside the provider callbacks are required on the replacement
+All 27 shared cases outside the provider callbacks are required on the replacement
 production build, including template creation/copy/management and admin access:
 
 ```sh

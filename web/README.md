@@ -101,7 +101,7 @@ Owned-template queries back management; the admin loader and API both enforce
 the current admin role. Successful template mutations refresh membership,
 definitions, owned/all lists, and affected schedules.
 
-CI now runs all 26 non-OAuth shared cases on the replacement production build:
+CI now runs all 27 non-OAuth shared cases on the replacement production build:
 
 ```sh
 E2E_RUNTIME=go pnpm test:e2e --grep-invert 'callback provisions a user'

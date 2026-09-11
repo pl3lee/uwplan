@@ -77,7 +77,7 @@ term-range persistence, exact CSV export, and mobile navigation/assignment.
 The shared response helper recognizes CSV downloads served by GET as well as
 legacy action responses. Template creation/copy/rename/delete, owned-plan visibility, admin user listing,
 and admin cross-owner rename now have replacement implementations too. Run the
-26 non-OAuth shared cases together; the six OAuth callbacks still require the
+27 non-OAuth shared cases together; the six OAuth callbacks still require the
 Go provider transport fixture before complete parity and cutover.
 
 The baseline also found that the drag context generated different accessibility
