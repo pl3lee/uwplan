@@ -153,6 +153,11 @@ export async function chooseTemplate(page: Page, name: string) {
     page.getByRole("option", { name, exact: true }).click(),
   );
   await page.keyboard.press("Escape");
+  // The picker restores focus after its closing transition. Wait for that
+  // before typing elsewhere so restoration cannot steal the next keystrokes.
+  await expect(
+    page.getByRole("combobox", { name: "Academic plans", exact: true }),
+  ).toBeFocused();
   await expect(page.getByText(name, { exact: true })).toHaveCount(
     wasSelected ? 0 : 1,
   );
