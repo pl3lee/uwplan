@@ -3,9 +3,10 @@
 React Router SSR application with React, TypeScript, Vite, Tailwind, Base UI,
 TanStack Query, and an Orval-generated Huma client.
 
-The rewrite is in progress. Public pages, the sign-in entry point, and course
-selection and scheduling are ported. Template management, administration, and full
-browser parity are still pending. Production continues
+The rewrite is in progress. Public pages, the sign-in entry point, course
+selection, scheduling, template creation/copying/management, and administration
+are ported. OAuth browser-provider parity and deployment/telemetry rehearsals
+are still pending. Production continues
 to use the existing application until the cutover checks in
 [`docs/rewrite-plan.md`](../docs/rewrite-plan.md) pass.
 
@@ -91,3 +92,20 @@ E2E_RUNTIME=go pnpm test:e2e e2e/scheduling.spec.ts
 
 The other shared Playwright assertions remain in the repository's `e2e/` directory and must pass against the replacement
 production build before it is deployed.
+
+Template forms use TanStack Form and the generated template API. The editor
+preserves instruction, fixed/free requirement, separator, reorder, and remove
+controls. Copying loads the selected definition through an authenticated loader;
+the confirmation resets the form, and duplicate names get explicit feedback.
+Owned-template queries back management; the admin loader and API both enforce
+the current admin role. Successful template mutations refresh membership,
+definitions, owned/all lists, and affected schedules.
+
+CI now runs all 26 non-OAuth shared cases on the replacement production build:
+
+```sh
+E2E_RUNTIME=go pnpm test:e2e --grep-invert 'callback provisions a user'
+```
+
+The six Google/GitHub callback cases still require the Go provider transport
+fixture and remain part of the complete legacy suite during the transition.

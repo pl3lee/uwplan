@@ -31,7 +31,7 @@ legacy test schema with Goose, and runs against real PostgreSQL and an isolated
 Redis container. It preserves the browser assertions and covers Chromium,
 Firefox, and WebKit. Artifacts are in `output/playwright-go/`. The complete
 legacy suite remains active during migration. The Go provider transport adapter
-and template/admin pages are still being ported; the full replacement suite
+is still being ported; the full replacement suite
 must pass before production cutover.
 
 `oauth-server.mjs` implements a controlled OAuth/OIDC provider with one-use codes,
@@ -59,3 +59,15 @@ The scheduling assertions also run unchanged with `E2E_RUNTIME=go pnpm test:e2e 
 response for export as well as legacy POST actions; the exact downloaded content
 assertion is shared. Selection, scheduling, and expired-session/logout flows are
 required replacement-runtime CI checks during the remaining migration.
+
+All 26 shared cases outside the provider callbacks are required on the replacement
+production build, including template creation/copy/management and admin access:
+
+```sh
+E2E_RUNTIME=go pnpm test:e2e --grep-invert 'callback provisions a user'
+```
+
+This temporary exclusion covers only the six provider callbacks; it does not
+establish complete authentication parity. Those six cases remain required on the
+legacy runtime until the Go provider fixture is ready, and the complete shared
+suite must pass on the replacement before cutover.
