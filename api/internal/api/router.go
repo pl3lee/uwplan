@@ -12,6 +12,7 @@ import (
 type Dependencies struct {
 	Auth   AuthService
 	Health HealthGateway
+	OAuth  OAuthService
 }
 
 func NewRouter(cfg config.Config, deps Dependencies) (http.Handler, huma.API) {
@@ -28,5 +29,6 @@ func NewRouter(cfg config.Config, deps Dependencies) (http.Handler, huma.API) {
 	app := humachi.New(router, hc)
 	registerHealth(app, deps.Health, cfg.Release)
 	registerAuth(app, cfg, deps.Auth)
+	registerOAuth(app, cfg, deps.OAuth)
 	return router, app
 }

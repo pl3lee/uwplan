@@ -4,8 +4,10 @@ go 1.26.0
 
 require (
 	github.com/alicebob/miniredis/v2 v2.37.0
+	github.com/coreos/go-oidc/v3 v3.21.0
 	github.com/danielgtaylor/huma/v2 v2.34.1
 	github.com/go-chi/chi/v5 v5.2.3
+	github.com/go-jose/go-jose/v4 v4.1.4
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.9.2
@@ -13,6 +15,7 @@ require (
 	github.com/pressly/goose/v3 v3.27.0
 	github.com/redis/go-redis/v9 v9.18.0
 	github.com/stretchr/testify v1.11.1
+	golang.org/x/oauth2 v0.36.0
 )
 
 require (

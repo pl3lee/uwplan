@@ -15,9 +15,12 @@ import (
 	"github.com/pl3lee/uwplan/api/internal/api"
 	"github.com/pl3lee/uwplan/api/internal/config"
 	healthgateway "github.com/pl3lee/uwplan/api/internal/gateway/health"
+	oauthgateway "github.com/pl3lee/uwplan/api/internal/gateway/oauth"
+	oauthrepository "github.com/pl3lee/uwplan/api/internal/repository/oauth"
 	sessionrepository "github.com/pl3lee/uwplan/api/internal/repository/session"
 	userrepository "github.com/pl3lee/uwplan/api/internal/repository/user"
 	authservice "github.com/pl3lee/uwplan/api/internal/service/auth"
+	oauthservice "github.com/pl3lee/uwplan/api/internal/service/oauth"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -66,7 +69,9 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	router, _ := api.NewRouter(cfg, api.Dependencies{Auth: auth, Health: healthgateway.NewHealthGateway(database, redisClient)})
+	providerGateway := oauthgateway.NewOAuthGateway(oauthgateway.Options{PublicOrigin: cfg.PublicOrigin, Google: oauthgateway.Credentials{ClientID: cfg.Google.ClientID, ClientSecret: cfg.Google.ClientSecret}, GitHub: oauthgateway.Credentials{ClientID: cfg.GitHub.ClientID, ClientSecret: cfg.GitHub.ClientSecret}}, nil)
+	oauth := oauthservice.NewOAuthService(oauthrepository.NewOAuthRepository(redisClient), providerGateway, auth)
+	router, _ := api.NewRouter(cfg, api.Dependencies{Auth: auth, Health: healthgateway.NewHealthGateway(database, redisClient), OAuth: oauth})
 	server := &http.Server{Addr: cfg.HTTPAddress, Handler: router, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 20 * time.Second, WriteTimeout: 20 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16 << 10}
 	stopped := make(chan error, 1)
 	go func() { stopped <- server.ListenAndServe() }()
