@@ -25,7 +25,13 @@
     "format:write": "prettier --write \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
     "test": "jest",
-    "test:e2e": "node e2e/run.mjs"
+    "test:e2e": "node e2e/run.mjs",
+    "dev:api": "make -C api run",
+    "dev:web": "pnpm --filter @uwplan/web dev",
+    "build:web": "pnpm --filter @uwplan/web build",
+    "check:web": "pnpm --filter @uwplan/web typecheck && pnpm --filter @uwplan/web lint",
+    "test:web": "pnpm --filter @uwplan/web test",
+    "generate:web": "pnpm --filter @uwplan/web api:generate"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.7.2",
@@ -100,5 +106,5 @@
   "ct3aMetadata": {
     "initVersion": "7.38.1"
   },
-  "packageManager": "npm@10.9.0"
+  "packageManager": "pnpm@10.34.5"
 }

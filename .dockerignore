@@ -14,3 +14,7 @@ playwright.config.ts
 .codex-staging
 *.dump
 *.backup
+
+web/node_modules
+web/build
+web/.react-router

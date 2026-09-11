@@ -155,7 +155,7 @@ const config: Config = {
 
   // The test environment that will be used for testing
   testEnvironment: "jsdom",
-  testPathIgnorePatterns: ["/node_modules/", "/e2e/"],
+  testPathIgnorePatterns: ["/node_modules/", "/e2e/", "/web/"],
 
   // Options that will be passed to the testEnvironment
   // testEnvironmentOptions: {},
