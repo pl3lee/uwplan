@@ -39,12 +39,13 @@ func registerHealth(app huma.API, gateway HealthGateway, release health.Release)
 		report := gateway.Check(ctx)
 		response := &ReadinessResponse{Status: http.StatusServiceUnavailable}
 		response.Body.Status = "unready"
-		if report.Ready() {
+		safeRelease, releaseValid := release.Public()
+		if report.Ready() && releaseValid {
 			response.Status = http.StatusOK
 			response.Body.Status = "ready"
 		}
-		response.Body.Release.Digest = release.Digest
-		response.Body.Release.Revision = release.Revision
+		response.Body.Release.Digest = safeRelease.Digest
+		response.Body.Release.Revision = safeRelease.Revision
 		response.Body.Dependencies.Database = report.Database
 		response.Body.Dependencies.Redis = report.Redis
 		return response, nil

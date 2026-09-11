@@ -66,7 +66,7 @@ on loopback. HTTPS uses a `__Host-uwplan_session` HttpOnly cookie; loopback uses
 Do not expose this candidate runtime through production routing yet.
 
 - `GET /api/live` stays live when dependencies are unavailable.
-- `GET /api/ready` requires PostgreSQL and Redis, probes under a two-second
+- `GET /api/ready` requires PostgreSQL, Redis, and valid release identity; probes under a two-second
   deadline, and reports release identity from `RELEASE_DIGEST`/`RELEASE_REVISION`.
 - `GET /api/v1/me` requires a valid Redis session and returns the current user.
 - `POST /api/v1/auth/logout` requires an exact `PUBLIC_ORIGIN` Origin header,

@@ -47,7 +47,7 @@ func TestConfigurationRequiresSecurePublicOrigin(t *testing.T) {
 			if tc.normalized != "" {
 				expectedOrigin = tc.normalized
 			}
-			want := config.Config{HTTPAddress: ":8080", DatabaseURL: values["DATABASE_URL"], RedisURL: values["REDIS_URL"], PublicOrigin: expectedOrigin, SecureCookies: tc.secure, SessionTTL: 30 * 24 * time.Hour, Release: health.Release{Digest: "unavailable", Revision: "unknown"}}
+			want := config.Config{HTTPAddress: ":8080", DatabaseURL: values["DATABASE_URL"], RedisURL: values["REDIS_URL"], PublicOrigin: expectedOrigin, SecureCookies: tc.secure, SessionTTL: 30 * 24 * time.Hour, Release: health.Release{}}
 			if diff := cmp.Diff(want, got); diff != "" {
 				t.Fatal(diff)
 			}

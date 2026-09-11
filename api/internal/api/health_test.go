@@ -50,11 +50,22 @@ func TestReadinessRequiresDatabaseAndRedis(t *testing.T) {
 			t.Parallel()
 			gateway := NewHealthGatewayMock(t)
 			gateway.EXPECT().Check(mock.Anything).Return(tc.report).Once()
-			cfg := config.Config{Release: health.Release{Digest: "sha256:fixture", Revision: "revision"}}
+			cfg := config.Config{Release: health.Release{Digest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", Revision: "revision"}}
 			router, _ := NewRouter(cfg, Dependencies{Health: gateway})
 			response := httptest.NewRecorder()
 			router.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/ready", nil))
-			assertJSON(t, response, tc.status, map[string]any{"status": tc.state, "release": map[string]any{"digest": "sha256:fixture", "revision": "revision"}, "dependencies": map[string]any{"database": string(tc.report.Database), "redis": string(tc.report.Redis)}})
+			assertJSON(t, response, tc.status, map[string]any{"status": tc.state, "release": map[string]any{"digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "revision": "revision"}, "dependencies": map[string]any{"database": string(tc.report.Database), "redis": string(tc.report.Redis)}})
 		})
 	}
+}
+
+func TestReadinessRejectsAndRedactsInvalidReleaseIdentity(t *testing.T) {
+	t.Parallel()
+	gateway := NewHealthGatewayMock(t)
+	gateway.EXPECT().Check(mock.Anything).Return(health.Report{Database: health.Available, Redis: health.Available}).Once()
+	cfg := config.Config{Release: health.Release{Digest: "credential-sentinel", Revision: "invalid/credential-sentinel"}}
+	router, _ := NewRouter(cfg, Dependencies{Health: gateway})
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/ready", nil))
+	assertJSON(t, response, 503, map[string]any{"status": "unready", "release": map[string]any{"digest": "unavailable", "revision": "unknown"}, "dependencies": map[string]any{"database": "available", "redis": "available"}})
 }

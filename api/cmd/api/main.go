@@ -36,7 +36,8 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("load configuration: %w", err)
 	}
-	slog.SetDefault(slog.Default().With("release_digest", cfg.Release.Digest, "release_revision", cfg.Release.Revision))
+	safeRelease, _ := cfg.Release.Public()
+	slog.SetDefault(slog.Default().With("release_digest", safeRelease.Digest, "release_revision", safeRelease.Revision))
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	databaseConfig, err := pgxpool.ParseConfig(cfg.DatabaseURL)

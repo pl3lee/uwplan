@@ -58,12 +58,6 @@ func Load(getenv func(string) string) (Config, error) {
 	if cfg.HTTPAddress == "" {
 		cfg.HTTPAddress = ":8080"
 	}
-	if cfg.Release.Digest == "" {
-		cfg.Release.Digest = "unavailable"
-	}
-	if cfg.Release.Revision == "" {
-		cfg.Release.Revision = "unknown"
-	}
 	return cfg, nil
 }
 
