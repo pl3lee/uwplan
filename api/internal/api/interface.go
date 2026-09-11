@@ -3,6 +3,8 @@ package api
 import (
 	"context"
 
+	"github.com/pl3lee/uwplan/api/internal/domain/course"
+
 	"github.com/pl3lee/uwplan/api/internal/domain/health"
 	"github.com/pl3lee/uwplan/api/internal/domain/oauth"
 	"github.com/pl3lee/uwplan/api/internal/domain/schedule"
@@ -14,6 +16,10 @@ import (
 type AuthService interface {
 	Authenticate(context.Context, session.Credentials) (user.User, error)
 	Logout(context.Context, session.Credentials) error
+}
+
+type CourseService interface {
+	List(context.Context) ([]course.Course, error)
 }
 
 type ScheduleService interface {

@@ -1,5 +1,11 @@
 # UWPlan API
 
+The authenticated `GET /api/v1/courses` endpoint returns the course catalog in
+course-code order, retaining legacy IDs, descriptions, prerequisites, ratings,
+and nullable values. The catalog is shared across users; authentication is
+required. Course import/update commands and template/selection endpoints are
+still being migrated.
+
 The Go foundation contains the academic-term domain, PostgreSQL schema
 transition, account resolution and provisioning, and Redis session services. The existing application and release migrator remain active
 until the API, authentication, and web replacement are ready for cutover.

@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pl3lee/uwplan/api/internal/domain/course"
 	domainschedule "github.com/pl3lee/uwplan/api/internal/domain/schedule"
 	"github.com/pl3lee/uwplan/api/internal/domain/term"
 	"github.com/pl3lee/uwplan/api/internal/domain/user"
+	courserepository "github.com/pl3lee/uwplan/api/internal/repository/course"
 	"github.com/pl3lee/uwplan/api/internal/repository/db/sqlc"
 )
 
@@ -41,7 +41,7 @@ func (r *ScheduleRepositoryImpl) View(ctx context.Context, input domainschedule.
 		return domainschedule.View{}, fmt.Errorf("get selected courses: %w", err)
 	}
 	for _, item := range selected {
-		converted, err := courseFromRow(item.Course)
+		converted, err := courserepository.FromRow(item.Course)
 		if err != nil {
 			return domainschedule.View{}, err
 		}
@@ -52,7 +52,7 @@ func (r *ScheduleRepositoryImpl) View(ctx context.Context, input domainschedule.
 		return domainschedule.View{}, fmt.Errorf("get assigned courses: %w", err)
 	}
 	for _, item := range assigned {
-		converted, err := courseFromRow(item.Course)
+		converted, err := courserepository.FromRow(item.Course)
 		if err != nil {
 			return domainschedule.View{}, err
 		}
@@ -183,22 +183,4 @@ func collection(rows []sqlc.ListOwnedSchedulesRow) domainschedule.Collection {
 
 func termRangeFromRow(row sqlc.GetUserTermRangeRow) term.Range {
 	return term.Range{Start: term.Term{Season: term.Season(row.StartTerm), Year: int(row.StartYear)}, End: term.Term{Season: term.Season(row.EndTerm), Year: int(row.EndYear)}}
-}
-
-func courseFromRow(row sqlc.Course) (course.Course, error) {
-	result := course.Course{ID: row.ID, Code: row.Code, Name: row.Name, Description: row.Description, Prereqs: row.Prereqs, Antireqs: row.Antireqs, Coreqs: row.Coreqs, NumRatings: row.NumRatings}
-	for _, rating := range []struct {
-		stored pgtype.Numeric
-		target **string
-	}{{row.UsefulRating, &result.UsefulRating}, {row.LikedRating, &result.LikedRating}, {row.EasyRating, &result.EasyRating}} {
-		value, err := rating.stored.Value()
-		if err != nil {
-			return course.Course{}, fmt.Errorf("decode course rating: %w", err)
-		}
-		if value != nil {
-			text := value.(string)
-			*rating.target = &text
-		}
-	}
-	return result, nil
 }
