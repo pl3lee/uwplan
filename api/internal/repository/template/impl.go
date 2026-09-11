@@ -100,14 +100,24 @@ func (r *TemplateRepositoryImpl) Create(ctx context.Context, input domaintemplat
 	if err != nil {
 		return domaintemplate.Template{}, fmt.Errorf("create template: %w", mutationError(err))
 	}
-	for index, item := range input.Items {
+	if err := createItems(ctx, q, id, input.Items); err != nil {
+		return domaintemplate.Template{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return domaintemplate.Template{}, fmt.Errorf("commit template creation: %w", mutationError(err))
+	}
+	return fromRow(row), nil
+}
+
+func createItems(ctx context.Context, q *sqlc.Queries, id uuid.UUID, items []domaintemplate.DraftItem) error {
+	for index, item := range items {
 		itemID, err := uuid.NewV7()
 		if err != nil {
-			return domaintemplate.Template{}, fmt.Errorf("generate template item ID: %w", err)
+			return fmt.Errorf("generate template item ID: %w", err)
 		}
 		err = q.CreateTemplateItem(ctx, sqlc.CreateTemplateItemParams{ID: itemID, TemplateID: id, Type: sqlc.ItemType(item.Type), Description: item.Description, OrderIndex: int32(index)})
 		if err != nil {
-			return domaintemplate.Template{}, fmt.Errorf("create template item: %w", err)
+			return fmt.Errorf("create template item: %w", err)
 		}
 		if item.Type != domaintemplate.Requirement {
 			continue
@@ -115,30 +125,66 @@ func (r *TemplateRepositoryImpl) Create(ctx context.Context, input domaintemplat
 		for _, code := range item.CourseCodes {
 			courseItemID, err := uuid.NewV7()
 			if err != nil {
-				return domaintemplate.Template{}, fmt.Errorf("generate fixed course item ID: %w", err)
+				return fmt.Errorf("generate fixed course item ID: %w", err)
 			}
 			_, err = q.CreateFixedTemplateCourse(ctx, sqlc.CreateFixedTemplateCourseParams{ID: courseItemID, RequirementID: itemID, Code: code})
 			if errors.Is(err, pgx.ErrNoRows) {
-				return domaintemplate.Template{}, domaintemplate.ErrCourseNotFound
+				return domaintemplate.ErrCourseNotFound
 			}
 			if err != nil {
-				return domaintemplate.Template{}, fmt.Errorf("create fixed course item: %w", err)
+				return fmt.Errorf("create fixed course item: %w", err)
 			}
 		}
 		for range item.CourseCount {
 			courseItemID, err := uuid.NewV7()
 			if err != nil {
-				return domaintemplate.Template{}, fmt.Errorf("generate free course item ID: %w", err)
+				return fmt.Errorf("generate free course item ID: %w", err)
 			}
 			if err := q.CreateFreeTemplateCourse(ctx, sqlc.CreateFreeTemplateCourseParams{ID: courseItemID, RequirementID: itemID}); err != nil {
-				return domaintemplate.Template{}, fmt.Errorf("create free course item: %w", err)
+				return fmt.Errorf("create free course item: %w", err)
 			}
 		}
 	}
-	if err := tx.Commit(ctx); err != nil {
-		return domaintemplate.Template{}, fmt.Errorf("commit template creation: %w", mutationError(err))
+	return nil
+}
+
+func (r *TemplateRepositoryImpl) Seed(ctx context.Context, input domaintemplate.Seed) (domaintemplate.SeedResult, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return domaintemplate.SeedResult{}, fmt.Errorf("begin template seed: %w", err)
 	}
-	return fromRow(row), nil
+	defer tx.Rollback(ctx)
+	q := sqlc.New(tx)
+	result := domaintemplate.SeedResult{}
+	for _, definition := range input.Templates {
+		id, err := uuid.NewV7()
+		if err != nil {
+			return domaintemplate.SeedResult{}, fmt.Errorf("generate seed template ID: %w", err)
+		}
+		_, err = q.CreateBuiltinTemplate(ctx, sqlc.CreateBuiltinTemplateParams{ID: id, Name: definition.Name, Description: definition.Description})
+		if errors.Is(err, pgx.ErrNoRows) {
+			existing, err := q.GetTemplateByName(ctx, definition.Name)
+			if err != nil {
+				return domaintemplate.SeedResult{}, fmt.Errorf("read existing seed template: %w", err)
+			}
+			if existing.CreatedBy != nil {
+				return domaintemplate.SeedResult{}, domaintemplate.ErrNameExists
+			}
+			result.Existing++
+			continue
+		}
+		if err != nil {
+			return domaintemplate.SeedResult{}, fmt.Errorf("insert seed template: %w", err)
+		}
+		if err := createItems(ctx, q, id, definition.Items); err != nil {
+			return domaintemplate.SeedResult{}, err
+		}
+		result.Created++
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return domaintemplate.SeedResult{}, fmt.Errorf("commit template seed: %w", err)
+	}
+	return result, nil
 }
 
 func (r *TemplateRepositoryImpl) Rename(ctx context.Context, input domaintemplate.Rename) error {

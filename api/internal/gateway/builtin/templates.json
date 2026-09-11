@@ -1,0 +1,426 @@
+[
+  {
+    "name": "Bachelor of Mathematics Degree - 2024",
+    "description": "2024 degree requirements for Bachelor of Mathematics",
+    "items": [
+      {
+        "type": "instruction",
+        "description": "Complete all of the following"
+      },
+      {
+        "type": "requirement",
+        "description": "Complete 1 of the following:",
+        "course_type": "fixed",
+        "course_codes": [
+          "CS115",
+          "CS135",
+          "CS145"
+        ]
+      },
+      {
+        "type": "requirement",
+        "description": "Complete 1 of the following:",
+        "course_type": "fixed",
+        "course_codes": [
+          "CS116",
+          "CS136",
+          "CS146"
+        ]
+      },
+      {
+        "type": "requirement",
+        "description": "Complete 1 of the following:",
+        "course_type": "fixed",
+        "course_codes": [
+          "MATH106",
+          "MATH136",
+          "MATH146"
+        ]
+      },
+      {
+        "type": "requirement",
+        "description": "Complete 1 of the following:",
+        "course_type": "fixed",
+        "course_codes": [
+          "MATH127",
+          "MATH137",
+          "MATH147"
+        ]
+      },
+      {
+        "type": "requirement",
+        "description": "Complete 1 of the following:",
+        "course_type": "fixed",
+        "course_codes": [
+          "MATH128",
+          "MATH138",
+          "MATH148"
+        ]
+      },
+      {
+        "type": "requirement",
+        "description": "Complete 1 of the following:",
+        "course_type": "fixed",
+        "course_codes": [
+          "MATH135",
+          "MATH145"
+        ]
+      },
+      {
+        "type": "requirement",
+        "description": "Complete 1 of the following:",
+        "course_type": "fixed",
+        "course_codes": [
+          "MATH235",
+          "MATH245"
+        ]
+      },
+      {
+        "type": "requirement",
+        "description": "Complete 1 of the following:",
+        "course_type": "fixed",
+        "course_codes": [
+          "MATH237",
+          "MATH239",
+          "MATH247",
+          "MATH249"
+        ]
+      },
+      {
+        "type": "requirement",
+        "description": "Complete 1 of the following:",
+        "course_type": "fixed",
+        "course_codes": [
+          "STAT230",
+          "STAT240"
+        ]
+      },
+      {
+        "type": "requirement",
+        "description": "Complete 1 of the following:",
+        "course_type": "fixed",
+        "course_codes": [
+          "STAT231",
+          "STAT241"
+        ]
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "type": "instruction",
+        "description": "The following List 1 and List 2 describe the Undergraduate Communication Requirement."
+      },
+      {
+        "type": "instruction",
+        "description": "List 1"
+      },
+      {
+        "type": "requirement",
+        "description": "Complete 1 of the following:",
+        "course_type": "fixed",
+        "course_codes": [
+          "COMMST100",
+          "COMMST223",
+          "EMLS101R",
+          "EMLS102R",
+          "EMLS129R",
+          "ENGL109",
+          "ENGL129R"
+        ]
+      },
+      {
+        "type": "instruction",
+        "description": "List 2"
+      },
+      {
+        "type": "requirement",
+        "description": "Complete 1 of the following:",
+        "course_type": "fixed",
+        "course_codes": [
+          "COMMST225",
+          "COMMST227",
+          "COMMST228",
+          "EMLS103R",
+          "EMLS104R",
+          "EMLS110R",
+          "ENGL101B",
+          "ENGL108B",
+          "ENGL108D",
+          "ENGL119",
+          "ENGL208B",
+          "ENGL209",
+          "ENGL210E",
+          "ENGL210F",
+          "ENGL378",
+          "MTHEL300"
+        ]
+      },
+      {
+        "type": "requirement",
+        "description": "Complete 1 additional course from List 1 or List 2.",
+        "course_type": "fixed",
+        "course_codes": [
+          "COMMST100",
+          "COMMST223",
+          "EMLS101R",
+          "EMLS102R",
+          "EMLS129R",
+          "ENGL109",
+          "ENGL129R",
+          "COMMST225",
+          "COMMST227",
+          "COMMST228",
+          "EMLS103R",
+          "EMLS104R",
+          "EMLS110R",
+          "ENGL101B",
+          "ENGL108B",
+          "ENGL108D",
+          "ENGL119",
+          "ENGL208B",
+          "ENGL209",
+          "ENGL210E",
+          "ENGL210F",
+          "ENGL378",
+          "MTHEL300"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Computational Mathematics Major - 2024",
+    "description": "2024 academic requirements for Computational Mathematics major",
+    "items": [
+      {
+        "type": "instruction",
+        "description": "Complete all of the following"
+      },
+      {
+        "type": "requirement",
+        "description": "Complete all the following courses:",
+        "course_type": "fixed",
+        "course_codes": [
+          "CS230",
+          "CS234"
+        ]
+      },
+      {
+        "type": "requirement",
+        "description": "Complete 1 of the following courses:",
+        "course_type": "fixed",
+        "course_codes": [
+          "AMATH242",
+          "CS371"
+        ]
+      },
+      {
+        "type": "requirement",
+        "description": "Complete 1 of the following courses:",
+        "course_type": "fixed",
+        "course_codes": [
+          "MATH237",
+          "MATH247"
+        ]
+      },
+      {
+        "type": "requirement",
+        "description": "Complete 1 of the following courses:",
+        "course_type": "fixed",
+        "course_codes": [
+          "MATH239",
+          "MATH249"
+        ]
+      },
+      {
+        "type": "requirement",
+        "description": "Complete 3 non-math courses, at least one of which is at the 200-, 300-, or 400-level, all from the same subject code, from the following choices: AE, BIOL, BME, CHE, CHEM, CIVE, EARTH, ECE, ECON, ENVE, GEOE, ME, MNS, MSE, MTE, NE, PHYS, SYDE",
+        "course_type": "free",
+        "course_count": 3
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "type": "instruction",
+        "description": "List 1: Complete 2 of the following requirements:"
+      },
+      {
+        "type": "requirement",
+        "description": "Complete 1 of the following courses:",
+        "course_type": "fixed",
+        "course_codes": [
+          "AMATH250",
+          "AMATH251",
+          "AMATH350"
+        ]
+      },
+      {
+        "type": "requirement",
+        "description": "Complete 1 of the following courses:",
+        "course_type": "fixed",
+        "course_codes": [
+          "CO250",
+          "CO255"
+        ]
+      },
+      {
+        "type": "requirement",
+        "description": "Complete 1 of the following courses:",
+        "course_type": "fixed",
+        "course_codes": [
+          "CS245",
+          "CS245E",
+          "PMATH330",
+          "PMATH432"
+        ]
+      },
+      {
+        "type": "requirement",
+        "description": "Complete 1 of the following courses:",
+        "course_type": "fixed",
+        "course_codes": [
+          "CS246",
+          "CS246E"
+        ]
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "type": "instruction",
+        "description": "List 2: Complete 2 courses total from the following groups:"
+      },
+      {
+        "type": "requirement",
+        "description": "Choose from these courses:",
+        "course_type": "fixed",
+        "course_codes": [
+          "AMATH342",
+          "CS475",
+          "PMATH370"
+        ]
+      },
+      {
+        "type": "requirement",
+        "description": "Complete no more than 1 from:",
+        "course_type": "fixed",
+        "course_codes": [
+          "CO353",
+          "CO367"
+        ]
+      },
+      {
+        "type": "requirement",
+        "description": "Complete no more than 1 from:",
+        "course_type": "fixed",
+        "course_codes": [
+          "STAT340",
+          "STAT341"
+        ]
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "type": "instruction",
+        "description": "Complete 4 additional courses from List 2 or List 3; choices must be in at least two different subject codes (AMATH, CO, CS, PMATH, STAT), and 2 courses must be at the 400-level"
+      },
+      {
+        "type": "requirement",
+        "description": "Choose from List 2 courses:",
+        "course_type": "fixed",
+        "course_codes": [
+          "AMATH342",
+          "CS475",
+          "PMATH370",
+          "CO353",
+          "CO367",
+          "STAT340",
+          "STAT341"
+        ]
+      },
+      {
+        "type": "instruction",
+        "description": "List 3"
+      },
+      {
+        "type": "requirement",
+        "description": "Choose from List 3 courses:",
+        "course_type": "fixed",
+        "course_codes": [
+          "AMATH343",
+          "AMATH382",
+          "AMATH383",
+          "AMATH391",
+          "AMATH442",
+          "AMATH455",
+          "AMATH477",
+          "BIOL382",
+          "CO351",
+          "CO370",
+          "CO372",
+          "CO450",
+          "CO452",
+          "CO454",
+          "CO456",
+          "CO463",
+          "CO466",
+          "CO471",
+          "CO485",
+          "CO487",
+          "CS341",
+          "CS431",
+          "CS451",
+          "CS466",
+          "CS476",
+          "CS479",
+          "CS480",
+          "CS482",
+          "CS485",
+          "CS487",
+          "STAT440",
+          "STAT441",
+          "STAT442",
+          "STAT444"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Free Electives - 10 Courses",
+    "description": "Add courses of your choice to your schedule",
+    "items": [
+      {
+        "type": "requirement",
+        "description": "Add any courses that you want to take",
+        "course_type": "free",
+        "course_count": 10
+      }
+    ]
+  },
+  {
+    "name": "Free Electives - 5 Courses",
+    "description": "Add courses of your choice to your schedule",
+    "items": [
+      {
+        "type": "requirement",
+        "description": "Add any courses that you want to take",
+        "course_type": "free",
+        "course_count": 5
+      }
+    ]
+  },
+  {
+    "name": "Free Electives - 15 Courses",
+    "description": "Add courses of your choice to your schedule",
+    "items": [
+      {
+        "type": "requirement",
+        "description": "Add any courses that you want to take",
+        "course_type": "free",
+        "course_count": 15
+      }
+    ]
+  }
+]

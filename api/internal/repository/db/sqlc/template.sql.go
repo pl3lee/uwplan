@@ -12,6 +12,29 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const createBuiltinTemplate = `-- name: CreateBuiltinTemplate :one
+INSERT INTO template(id,name,description,created_by) VALUES($1,$2,$3,NULL)
+ON CONFLICT(name) DO NOTHING RETURNING id, name, description, created_by
+`
+
+type CreateBuiltinTemplateParams struct {
+	ID          uuid.UUID
+	Name        string
+	Description *string
+}
+
+func (q *Queries) CreateBuiltinTemplate(ctx context.Context, arg CreateBuiltinTemplateParams) (Template, error) {
+	row := q.db.QueryRow(ctx, createBuiltinTemplate, arg.ID, arg.Name, arg.Description)
+	var i Template
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Description,
+		&i.CreatedBy,
+	)
+	return i, err
+}
+
 const createFixedTemplateCourse = `-- name: CreateFixedTemplateCourse :one
 INSERT INTO course_item(id,requirement_id,type,course_id)
 SELECT $1,$2,'fixed',c.id FROM course c WHERE c.code=$3 RETURNING id
@@ -119,6 +142,22 @@ SELECT id, name, description, created_by FROM template WHERE id=$1
 
 func (q *Queries) GetTemplate(ctx context.Context, id uuid.UUID) (Template, error) {
 	row := q.db.QueryRow(ctx, getTemplate, id)
+	var i Template
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Description,
+		&i.CreatedBy,
+	)
+	return i, err
+}
+
+const getTemplateByName = `-- name: GetTemplateByName :one
+SELECT id, name, description, created_by FROM template WHERE name=$1
+`
+
+func (q *Queries) GetTemplateByName(ctx context.Context, name string) (Template, error) {
+	row := q.db.QueryRow(ctx, getTemplateByName, name)
 	var i Template
 	err := row.Scan(
 		&i.ID,

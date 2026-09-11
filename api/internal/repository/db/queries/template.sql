@@ -7,6 +7,13 @@ SELECT * FROM template WHERE id=$1;
 -- name: CreateTemplate :one
 INSERT INTO template(id,name,description,created_by) VALUES($1,$2,$3,$4) RETURNING *;
 
+-- name: CreateBuiltinTemplate :one
+INSERT INTO template(id,name,description,created_by) VALUES($1,$2,$3,NULL)
+ON CONFLICT(name) DO NOTHING RETURNING *;
+
+-- name: GetTemplateByName :one
+SELECT * FROM template WHERE name=$1;
+
 -- name: ListTemplateItems :many
 SELECT * FROM template_item WHERE template_id=$1 ORDER BY order_index,id;
 
