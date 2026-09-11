@@ -117,9 +117,9 @@ export async function mutate(page: Page, action: () => Promise<unknown>) {
 
 export async function reloadSavedPage(page: Page) {
   await page.reload();
-  // SSR text appears before client event handlers are ready in every browser.
-  // The controlled test environment has no background polling or remote media.
-  await page.waitForLoadState("networkidle");
+  // Callers assert the saved UI and interact through auto-waiting locators.
+  // Network idleness is not hydration readiness: the development reload
+  // connection can remain open in Firefox after the page is usable.
 }
 
 export async function chooseTemplate(page: Page, name: string) {
