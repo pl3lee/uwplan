@@ -16,6 +16,7 @@ import (
 	"github.com/pl3lee/uwplan/api/internal/config"
 	healthgateway "github.com/pl3lee/uwplan/api/internal/gateway/health"
 	oauthgateway "github.com/pl3lee/uwplan/api/internal/gateway/oauth"
+	"github.com/pl3lee/uwplan/api/internal/observability"
 	courserepository "github.com/pl3lee/uwplan/api/internal/repository/course"
 	oauthrepository "github.com/pl3lee/uwplan/api/internal/repository/oauth"
 	schedulerepository "github.com/pl3lee/uwplan/api/internal/repository/schedule"
@@ -36,22 +37,38 @@ import (
 func main() {
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)).With("service", "uwplan-api"))
 	if err := run(); err != nil {
-		// Connection parsers and provider errors may contain credentials. Report only
-		// the error type; never serialize environment values or the raw error here.
-		slog.Error("api.stopped", "event", "api.stopped", "error_type", fmt.Sprintf("%T", err))
 		os.Exit(1)
 	}
 }
 
-func run() error {
+func run() (runErr error) {
+	shutdownTelemetry := func() {}
+	defer func() {
+		// Record terminal failures before closing the exporter. Configuration
+		// failures before setup still use the safe local fallback logger.
+		if runErr != nil {
+			slog.Error("api.stopped", "event", "api.stopped", "error_type", fmt.Sprintf("%T", runErr))
+		}
+		shutdownTelemetry()
+	}()
 	cfg, err := config.Load(os.Getenv)
 	if err != nil {
 		return fmt.Errorf("load configuration: %w", err)
 	}
-	safeRelease, _ := cfg.Release.Public()
-	slog.SetDefault(slog.Default().With("release_digest", safeRelease.Digest, "release_revision", safeRelease.Revision))
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	telemetry, err := observability.Setup(ctx, observability.Options{Enabled: os.Getenv("OTEL_ENABLED") == "true", Release: cfg.Release})
+	if err != nil {
+		return fmt.Errorf("configure telemetry: %w", err)
+	}
+	slog.SetDefault(telemetry.Logger)
+	shutdownTelemetry = func() {
+		shutdown, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := telemetry.Shutdown(shutdown); err != nil {
+			slog.New(slog.NewJSONHandler(os.Stdout, nil)).Error("telemetry.shutdown.failed", "service", observability.ServiceName, "error_type", fmt.Sprintf("%T", err))
+		}
+	}
 	databaseConfig, err := pgxpool.ParseConfig(cfg.DatabaseURL)
 	if err != nil {
 		return fmt.Errorf("configure database: %w", err)
@@ -85,7 +102,7 @@ func run() error {
 	templates := templateservice.NewTemplateService(templaterepository.NewTemplateRepository(database))
 	selections := selectionservice.NewSelectionService(selectionrepository.NewSelectionRepository(database))
 	admin := adminservice.NewAdminService(userrepository.NewUserRepository(database))
-	router, _ := api.NewRouter(cfg, api.Dependencies{Auth: auth, Admin: admin, Health: healthgateway.NewHealthGateway(database, redisClient), OAuth: oauth, Schedules: schedules, Courses: courses, Templates: templates, Selections: selections})
+	router, _ := api.NewRouter(cfg, api.Dependencies{Telemetry: telemetry, Auth: auth, Admin: admin, Health: healthgateway.NewHealthGateway(database, redisClient), OAuth: oauth, Schedules: schedules, Courses: courses, Templates: templates, Selections: selections})
 	server := &http.Server{Addr: cfg.HTTPAddress, Handler: router, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 20 * time.Second, WriteTimeout: 20 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16 << 10}
 	stopped := make(chan error, 1)
 	go func() { stopped <- server.ListenAndServe() }()

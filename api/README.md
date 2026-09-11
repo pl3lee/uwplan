@@ -249,3 +249,31 @@ course IDs.
 
 Domain, service, repository, and HTTP tests cover validation, duplicate cleanup,
 null choices, ownership, expired sessions, CSRF, and complete error responses.
+
+## API telemetry
+
+The API always writes structured JSON to stdout. Set `OTEL_ENABLED=true` to also
+export logs, request traces, and health metrics over OTLP/HTTP. Configure
+`OTEL_EXPORTER_OTLP_ENDPOINT` with the collector base URL and
+`OTEL_EXPORTER_OTLP_HEADERS` with any required collector authorization in the
+server environment. Standard per-signal OTLP endpoint/header variables are also
+supported. Never put collector credentials in frontend configuration.
+
+Resources identify `uwplan-api`, the immutable release digest as `service.version`,
+and the source revision. Logs retain `service`, `release_digest`, and
+`release_revision`; request events add a generated request ID and trace correlation.
+Only route templates, method, status, and duration are recorded. URLs, queries,
+bodies, cookies, authorization, and baggage are excluded. A valid
+`X-UWPlan-Validation-ID` (`validation-` followed by 36 lowercase hex/hyphen
+characters) is available in logs and traces for ingestion verification.
+
+The existing `uwplan.health.requests` counter and `uwplan.health.duration`
+histogram (milliseconds) remain available for liveness/readiness. Logs and traces
+use bounded 512-entry asynchronous queues; exports time out after two seconds.
+Health metrics export every minute, and shutdown has a five-second flush budget.
+Collector failures produce a safe local error type and do not block requests.
+
+Unit tests send actual OTLP payloads to a local collector and verify release
+identity, log/trace correlation, health metrics, secret exclusion, and liveness
+while an export is stalled. Production Grafana ingestion is verified separately
+during deployment rehearsal; enabling this module alone does not establish it.
