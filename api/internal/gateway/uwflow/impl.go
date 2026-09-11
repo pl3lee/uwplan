@@ -34,13 +34,24 @@ func NewUWFlowGateway(endpoint string, client *http.Client) *UWFlowGatewayImpl {
 }
 
 type searchCourse struct {
-	ID      int64        `json:"course_id"`
-	Code    string       `json:"code"`
-	Name    string       `json:"name"`
-	Useful  *json.Number `json:"useful"`
-	Liked   *json.Number `json:"liked"`
-	Easy    *json.Number `json:"easy"`
-	Ratings *int32       `json:"ratings"`
+	ID      int64                 `json:"course_id"`
+	Code    string                `json:"code"`
+	Name    string                `json:"name"`
+	Useful  nullable[json.Number] `json:"useful"`
+	Liked   nullable[json.Number] `json:"liked"`
+	Easy    nullable[json.Number] `json:"easy"`
+	Ratings nullable[int32]       `json:"ratings"`
+}
+
+// nullable distinguishes a present null from a missing field in a partial response.
+type nullable[T any] struct {
+	value   *T
+	present bool
+}
+
+func (n *nullable[T]) UnmarshalJSON(data []byte) error {
+	n.present = true
+	return json.Unmarshal(data, &n.value)
 }
 
 // Metadata can be explicitly null in upstream records, but an omitted field
@@ -141,7 +152,7 @@ func (g *UWFlowGatewayImpl) Fetch(ctx context.Context) (course.Import, error) {
 		return course.Import{}, fmt.Errorf("UWFlow catalog is incomplete")
 	}
 	for _, item := range index.Data.Courses {
-		if item.ID <= 0 || strings.TrimSpace(item.Code) == "" || strings.TrimSpace(item.Name) == "" {
+		if item.ID <= 0 || strings.TrimSpace(item.Code) == "" || strings.TrimSpace(item.Name) == "" || !item.Useful.present || !item.Liked.present || !item.Easy.present || !item.Ratings.present {
 			return course.Import{}, fmt.Errorf("UWFlow catalog entry is incomplete")
 		}
 	}
@@ -205,7 +216,7 @@ func (g *UWFlowGatewayImpl) details(ctx context.Context, item searchCourse) (cou
 	if detail.ID != item.ID || !strings.EqualFold(detail.Code, item.Code) || !detail.Description.present || !detail.Prereqs.present || !detail.Antireqs.present || !detail.Coreqs.present {
 		return course.Course{}, fmt.Errorf("UWFlow course details do not match the catalog")
 	}
-	return course.Course{Code: item.Code, Name: item.Name, Description: detail.Description.value, Prereqs: detail.Prereqs.value, Antireqs: detail.Antireqs.value, Coreqs: detail.Coreqs.value, UsefulRating: ratingText(item.Useful), LikedRating: ratingText(item.Liked), EasyRating: ratingText(item.Easy), NumRatings: item.Ratings}, nil
+	return course.Course{Code: item.Code, Name: item.Name, Description: detail.Description.value, Prereqs: detail.Prereqs.value, Antireqs: detail.Antireqs.value, Coreqs: detail.Coreqs.value, UsefulRating: ratingText(item.Useful.value), LikedRating: ratingText(item.Liked.value), EasyRating: ratingText(item.Easy.value), NumRatings: item.Ratings.value}, nil
 }
 
 func ratingText(value *json.Number) *string {

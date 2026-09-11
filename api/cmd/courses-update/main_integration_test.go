@@ -26,6 +26,8 @@ func TestCommandImportsFixtureAndReturnsFailureWithoutChangingCatalog(t *testing
 		t.Fatal(err)
 	}
 	var deny atomic.Bool
+	var omitted atomic.Value
+	omitted.Store("")
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if deny.Load() {
 			http.Error(w, "private upstream detail", http.StatusForbidden)
@@ -41,7 +43,9 @@ func TestCommandImportsFixtureAndReturnsFailureWithoutChangingCatalog(t *testing
 		}
 		w.Header().Set("Content-Type", "application/json")
 		if body.OperationName == "exploreAll" {
-			_, _ = w.Write([]byte(`{"data":{"course_search_index":[{"course_id":135,"code":"cs135","name":"Functional Programs","useful":null,"liked":null,"easy":null,"ratings":null}]}}`))
+			item := map[string]any{"course_id": 135, "code": "cs135", "name": "Functional Programs", "useful": 0.8, "liked": 0.7, "easy": 0.5, "ratings": 12}
+			delete(item, omitted.Load().(string))
+			_ = json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{"course_search_index": []any{item}}})
 		} else {
 			_, _ = w.Write([]byte(`{"data":{"course":[{"id":135,"code":"cs135","name":"Functional Programs","description":"Updated description","prereqs":"","antireqs":"","coreqs":""}]}}`))
 		}
@@ -61,11 +65,14 @@ func TestCommandImportsFixtureAndReturnsFailureWithoutChangingCatalog(t *testing
 	if diff := cmp.Diff(wantLog, log); diff != "" {
 		t.Fatal(diff)
 	}
-	want := []course.Course{{ID: uuid.MustParse("11111111-1111-4111-8111-111111111111"), Code: "CS135", Name: "Functional Programs", Description: "Updated description"}}
+	useful, liked, easy := "0.800", "0.700", "0.500"
+	count := int32(12)
+	want := []course.Course{{ID: uuid.MustParse("11111111-1111-4111-8111-111111111111"), Code: "CS135", Name: "Functional Programs", Description: "Updated description", UsefulRating: &useful, LikedRating: &liked, EasyRating: &easy, NumRatings: &count}}
 	repo := courserepository.NewCourseRepository(pool)
-	for _, scenario := range []string{"success", "upstream failure", "canceled"} {
+	for _, scenario := range []string{"success", "useful", "liked", "easy", "ratings", "upstream failure", "canceled"} {
 		if scenario != "success" {
-			deny.Store(true)
+			deny.Store(scenario == "upstream failure" || scenario == "canceled")
+			omitted.Store(scenario)
 			ctx := t.Context()
 			if scenario == "canceled" {
 				var cancel context.CancelFunc

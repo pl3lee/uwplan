@@ -134,7 +134,7 @@ func TestUWFlowRejectsMissingOrMismatchedDetails(t *testing.T) {
 					return
 				}
 				if request.Operation == "exploreAll" {
-					w.Write([]byte(`{"data":{"course_search_index":[{"course_id":1,"code":"cs135","name":"Functional Programs","ratings":0}]}}`))
+					w.Write([]byte(`{"data":{"course_search_index":[{"course_id":1,"code":"cs135","name":"Functional Programs","ratings":0,"useful":null,"liked":null,"easy":null}]}}`))
 					return
 				}
 				w.Write([]byte(body))
@@ -159,7 +159,7 @@ func TestUWFlowRetriesTransientFailureAndBoundsParallelRequests(t *testing.T) {
 	count := int32(0)
 	for i := 1; i <= 12; i++ {
 		code := fmt.Sprintf("cs%d", 100+i)
-		index = append(index, map[string]any{"course_id": i, "code": code, "name": "Course", "ratings": 0})
+		index = append(index, map[string]any{"course_id": i, "code": code, "name": "Course", "ratings": 0, "useful": nil, "liked": nil, "easy": nil})
 		want.Courses = append(want.Courses, course.Course{Code: code, Name: "Course", NumRatings: &count})
 	}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
