@@ -3,8 +3,7 @@
 The authenticated `GET /api/v1/courses` endpoint returns the course catalog in
 course-code order, retaining legacy IDs, descriptions, prerequisites, ratings,
 and nullable values. The catalog is shared across users; authentication is
-required. Course import/update commands and selection endpoints are still being
-migrated.
+required. Course import/update commands are still being migrated.
 
 The Go foundation contains the academic-term domain, PostgreSQL schema
 transition, account resolution and provisioning, and Redis session services. The existing application and release migrator remain active
@@ -159,3 +158,35 @@ return the same 404, duplicate names return 409, and invalid definitions or
 unknown course codes return 400. Every mutation requires the configured Origin.
 Integration tests cover complete definitions, rollback, ownership, and a role
 change taking effect for an already issued session.
+
+## Plan membership and course selection
+
+`GET /api/v1/plan` returns the authenticated user's selected template IDs, course
+item choices (resolved course ID and selection flag), and unique selected course
+IDs for the selection table. Template definitions and catalog details use their
+existing read endpoints. Reads use a consistent PostgreSQL snapshot and retain
+nullable free-course slots.
+
+| Route | Operation |
+| --- | --- |
+| `/api/v1/plan/templates/{template_id}` | PUT `selected` to add/remove membership |
+| `/api/v1/plan/items/{item_id}/selection` | PUT `selected` for a course item in the user's plan |
+| `/api/v1/plan/items/{item_id}/course` | PUT `course_id`, or explicit null to clear a free-course choice |
+| `/api/v1/plan/courses/{course_id}` | DELETE all matching selections and assignments in the user's plan |
+
+Membership and selection mutations lock the user's plan and require the exact
+configured Origin. Course-item mutations require membership in that item's
+template; changing a fixed slot through the free-course endpoint is rejected.
+Missing resources and items outside the user's plan share a 404 response.
+Clients cannot supply another user's identity in request bodies.
+
+Removing a template deselects its items but retains saved free-course choices.
+Changing a free-course choice retains the selection flag. Removing a selected
+course clears every matching fixed/free occurrence across templates and removes
+that course from all of the user's schedules in one transaction. Other users'
+choices and schedules remain intact. Existing schedule CSV exports continue to
+retain individual selected item occurrences; the selection table uses unique
+course IDs.
+
+Domain, service, repository, and HTTP tests cover validation, duplicate cleanup,
+null choices, ownership, expired sessions, CSRF, and complete error responses.

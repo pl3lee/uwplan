@@ -28,13 +28,16 @@ import type {
   CompleteOAuthParams,
   CourseListResponseBody,
   ErrorModel,
+  FreeCourseBody,
   ListTemplatesParams,
   LiveBody,
+  PlanStateBody,
   ReadinessBody,
   ScheduleBody,
   ScheduleListResponseBody,
   ScheduleNameBody,
   ScheduleViewResponseBody,
+  SelectionFlagBody,
   StartOAuthParams,
   TemplateBody,
   TemplateDefinitionResponseBody,
@@ -932,6 +935,612 @@ export function useGetCurrentUser<TData = Awaited<ReturnType<typeof getCurrentUs
 
 
 
+/**
+ * @summary Read the current user's template membership and course choices
+ */
+export type getPlanStateResponse200 = {
+  data: PlanStateBody
+  status: 200
+}
+
+export type getPlanStateResponse400 = {
+  data: ErrorModel
+  status: 400
+}
+
+export type getPlanStateResponse401 = {
+  data: ErrorModel
+  status: 401
+}
+
+export type getPlanStateResponse403 = {
+  data: ErrorModel
+  status: 403
+}
+
+export type getPlanStateResponse404 = {
+  data: ErrorModel
+  status: 404
+}
+
+export type getPlanStateResponse500 = {
+  data: ErrorModel
+  status: 500
+}
+    
+export type getPlanStateResponseSuccess = (getPlanStateResponse200) & {
+  headers: Headers;
+};
+export type getPlanStateResponseError = (getPlanStateResponse400 | getPlanStateResponse401 | getPlanStateResponse403 | getPlanStateResponse404 | getPlanStateResponse500) & {
+  headers: Headers;
+};
+
+export type getPlanStateResponse = (getPlanStateResponseSuccess | getPlanStateResponseError)
+
+export const getGetPlanStateUrl = () => {
+
+
+  
+
+  return `/api/v1/plan`
+}
+
+export const getPlanState = async ( options?: RequestInit): Promise<getPlanStateResponse> => {
+  
+  return apiFetch<getPlanStateResponse>(getGetPlanStateUrl(),
+  {      
+    ...options,
+    method: 'GET'
+    
+    
+  }
+);}
+
+
+
+
+
+export const getGetPlanStateQueryKey = () => {
+    return [
+    `/api/v1/plan`
+    ] as const;
+    }
+
+    
+export const getGetPlanStateQueryOptions = <TData = Awaited<ReturnType<typeof getPlanState>>, TError = ErrorType<ErrorModel>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPlanState>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPlanStateQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPlanState>>> = ({ signal }) => getPlanState({ signal, ...requestOptions });
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPlanState>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetPlanStateQueryResult = NonNullable<Awaited<ReturnType<typeof getPlanState>>>
+export type GetPlanStateQueryError = ErrorType<ErrorModel>
+
+
+export function useGetPlanState<TData = Awaited<ReturnType<typeof getPlanState>>, TError = ErrorType<ErrorModel>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPlanState>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPlanState>>,
+          TError,
+          Awaited<ReturnType<typeof getPlanState>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetPlanState<TData = Awaited<ReturnType<typeof getPlanState>>, TError = ErrorType<ErrorModel>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPlanState>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPlanState>>,
+          TError,
+          Awaited<ReturnType<typeof getPlanState>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetPlanState<TData = Awaited<ReturnType<typeof getPlanState>>, TError = ErrorType<ErrorModel>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPlanState>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Read the current user's template membership and course choices
+ */
+
+export function useGetPlanState<TData = Awaited<ReturnType<typeof getPlanState>>, TError = ErrorType<ErrorModel>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPlanState>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetPlanStateQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+
+/**
+ * @summary Remove every matching selection and assignment from the current user's plan
+ */
+export type removeSelectedCourseResponse204 = {
+  data: void
+  status: 204
+}
+
+export type removeSelectedCourseResponse400 = {
+  data: ErrorModel
+  status: 400
+}
+
+export type removeSelectedCourseResponse401 = {
+  data: ErrorModel
+  status: 401
+}
+
+export type removeSelectedCourseResponse403 = {
+  data: ErrorModel
+  status: 403
+}
+
+export type removeSelectedCourseResponse404 = {
+  data: ErrorModel
+  status: 404
+}
+
+export type removeSelectedCourseResponse422 = {
+  data: ErrorModel
+  status: 422
+}
+
+export type removeSelectedCourseResponse500 = {
+  data: ErrorModel
+  status: 500
+}
+    
+export type removeSelectedCourseResponseSuccess = (removeSelectedCourseResponse204) & {
+  headers: Headers;
+};
+export type removeSelectedCourseResponseError = (removeSelectedCourseResponse400 | removeSelectedCourseResponse401 | removeSelectedCourseResponse403 | removeSelectedCourseResponse404 | removeSelectedCourseResponse422 | removeSelectedCourseResponse500) & {
+  headers: Headers;
+};
+
+export type removeSelectedCourseResponse = (removeSelectedCourseResponseSuccess | removeSelectedCourseResponseError)
+
+export const getRemoveSelectedCourseUrl = (courseId: string,) => {
+
+
+  
+
+  return `/api/v1/plan/courses/${courseId}`
+}
+
+export const removeSelectedCourse = async (courseId: string, options?: RequestInit): Promise<removeSelectedCourseResponse> => {
+  
+  return apiFetch<removeSelectedCourseResponse>(getRemoveSelectedCourseUrl(courseId),
+  {      
+    ...options,
+    method: 'DELETE'
+    
+    
+  }
+);}
+
+
+
+
+export const getRemoveSelectedCourseMutationOptions = <TError = ErrorType<ErrorModel>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeSelectedCourse>>, TError,{courseId: string}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof removeSelectedCourse>>, TError,{courseId: string}, TContext> => {
+
+const mutationKey = ['removeSelectedCourse'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof removeSelectedCourse>>, {courseId: string}> = (props) => {
+          const {courseId} = props ?? {};
+
+          return  removeSelectedCourse(courseId,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RemoveSelectedCourseMutationResult = NonNullable<Awaited<ReturnType<typeof removeSelectedCourse>>>
+    
+    export type RemoveSelectedCourseMutationError = ErrorType<ErrorModel>
+
+    /**
+ * @summary Remove every matching selection and assignment from the current user's plan
+ */
+export const useRemoveSelectedCourse = <TError = ErrorType<ErrorModel>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeSelectedCourse>>, TError,{courseId: string}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof removeSelectedCourse>>,
+        TError,
+        {courseId: string},
+        TContext
+      > => {
+
+      const mutationOptions = getRemoveSelectedCourseMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
+/**
+ * @summary Fill or clear a free-course slot in the current user's plan
+ */
+export type changeFreeCourseResponse204 = {
+  data: void
+  status: 204
+}
+
+export type changeFreeCourseResponse400 = {
+  data: ErrorModel
+  status: 400
+}
+
+export type changeFreeCourseResponse401 = {
+  data: ErrorModel
+  status: 401
+}
+
+export type changeFreeCourseResponse403 = {
+  data: ErrorModel
+  status: 403
+}
+
+export type changeFreeCourseResponse404 = {
+  data: ErrorModel
+  status: 404
+}
+
+export type changeFreeCourseResponse422 = {
+  data: ErrorModel
+  status: 422
+}
+
+export type changeFreeCourseResponse500 = {
+  data: ErrorModel
+  status: 500
+}
+    
+export type changeFreeCourseResponseSuccess = (changeFreeCourseResponse204) & {
+  headers: Headers;
+};
+export type changeFreeCourseResponseError = (changeFreeCourseResponse400 | changeFreeCourseResponse401 | changeFreeCourseResponse403 | changeFreeCourseResponse404 | changeFreeCourseResponse422 | changeFreeCourseResponse500) & {
+  headers: Headers;
+};
+
+export type changeFreeCourseResponse = (changeFreeCourseResponseSuccess | changeFreeCourseResponseError)
+
+export const getChangeFreeCourseUrl = (itemId: string,) => {
+
+
+  
+
+  return `/api/v1/plan/items/${itemId}/course`
+}
+
+export const changeFreeCourse = async (itemId: string,
+    freeCourseBody: FreeCourseBody, options?: RequestInit): Promise<changeFreeCourseResponse> => {
+  
+  return apiFetch<changeFreeCourseResponse>(getChangeFreeCourseUrl(itemId),
+  {      
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      freeCourseBody,)
+  }
+);}
+
+
+
+
+export const getChangeFreeCourseMutationOptions = <TError = ErrorType<ErrorModel>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changeFreeCourse>>, TError,{itemId: string;data: BodyType<FreeCourseBody>}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof changeFreeCourse>>, TError,{itemId: string;data: BodyType<FreeCourseBody>}, TContext> => {
+
+const mutationKey = ['changeFreeCourse'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof changeFreeCourse>>, {itemId: string;data: BodyType<FreeCourseBody>}> = (props) => {
+          const {itemId,data} = props ?? {};
+
+          return  changeFreeCourse(itemId,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ChangeFreeCourseMutationResult = NonNullable<Awaited<ReturnType<typeof changeFreeCourse>>>
+    export type ChangeFreeCourseMutationBody = BodyType<FreeCourseBody>
+    export type ChangeFreeCourseMutationError = ErrorType<ErrorModel>
+
+    /**
+ * @summary Fill or clear a free-course slot in the current user's plan
+ */
+export const useChangeFreeCourse = <TError = ErrorType<ErrorModel>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changeFreeCourse>>, TError,{itemId: string;data: BodyType<FreeCourseBody>}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof changeFreeCourse>>,
+        TError,
+        {itemId: string;data: BodyType<FreeCourseBody>},
+        TContext
+      > => {
+
+      const mutationOptions = getChangeFreeCourseMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
+/**
+ * @summary Select or deselect a course item in the current user's plan
+ */
+export type setCourseSelectionResponse204 = {
+  data: void
+  status: 204
+}
+
+export type setCourseSelectionResponse400 = {
+  data: ErrorModel
+  status: 400
+}
+
+export type setCourseSelectionResponse401 = {
+  data: ErrorModel
+  status: 401
+}
+
+export type setCourseSelectionResponse403 = {
+  data: ErrorModel
+  status: 403
+}
+
+export type setCourseSelectionResponse404 = {
+  data: ErrorModel
+  status: 404
+}
+
+export type setCourseSelectionResponse422 = {
+  data: ErrorModel
+  status: 422
+}
+
+export type setCourseSelectionResponse500 = {
+  data: ErrorModel
+  status: 500
+}
+    
+export type setCourseSelectionResponseSuccess = (setCourseSelectionResponse204) & {
+  headers: Headers;
+};
+export type setCourseSelectionResponseError = (setCourseSelectionResponse400 | setCourseSelectionResponse401 | setCourseSelectionResponse403 | setCourseSelectionResponse404 | setCourseSelectionResponse422 | setCourseSelectionResponse500) & {
+  headers: Headers;
+};
+
+export type setCourseSelectionResponse = (setCourseSelectionResponseSuccess | setCourseSelectionResponseError)
+
+export const getSetCourseSelectionUrl = (itemId: string,) => {
+
+
+  
+
+  return `/api/v1/plan/items/${itemId}/selection`
+}
+
+export const setCourseSelection = async (itemId: string,
+    selectionFlagBody: SelectionFlagBody, options?: RequestInit): Promise<setCourseSelectionResponse> => {
+  
+  return apiFetch<setCourseSelectionResponse>(getSetCourseSelectionUrl(itemId),
+  {      
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      selectionFlagBody,)
+  }
+);}
+
+
+
+
+export const getSetCourseSelectionMutationOptions = <TError = ErrorType<ErrorModel>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setCourseSelection>>, TError,{itemId: string;data: BodyType<SelectionFlagBody>}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setCourseSelection>>, TError,{itemId: string;data: BodyType<SelectionFlagBody>}, TContext> => {
+
+const mutationKey = ['setCourseSelection'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setCourseSelection>>, {itemId: string;data: BodyType<SelectionFlagBody>}> = (props) => {
+          const {itemId,data} = props ?? {};
+
+          return  setCourseSelection(itemId,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetCourseSelectionMutationResult = NonNullable<Awaited<ReturnType<typeof setCourseSelection>>>
+    export type SetCourseSelectionMutationBody = BodyType<SelectionFlagBody>
+    export type SetCourseSelectionMutationError = ErrorType<ErrorModel>
+
+    /**
+ * @summary Select or deselect a course item in the current user's plan
+ */
+export const useSetCourseSelection = <TError = ErrorType<ErrorModel>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setCourseSelection>>, TError,{itemId: string;data: BodyType<SelectionFlagBody>}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof setCourseSelection>>,
+        TError,
+        {itemId: string;data: BodyType<SelectionFlagBody>},
+        TContext
+      > => {
+
+      const mutationOptions = getSetCourseSelectionMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
+/**
+ * @summary Add or remove a template from the current user's plan
+ */
+export type setTemplateMembershipResponse204 = {
+  data: void
+  status: 204
+}
+
+export type setTemplateMembershipResponse400 = {
+  data: ErrorModel
+  status: 400
+}
+
+export type setTemplateMembershipResponse401 = {
+  data: ErrorModel
+  status: 401
+}
+
+export type setTemplateMembershipResponse403 = {
+  data: ErrorModel
+  status: 403
+}
+
+export type setTemplateMembershipResponse404 = {
+  data: ErrorModel
+  status: 404
+}
+
+export type setTemplateMembershipResponse422 = {
+  data: ErrorModel
+  status: 422
+}
+
+export type setTemplateMembershipResponse500 = {
+  data: ErrorModel
+  status: 500
+}
+    
+export type setTemplateMembershipResponseSuccess = (setTemplateMembershipResponse204) & {
+  headers: Headers;
+};
+export type setTemplateMembershipResponseError = (setTemplateMembershipResponse400 | setTemplateMembershipResponse401 | setTemplateMembershipResponse403 | setTemplateMembershipResponse404 | setTemplateMembershipResponse422 | setTemplateMembershipResponse500) & {
+  headers: Headers;
+};
+
+export type setTemplateMembershipResponse = (setTemplateMembershipResponseSuccess | setTemplateMembershipResponseError)
+
+export const getSetTemplateMembershipUrl = (templateId: string,) => {
+
+
+  
+
+  return `/api/v1/plan/templates/${templateId}`
+}
+
+export const setTemplateMembership = async (templateId: string,
+    selectionFlagBody: SelectionFlagBody, options?: RequestInit): Promise<setTemplateMembershipResponse> => {
+  
+  return apiFetch<setTemplateMembershipResponse>(getSetTemplateMembershipUrl(templateId),
+  {      
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      selectionFlagBody,)
+  }
+);}
+
+
+
+
+export const getSetTemplateMembershipMutationOptions = <TError = ErrorType<ErrorModel>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setTemplateMembership>>, TError,{templateId: string;data: BodyType<SelectionFlagBody>}, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setTemplateMembership>>, TError,{templateId: string;data: BodyType<SelectionFlagBody>}, TContext> => {
+
+const mutationKey = ['setTemplateMembership'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setTemplateMembership>>, {templateId: string;data: BodyType<SelectionFlagBody>}> = (props) => {
+          const {templateId,data} = props ?? {};
+
+          return  setTemplateMembership(templateId,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetTemplateMembershipMutationResult = NonNullable<Awaited<ReturnType<typeof setTemplateMembership>>>
+    export type SetTemplateMembershipMutationBody = BodyType<SelectionFlagBody>
+    export type SetTemplateMembershipMutationError = ErrorType<ErrorModel>
+
+    /**
+ * @summary Add or remove a template from the current user's plan
+ */
+export const useSetTemplateMembership = <TError = ErrorType<ErrorModel>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setTemplateMembership>>, TError,{templateId: string;data: BodyType<SelectionFlagBody>}, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof setTemplateMembership>>,
+        TError,
+        {templateId: string;data: BodyType<SelectionFlagBody>},
+        TContext
+      > => {
+
+      const mutationOptions = getSetTemplateMembershipMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
 /**
  * @summary List the user's schedules
  */

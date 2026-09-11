@@ -26,6 +26,20 @@ func (q *Queries) AttachPlanTemplate(ctx context.Context, arg AttachPlanTemplate
 	return err
 }
 
+const clearFreeCourse = `-- name: ClearFreeCourse :exec
+DELETE FROM free_course WHERE user_id=$1 AND course_item_id=$2
+`
+
+type ClearFreeCourseParams struct {
+	UserID       string
+	CourseItemID uuid.UUID
+}
+
+func (q *Queries) ClearFreeCourse(ctx context.Context, arg ClearFreeCourseParams) error {
+	_, err := q.db.Exec(ctx, clearFreeCourse, arg.UserID, arg.CourseItemID)
+	return err
+}
+
 const deselectTemplateChoices = `-- name: DeselectTemplateChoices :exec
 UPDATE selected_course sc SET selected=false FROM course_item ci,template_item ti
 WHERE sc.course_item_id=ci.id AND ci.requirement_id=ti.id AND sc.plan_id=$1 AND ti.template_id=$2
@@ -53,6 +67,32 @@ type DetachPlanTemplateParams struct {
 func (q *Queries) DetachPlanTemplate(ctx context.Context, arg DetachPlanTemplateParams) error {
 	_, err := q.db.Exec(ctx, detachPlanTemplate, arg.PlanID, arg.TemplateID)
 	return err
+}
+
+const fillFreeCourse = `-- name: FillFreeCourse :execrows
+INSERT INTO free_course(id,user_id,course_item_id,filled_course_id)
+SELECT $1,$2,$3,c.id FROM course c WHERE c.id=$4
+ON CONFLICT(course_item_id,user_id) DO UPDATE SET filled_course_id=excluded.filled_course_id
+`
+
+type FillFreeCourseParams struct {
+	ID           uuid.UUID
+	UserID       string
+	CourseItemID uuid.UUID
+	CourseID     uuid.UUID
+}
+
+func (q *Queries) FillFreeCourse(ctx context.Context, arg FillFreeCourseParams) (int64, error) {
+	result, err := q.db.Exec(ctx, fillFreeCourse,
+		arg.ID,
+		arg.UserID,
+		arg.CourseItemID,
+		arg.CourseID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const getOwnedPlan = `-- name: GetOwnedPlan :one
@@ -144,6 +184,58 @@ func (q *Queries) LockAvailableTemplate(ctx context.Context, id uuid.UUID) (uuid
 	row := q.db.QueryRow(ctx, lockAvailableTemplate, id)
 	err := row.Scan(&id)
 	return id, err
+}
+
+const lockPlanFreeCourseItem = `-- name: LockPlanFreeCourseItem :one
+SELECT ci.id FROM plan_template pt
+JOIN template_item ti ON ti.template_id=pt.template_id
+JOIN course_item ci ON ci.requirement_id=ti.id
+WHERE pt.plan_id=$1 AND ci.id=$2 AND ci.type='free' FOR KEY SHARE OF ci
+`
+
+type LockPlanFreeCourseItemParams struct {
+	PlanID uuid.UUID
+	ID     uuid.UUID
+}
+
+func (q *Queries) LockPlanFreeCourseItem(ctx context.Context, arg LockPlanFreeCourseItemParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, lockPlanFreeCourseItem, arg.PlanID, arg.ID)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
+const removeCourseFromPlanSchedules = `-- name: RemoveCourseFromPlanSchedules :exec
+DELETE FROM schedule_course sc USING schedule s
+WHERE sc.schedule_id=s.id AND s.plan_id=$1 AND sc.course_id=$2
+`
+
+type RemoveCourseFromPlanSchedulesParams struct {
+	PlanID   uuid.UUID
+	CourseID uuid.UUID
+}
+
+func (q *Queries) RemoveCourseFromPlanSchedules(ctx context.Context, arg RemoveCourseFromPlanSchedulesParams) error {
+	_, err := q.db.Exec(ctx, removeCourseFromPlanSchedules, arg.PlanID, arg.CourseID)
+	return err
+}
+
+const removeSelectedCourse = `-- name: RemoveSelectedCourse :exec
+DELETE FROM selected_course sc USING course_item ci
+LEFT JOIN free_course fc ON fc.course_item_id=ci.id AND fc.user_id=$1
+WHERE sc.plan_id=$2 AND sc.course_item_id=ci.id
+AND ((ci.type='fixed' AND ci.course_id=$3::uuid) OR (ci.type='free' AND fc.filled_course_id=$3::uuid))
+`
+
+type RemoveSelectedCourseParams struct {
+	UserID   string
+	PlanID   uuid.UUID
+	CourseID uuid.UUID
+}
+
+func (q *Queries) RemoveSelectedCourse(ctx context.Context, arg RemoveSelectedCourseParams) error {
+	_, err := q.db.Exec(ctx, removeSelectedCourse, arg.UserID, arg.PlanID, arg.CourseID)
+	return err
 }
 
 const setPlanChoice = `-- name: SetPlanChoice :execrows

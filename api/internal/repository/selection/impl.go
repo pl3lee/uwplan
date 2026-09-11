@@ -122,3 +122,71 @@ func (r *SelectionRepositoryImpl) SetChoice(ctx context.Context, input domainsel
 	}
 	return nil
 }
+
+func (r *SelectionRepositoryImpl) ChangeFreeCourse(ctx context.Context, input domainselection.FreeCourseChange) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin free course change: %w", err)
+	}
+	defer tx.Rollback(ctx)
+	q := sqlc.New(tx)
+	planID, err := q.LockOwnedPlan(ctx, input.UserID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domainselection.ErrNotFound
+	}
+	if err != nil {
+		return fmt.Errorf("lock free course plan: %w", err)
+	}
+	if _, err := q.LockPlanFreeCourseItem(ctx, sqlc.LockPlanFreeCourseItemParams{PlanID: planID, ID: input.ItemID}); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domainselection.ErrNotFound
+		}
+		return fmt.Errorf("find plan free course item: %w", err)
+	}
+	if input.CourseID == nil {
+		err = q.ClearFreeCourse(ctx, sqlc.ClearFreeCourseParams{UserID: input.UserID, CourseItemID: input.ItemID})
+	} else {
+		id, idErr := uuid.NewV7()
+		if idErr != nil {
+			return fmt.Errorf("generate free course ID: %w", idErr)
+		}
+		var rows int64
+		rows, err = q.FillFreeCourse(ctx, sqlc.FillFreeCourseParams{ID: id, UserID: input.UserID, CourseItemID: input.ItemID, CourseID: *input.CourseID})
+		if err == nil && rows == 0 {
+			return domainselection.ErrNotFound
+		}
+	}
+	if err != nil {
+		return fmt.Errorf("change free course: %w", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit free course change: %w", err)
+	}
+	return nil
+}
+
+func (r *SelectionRepositoryImpl) RemoveCourse(ctx context.Context, input domainselection.Removal) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin selected course removal: %w", err)
+	}
+	defer tx.Rollback(ctx)
+	q := sqlc.New(tx)
+	planID, err := q.LockOwnedPlan(ctx, input.UserID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domainselection.ErrNotFound
+	}
+	if err != nil {
+		return fmt.Errorf("lock selected course plan: %w", err)
+	}
+	if err := q.RemoveSelectedCourse(ctx, sqlc.RemoveSelectedCourseParams{UserID: input.UserID, PlanID: planID, CourseID: input.CourseID}); err != nil {
+		return fmt.Errorf("remove matching course selections: %w", err)
+	}
+	if err := q.RemoveCourseFromPlanSchedules(ctx, sqlc.RemoveCourseFromPlanSchedulesParams{PlanID: planID, CourseID: input.CourseID}); err != nil {
+		return fmt.Errorf("remove selected course assignments: %w", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit selected course removal: %w", err)
+	}
+	return nil
+}

@@ -8,6 +8,7 @@ import (
 	"github.com/pl3lee/uwplan/api/internal/domain/health"
 	"github.com/pl3lee/uwplan/api/internal/domain/oauth"
 	"github.com/pl3lee/uwplan/api/internal/domain/schedule"
+	"github.com/pl3lee/uwplan/api/internal/domain/selection"
 	"github.com/pl3lee/uwplan/api/internal/domain/session"
 	"github.com/pl3lee/uwplan/api/internal/domain/template"
 	"github.com/pl3lee/uwplan/api/internal/domain/term"
@@ -21,6 +22,14 @@ type AuthService interface {
 
 type CourseService interface {
 	List(context.Context) ([]course.Course, error)
+}
+
+type SelectionService interface {
+	State(context.Context, user.User) (selection.State, error)
+	SetTemplate(context.Context, selection.Membership) error
+	SetChoice(context.Context, selection.Toggle) error
+	ChangeFreeCourse(context.Context, selection.FreeCourseChange) error
+	RemoveCourse(context.Context, selection.Removal) error
 }
 
 type TemplateService interface {

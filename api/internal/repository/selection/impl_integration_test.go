@@ -101,4 +101,30 @@ INSERT INTO course_item(id,requirement_id,type,course_id) VALUES ('66666666-6666
 	if err := repo.SetChoice(t.Context(), selection.Toggle{UserID: "other", ItemID: itemID, Selected: true}); !errors.Is(err, selection.ErrNotFound) {
 		t.Fatalf("other user's membership: %v", err)
 	}
+	for range 12 {
+		selected, detached := make(chan error, 1), make(chan error, 1)
+		go func() {
+			selected <- repo.SetChoice(t.Context(), selection.Toggle{UserID: "owner", ItemID: itemID, Selected: true})
+		}()
+		go func() {
+			detached <- repo.SetTemplate(t.Context(), selection.Membership{UserID: "owner", TemplateID: templateID})
+		}()
+		if err := <-selected; err != nil && !errors.Is(err, selection.ErrNotFound) {
+			t.Fatal(err)
+		}
+		if err := <-detached; err != nil {
+			t.Fatal(err)
+		}
+		if err := repo.SetTemplate(t.Context(), selection.Membership{UserID: "owner", TemplateID: templateID, Selected: true}); err != nil {
+			t.Fatal(err)
+		}
+		got, err := repo.State(t.Context(), user.User{ID: "owner"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := selection.State{TemplateIDs: []uuid.UUID{templateID}, Choices: []selection.Choice{{ItemID: itemID, CourseID: &courseID}}}
+		if diff := cmp.Diff(want, got); diff != "" {
+			t.Fatalf("removed membership retained a concurrent selection: %s", diff)
+		}
+	}
 }
