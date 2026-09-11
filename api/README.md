@@ -11,8 +11,8 @@ Export `DATABASE_URL` for the target database and run `make courses-update` from
 `api/` (or build/run `cmd/courses-update`). The command does not load `.env`
 automatically or run schema migrations. Use the application database role with
 catalog insert/update permission. The existing root update/seed scripts remain
-available during the runtime transition; built-in template seeding is still
-being migrated.
+available during the runtime transition. Built-in template setup uses the
+separate seed command below.
 
 The UWFlow gateway fetches the complete catalog and details before writes, with
 at most eight concurrent detail requests, bounded response bodies, 15-second
@@ -32,6 +32,26 @@ normalization, reference preservation, cancellation, and atomic rollback. The
 live upstream returned HTTP 403 during migration validation; live refresh
 success remains unverified until upstream access is available. Do not treat that
 denial as an empty catalog or attempt to bypass its access restrictions.
+
+## Built-in templates
+
+With `DATABASE_URL` exported, run `make seed` from `api/` to add the five built-in
+templates: the 2024 mathematics degree and computational mathematics major,
+plus the 5-, 10-, and 15-course elective templates. The command embeds the legacy
+definitions, including descriptions, item order, fixed choices, and free slots.
+It does not fetch courses or migrate the schema. Populate the real course catalog
+before seeding; missing fixed course codes cause the whole seed to roll back.
+
+New templates are ownerless and receive UUIDv7 IDs for templates and items.
+Existing ownerless templates with the same name retain their definitions and
+IDs, including administrator edits and saved user selections. A collision with
+a user-owned template rejects the batch without changing its ownership. Repeated
+or concurrent seeds do not duplicate definitions. No existing data is deleted.
+
+The command honors SIGINT/SIGTERM, has a five-minute deadline, reports created
+and existing counts, and exits nonzero on failure. Export configuration explicitly;
+it does not load `.env` files. Logs do not include credentials or raw database
+errors. The legacy root scripts remain available during the runtime transition.
 
 The Go foundation contains the academic-term domain, PostgreSQL schema
 transition, account resolution and provisioning, and Redis session services. The existing application and release migrator remain active

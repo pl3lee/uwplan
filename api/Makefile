@@ -20,6 +20,10 @@ migrate:
 courses-update:
 	$(GO) run ./cmd/courses-update
 
+.PHONY: seed
+seed:
+	$(GO) run ./cmd/seed
+
 .PHONY: generate sqlc mocks
 generate: sqlc mocks openapi
 sqlc:

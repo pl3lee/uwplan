@@ -3,6 +3,7 @@ package template
 import (
 	"github.com/google/uuid"
 	"github.com/pl3lee/uwplan/api/internal/domain/user"
+	"sort"
 	"strings"
 	"unicode/utf8"
 )
@@ -59,24 +60,69 @@ type DraftItem struct {
 	CourseCount int
 }
 
+// Blueprint is a template definition without an owner or database identity.
+// Built-in seeds use it without inventing a user account.
+type Blueprint struct {
+	Name        string
+	Description *string
+	Items       []DraftItem
+}
+
+type Seed struct{ Templates []Blueprint }
+type SeedResult struct{ Created, Existing int }
+
+func (s Seed) Normalize() (Seed, error) {
+	if len(s.Templates) == 0 {
+		return Seed{}, ErrInvalid
+	}
+	result := Seed{Templates: make([]Blueprint, len(s.Templates))}
+	seen := make(map[string]bool, len(s.Templates))
+	for i, input := range s.Templates {
+		value, err := input.Normalize()
+		if err != nil {
+			return Seed{}, err
+		}
+		if seen[value.Name] {
+			return Seed{}, ErrInvalid
+		}
+		seen[value.Name] = true
+		result.Templates[i] = value
+	}
+	// Every concurrent seed acquires unique-name locks in the same order.
+	sort.Slice(result.Templates, func(i, j int) bool { return result.Templates[i].Name < result.Templates[j].Name })
+	return result, nil
+}
+
 // Normalize validates the creation form and returns independent item/code slices.
 // Item order is the form's order; persistence assigns fresh IDs to every item.
 func (d Draft) Normalize() (Draft, error) {
-	if d.Actor.ID == "" || strings.TrimSpace(d.Name) == "" || utf8.RuneCountInString(d.Name) > 255 {
+	if d.Actor.ID == "" {
 		return Draft{}, ErrInvalid
+	}
+	b, err := (Blueprint{Name: d.Name, Description: d.Description, Items: d.Items}).Normalize()
+	if err != nil {
+		return Draft{}, err
+	}
+	d.Name, d.Items = b.Name, b.Items
+	return d, nil
+}
+
+func (d Blueprint) Normalize() (Blueprint, error) {
+	if strings.TrimSpace(d.Name) == "" || utf8.RuneCountInString(d.Name) > 255 {
+		return Blueprint{}, ErrInvalid
 	}
 	result := d
 	result.Name = strings.TrimSpace(d.Name)
 	result.Items = make([]DraftItem, len(d.Items))
 	for i, item := range d.Items {
 		if err := item.Validate(); err != nil {
-			return Draft{}, err
+			return Blueprint{}, err
 		}
 		item.CourseCodes = append([]string(nil), item.CourseCodes...)
 		for j, code := range item.CourseCodes {
 			code = strings.ToUpper(strings.Join(strings.Fields(code), ""))
 			if code == "" || utf8.RuneCountInString(code) > 10 {
-				return Draft{}, ErrInvalid
+				return Blueprint{}, ErrInvalid
 			}
 			item.CourseCodes[j] = code
 		}
