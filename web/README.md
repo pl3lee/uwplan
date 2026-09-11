@@ -3,8 +3,9 @@
 React Router SSR application with React, TypeScript, Vite, Tailwind, Base UI,
 TanStack Query, and an Orval-generated Huma client.
 
-The rewrite is in progress. Public pages and the sign-in entry point are ported;
-planner routes and full browser parity are still pending. Production continues
+The rewrite is in progress. Public pages, the sign-in entry point, and course
+selection are ported. Scheduling, template management, administration, and full
+browser parity are still pending. Production continues
 to use the existing application until the cutover checks in
 [`docs/rewrite-plan.md`](../docs/rewrite-plan.md) pass.
 
@@ -66,6 +67,18 @@ request headers; OTLP export and release correlation are pending the deployment
 stage. The web browser
 checks exercise public pages and native provider form submission on the production
 build in desktop/mobile Chromium. They intercept provider-entry navigation and
-do not claim OAuth or planner parity. Shared Playwright assertions
+do not claim OAuth parity. The shared course-selection test also runs against
+the real Go API, PostgreSQL, and Redis on the replacement production build in
+Chromium, Firefox, and WebKit:
+
+```sh
+E2E_RUNTIME=go pnpm test:e2e --grep 'template choices and fixed/free course selections persist'
+```
+
+It covers academic-plan search/membership, fixed and free choices, selected-course
+sorting/removal, and persistence after reload. Query invalidation reloads confirmed
+API state after writes. Private loaders forward only authentication cookies,
+responses are not cacheable, and expired API sessions return to sign-in.
+The other shared Playwright assertions
 remain in the repository's `e2e/` directory and must pass against the replacement
 production build before it is deployed.

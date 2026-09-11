@@ -15,7 +15,24 @@ HTML report are in `output/playwright/` and uploaded by CI.
 `fixtures.ts` creates a separate user, plan, and template for each test. Browser
 assertions inspect the UI and downloads; direct database access is only fixture
 setup. Keep those assertions when replacing the application's runtime. Replace
-the session-seeding adapter when authentication moves to Redis.
+the session-seeding adapter when authentication changes. `session-adapter.ts`
+supports both the legacy cookie/database session and the Go cookie/hashed Redis
+session. Only the disposable runner creates Redis fixtures; there is no test
+session endpoint in either application.
+
+For the migrated course-selection flow, run:
+
+```sh
+E2E_RUNTIME=go pnpm test:e2e --grep 'template choices and fixed/free course selections persist'
+```
+
+This builds the production Go binary and React Router application, adopts the
+legacy test schema with Goose, and runs against real PostgreSQL and an isolated
+Redis container. It preserves the browser assertions and covers Chromium,
+Firefox, and WebKit. Artifacts are in `output/playwright-go/`. The complete
+legacy suite remains active during migration. The Go provider transport adapter
+and the other private pages are still being ported; the full replacement suite
+must pass before production cutover.
 
 `oauth-server.mjs` implements a controlled OAuth/OIDC provider with one-use codes,
 client credential checks, PKCE validation, and signed ID tokens. Auth tests use

@@ -66,6 +66,12 @@ legacy runtime; it is not accepted as successful behavior for the replacement.
 Run the complete unchanged behavior suite against the replacement production
 build before cutover.
 
+The course-selection flow now passes unchanged against the replacement production
+build with the real Go API, PostgreSQL, and Redis in Chromium, Firefox, and WebKit.
+This includes visible updates before reload, saved free-course changes, sorting,
+selection removal, and template detachment. The remaining flows still require
+replacement-runtime verification before cutover.
+
 The baseline also found that the drag context generated different accessibility
 IDs during SSR and hydration. A stable ID derived from the active schedule fixes
 the mismatch, including the development error badge that covered mobile

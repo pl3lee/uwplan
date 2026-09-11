@@ -6,6 +6,12 @@ import {
 } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import postgres from "postgres";
+import {
+  isGoRuntime,
+  sessionCookieName,
+  sessionToken as newSessionToken,
+  seedRedisSession,
+} from "./session-adapter";
 
 export type TestUser = {
   id: string;
@@ -38,7 +44,7 @@ export const test = base.extend<Fixtures>({
         const scheduleId = randomUUID();
         const templateId = randomUUID();
         const templateName = `Mathematics ${id.slice(0, 8)}`;
-        const sessionToken = randomUUID();
+        const sessionToken = newSessionToken();
         await sql.begin(async (tx) => {
           await tx`insert into "user" (id, name, email, role) values
             (${id}, 'Browser Student', ${`${id}@example.test`}, ${options.admin ? "admin" : "user"})`;
@@ -46,7 +52,8 @@ export const test = base.extend<Fixtures>({
           await tx`insert into schedule (id, name, plan_id) values (${scheduleId}, 'Default', ${planId})`;
           await tx`insert into user_term_range (user_id, start_term, start_year, end_term, end_year)
             values (${id}, 'Fall', 2026, 'Spring', 2027)`;
-          await tx`insert into session (session_token, user_id, expires) values
+          if (!isGoRuntime)
+            await tx`insert into session (session_token, user_id, expires) values
             (${sessionToken}, ${id}, ${new Date(Date.now() + (options.expired ? -60_000 : 3_600_000))})`;
           await tx`insert into course (code, name, useful_rating, liked_rating, easy_rating, num_ratings, description)
             values ('CS135', 'Designing Functional Programs', .8, .7, .6, 100, 'Learn functional programming'),
@@ -69,6 +76,8 @@ export const test = base.extend<Fixtures>({
             select ${fixed}, 'fixed', id from course where code in ('CS135', 'MATH135')`;
           await tx`insert into course_item (requirement_id, type) values (${free}, 'free')`;
         });
+        if (isGoRuntime)
+          seedRedisSession(id, sessionToken, options.expired ?? false);
         return { id, scheduleId, templateName, sessionToken };
       });
     } finally {
@@ -82,7 +91,7 @@ export const test = base.extend<Fixtures>({
     await use(async (user, target = context) => {
       await target.addCookies([
         {
-          name: "authjs.session-token",
+          name: sessionCookieName,
           value: user.sessionToken,
           url: baseURL!,
           httpOnly: true,

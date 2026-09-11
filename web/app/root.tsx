@@ -1,6 +1,12 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  MutationCache,
+  QueryCache,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { Links, Meta, Outlet, Scripts, ScrollRestoration } from "react-router";
+import { ApiError } from "~/lib/api-fetch";
 import "@fontsource-variable/geist";
 import "./app.css";
 
@@ -32,6 +38,8 @@ export default function App() {
   const [client] = useState(
     () =>
       new QueryClient({
+        queryCache: new QueryCache({ onError: handleExpiredSession }),
+        mutationCache: new MutationCache({ onError: handleExpiredSession }),
         defaultOptions: { queries: { retry: false, staleTime: 30_000 } },
       }),
   );
@@ -40,6 +48,15 @@ export default function App() {
       <Outlet />
     </QueryClientProvider>
   );
+}
+
+function handleExpiredSession(error: Error) {
+  if (
+    error instanceof ApiError &&
+    error.status === 401 &&
+    typeof window !== "undefined"
+  )
+    window.location.assign("/signin");
 }
 
 export function ErrorBoundary() {
