@@ -7,6 +7,9 @@ package sqlc
 
 import (
 	"context"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const listCatalogCourses = `-- name: ListCatalogCourses :many
@@ -43,4 +46,43 @@ func (q *Queries) ListCatalogCourses(ctx context.Context) ([]Course, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const upsertCatalogCourse = `-- name: UpsertCatalogCourse :exec
+INSERT INTO course(id,code,name,description,prereqs,antireqs,coreqs,useful_rating,liked_rating,easy_rating,num_ratings)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+ON CONFLICT(code) DO UPDATE SET name=excluded.name,description=excluded.description,
+prereqs=excluded.prereqs,antireqs=excluded.antireqs,coreqs=excluded.coreqs,
+useful_rating=excluded.useful_rating,liked_rating=excluded.liked_rating,easy_rating=excluded.easy_rating,num_ratings=excluded.num_ratings
+`
+
+type UpsertCatalogCourseParams struct {
+	ID           uuid.UUID
+	Code         string
+	Name         string
+	Description  string
+	Prereqs      string
+	Antireqs     string
+	Coreqs       string
+	UsefulRating pgtype.Numeric
+	LikedRating  pgtype.Numeric
+	EasyRating   pgtype.Numeric
+	NumRatings   *int32
+}
+
+func (q *Queries) UpsertCatalogCourse(ctx context.Context, arg UpsertCatalogCourseParams) error {
+	_, err := q.db.Exec(ctx, upsertCatalogCourse,
+		arg.ID,
+		arg.Code,
+		arg.Name,
+		arg.Description,
+		arg.Prereqs,
+		arg.Antireqs,
+		arg.Coreqs,
+		arg.UsefulRating,
+		arg.LikedRating,
+		arg.EasyRating,
+		arg.NumRatings,
+	)
+	return err
 }
