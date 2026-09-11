@@ -28,6 +28,9 @@ func TestLogsReachCollectorWithReleaseIdentity(t *testing.T) {
 	var mutex sync.Mutex
 	var received []*collectorlog.ExportLogsServiceRequest
 	collector := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if diff := cmp.Diff("fixture-collector-token", r.Header.Get("Authorization")); diff != "" {
+			t.Errorf("collector authorization: %s", diff)
+		}
 		// Other signal payloads are exercised by the HTTP correlation test below.
 		if r.URL.Path == "/v1/metrics" || r.URL.Path == "/v1/traces" {
 			w.Header().Set("Content-Type", "application/x-protobuf")
@@ -52,8 +55,7 @@ func TestLogsReachCollectorWithReleaseIdentity(t *testing.T) {
 		w.WriteHeader(200)
 	}))
 	defer collector.Close()
-	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", collector.URL)
-	t.Setenv("OTEL_EXPORTER_OTLP_HEADERS", "authorization=fixture-collector-token")
+	configureCollector(t, collector.URL)
 	release := health.Release{Digest: "sha256:" + strings.Repeat("a", 64), Revision: strings.Repeat("b", 40)}
 	telemetry, err := observability.Setup(context.Background(), observability.Options{Enabled: true, Release: release, Output: io.Discard})
 	if err != nil {
@@ -111,7 +113,7 @@ func TestCollectorOutageDoesNotBlockHealthRequests(t *testing.T) {
 	}))
 	defer collector.Close()
 	defer close(release)
-	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", collector.URL)
+	configureCollector(t, collector.URL)
 	telemetry, err := observability.Setup(context.Background(), observability.Options{Enabled: true, Output: io.Discard})
 	if err != nil {
 		t.Fatal(err)
@@ -187,7 +189,7 @@ func TestHealthRequestExportsCorrelatedSafeLogsTracesAndMetrics(t *testing.T) {
 		w.Header().Set("Content-Type", "application/x-protobuf")
 	}))
 	defer collector.Close()
-	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", collector.URL)
+	configureCollector(t, collector.URL)
 	var output bytes.Buffer
 	telemetry, err := observability.Setup(context.Background(), observability.Options{Enabled: true, Output: &output})
 	if err != nil {
@@ -265,5 +267,15 @@ func TestHealthRequestExportsCorrelatedSafeLogsTracesAndMetrics(t *testing.T) {
 	}
 	if diff := cmp.Diff(map[string]uint64{"uwplan.health.requests": 1, "uwplan.health.duration": 1}, metrics); diff != "" {
 		t.Fatalf("metrics: %s", diff)
+	}
+}
+
+func configureCollector(t *testing.T, origin string) {
+	t.Helper()
+	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", origin)
+	t.Setenv("OTEL_EXPORTER_OTLP_HEADERS", "")
+	for _, signal := range []string{"LOGS", "TRACES", "METRICS"} {
+		t.Setenv("OTEL_EXPORTER_OTLP_"+signal+"_ENDPOINT", origin+"/v1/"+strings.ToLower(signal))
+		t.Setenv("OTEL_EXPORTER_OTLP_"+signal+"_HEADERS", "authorization=fixture-collector-token")
 	}
 }
