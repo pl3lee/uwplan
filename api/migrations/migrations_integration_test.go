@@ -90,18 +90,29 @@ func TestLegacyUpgradePreservesData(t *testing.T) {
 
 func TestRejectsSchemaDrift(t *testing.T) {
 	t.Parallel()
-	pool := legacy(t)
-	if _, err := pool.Exec(t.Context(), `ALTER TABLE "user" ADD COLUMN unexpected_column text`); err != nil {
-		t.Fatal(err)
-	}
-	if err := apply(t, pool); !errors.Is(err, migrations.ErrSchemaMismatch) {
-		t.Fatalf("expected schema drift rejection, got %v", err)
-	}
-	var applied bool
-	if err := pool.QueryRow(t.Context(), "SELECT EXISTS(SELECT 1 FROM goose_db_version WHERE version_id=1 AND is_applied)").Scan(&applied); err != nil {
-		t.Fatal(err)
-	}
-	if diff := cmp.Diff(false, applied); diff != "" {
-		t.Fatalf("baseline applied despite drift: %s", diff)
+	for _, tc := range []struct {
+		name  string
+		alter string
+	}{
+		{"added column", `ALTER TABLE "user" ADD COLUMN unexpected_column text`},
+		{"timestamp precision", `ALTER TABLE session ALTER COLUMN expires TYPE timestamp(0) with time zone`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			pool := legacy(t)
+			if _, err := pool.Exec(t.Context(), tc.alter); err != nil {
+				t.Fatal(err)
+			}
+			if err := apply(t, pool); !errors.Is(err, migrations.ErrSchemaMismatch) {
+				t.Fatalf("expected schema drift rejection, got %v", err)
+			}
+			var applied bool
+			if err := pool.QueryRow(t.Context(), "SELECT EXISTS(SELECT 1 FROM goose_db_version WHERE version_id=1 AND is_applied)").Scan(&applied); err != nil {
+				t.Fatal(err)
+			}
+			if diff := cmp.Diff(false, applied); diff != "" {
+				t.Fatalf("baseline applied despite drift: %s", diff)
+			}
+		})
 	}
 }
