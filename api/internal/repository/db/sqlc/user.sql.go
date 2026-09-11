@@ -181,6 +181,44 @@ func (q *Queries) GetUser(ctx context.Context, id string) (GetUserRow, error) {
 	return i, err
 }
 
+const listUsers = `-- name: ListUsers :many
+SELECT id,email,name,image,role FROM "user" ORDER BY email,id
+`
+
+type ListUsersRow struct {
+	ID    string
+	Email string
+	Name  *string
+	Image *string
+	Role  RoleType
+}
+
+func (q *Queries) ListUsers(ctx context.Context) ([]ListUsersRow, error) {
+	rows, err := q.db.Query(ctx, listUsers)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListUsersRow{}
+	for rows.Next() {
+		var i ListUsersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Email,
+			&i.Name,
+			&i.Image,
+			&i.Role,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const lockIdentity = `-- name: LockIdentity :exec
 SELECT pg_advisory_xact_lock(hashtextextended($1::text,0))
 `

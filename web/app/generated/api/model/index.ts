@@ -72,3 +72,5 @@ export * from './userBody';
 export * from './userBodyImage';
 export * from './userBodyName';
 export * from './userBodyRole';
+export * from './userListResponseBody';
+export * from './userListResponseBodyUsers';

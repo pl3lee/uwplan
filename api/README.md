@@ -109,6 +109,17 @@ same Huma route registration used at runtime. `make generate` includes this step
 CI checks the complete generated output. Live specs are available under
 `/api/openapi.json` and `/api/openapi.yaml`, with documentation at `/api/docs`.
 
+## User administration
+
+`GET /api/v1/admin/users` returns profile IDs, names, emails, images, and roles
+for the existing admin user list. The service requires an identified admin;
+ordinary users and moderators receive 403, and absent or expired sessions
+receive 401. Authentication reads the current database role, so demoting an
+admin removes access immediately for an already issued session. The query
+returns profiles in email/ID order and does not read provider credentials.
+Repository, service, and HTTP tests cover nullable legacy profiles, denied
+access, role changes, session expiry, and generic infrastructure failures.
+
 ## Scheduling
 
 The schedule API derives ownership from the authenticated session. Mutations
