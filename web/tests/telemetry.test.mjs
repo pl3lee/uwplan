@@ -121,6 +121,11 @@ test("production web exports safe correlated requests and forwards API trace con
   });
   assert.equal(renderFailure.status, 500);
   assert.ok(!(await renderFailure.text()).includes("private-canary"));
+  const notFound = await fetch(`${origin}/missing-private-canary`, {
+    headers: { traceparent: `00-${"8".repeat(32)}-${"9".repeat(16)}-01` },
+  });
+  assert.equal(notFound.status, 404);
+  assert.ok((await notFound.text()).includes("Unable to load this page"));
   child.kill("SIGTERM");
   const [exitCode] = await exited;
   assert.equal(exitCode, 0);
@@ -160,6 +165,18 @@ test("production web exports safe correlated requests and forwards API trace con
         record.severityNumber === 17,
     ),
     "loader/render failure reaches collector with request context",
+  );
+  const notFoundLogs = records.filter(
+    ({ record }) => record.traceId === "8".repeat(32),
+  );
+  assert.ok(
+    notFoundLogs.some(
+      ({ record }) => record.body.stringValue === "http.request",
+    ),
+  );
+  assert.ok(
+    notFoundLogs.every(({ record }) => record.severityNumber < 17),
+    "ordinary missing routes must not report a server rendering failure",
   );
   const failedLogs = records.filter(
     ({ record }) => record.traceId === "4".repeat(32),
