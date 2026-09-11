@@ -70,3 +70,8 @@ The baseline also found that the drag context generated different accessibility
 IDs during SSR and hydration. A stable ID derived from the active schedule fixes
 the mismatch, including the development error badge that covered mobile
 navigation. The browser drag/drop and mobile assignment flows cover the fix.
+
+A release-run WebKit trace also exposed a free-course input accepting text after
+a reload before its React change handler was ready. No mutation request followed
+the fill. Disable that field until hydration finishes so early user input cannot
+be discarded. The existing reload-and-change browser assertion covers this case.
