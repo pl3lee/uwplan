@@ -1,8 +1,10 @@
 package user
 
 import (
+	"github.com/pl3lee/uwplan/api/internal/domain/term"
 	"net/mail"
 	"strings"
+	"time"
 	"unicode/utf8"
 )
 
@@ -59,6 +61,35 @@ func (i Identity) Validate() error {
 		if value != nil && utf8.RuneCountInString(*value) > 255 {
 			return ErrInvalidIdentity
 		}
+	}
+	return nil
+}
+
+// Provisioning supplies domain defaults for a new account. Existing accounts
+// retain their saved planning state when their provider identity is resolved.
+type Provisioning struct {
+	Identity     Identity
+	ScheduleName string
+	TermRange    term.Range
+}
+
+func NewProvisioning(identity Identity, now time.Time) Provisioning {
+	year := now.UTC().Year()
+	return Provisioning{Identity: identity, ScheduleName: "Default", TermRange: term.Range{
+		Start: term.Term{Season: term.Fall, Year: year},
+		End:   term.Term{Season: term.Fall, Year: year + 5},
+	}}
+}
+
+func (p Provisioning) Validate() error {
+	if err := p.Identity.Validate(); err != nil {
+		return err
+	}
+	if strings.TrimSpace(p.ScheduleName) == "" || utf8.RuneCountInString(p.ScheduleName) > 255 {
+		return ErrInvalidProvisioning
+	}
+	if _, err := p.TermRange.Terms(); err != nil {
+		return ErrInvalidProvisioning
 	}
 	return nil
 }

@@ -19,7 +19,7 @@ func TestLoginStoresOnlyHashedCredential(t *testing.T) {
 	sessions := NewSessionRepositoryMock(t)
 	identity := domainuser.Identity{Provider: domainuser.Google, Subject: "subject", Email: "person@example.test"}
 	person := domainuser.User{ID: "legacy-person", Email: identity.Email, Role: domainuser.RoleUser}
-	users.EXPECT().ResolveAccount(mock.Anything, identity).Return(person, nil).Once()
+	users.EXPECT().ResolveAccount(mock.Anything, domainuser.NewProvisioning(identity, time.Now())).Return(person, nil).Once()
 	var stored domainsession.Session
 	sessions.EXPECT().Create(mock.Anything, mock.Anything).RunAndReturn(func(_ context.Context, value domainsession.Session) error { stored = value; return nil }).Once()
 	service, err := NewAuthService(users, sessions, 24*time.Hour)
@@ -151,7 +151,7 @@ func TestLoginFailureNeverReturnsCredential(t *testing.T) {
 			users := NewUserRepositoryMock(t)
 			sessions := NewSessionRepositoryMock(t)
 			if tc.resolve {
-				users.EXPECT().ResolveAccount(mock.Anything, tc.identity).Return(person, tc.accountErr).Once()
+				users.EXPECT().ResolveAccount(mock.Anything, domainuser.NewProvisioning(tc.identity, time.Now())).Return(person, tc.accountErr).Once()
 			}
 			if tc.create {
 				sessions.EXPECT().Create(mock.Anything, mock.Anything).Return(tc.sessionErr).Once()

@@ -24,7 +24,7 @@ func TestNewAccountProvisionsPlanAtomically(t *testing.T) {
 			pool := postgres.NewPool(t)
 			repo := repositoryuser.NewUserRepository(pool)
 			identity := domainuser.Identity{Provider: provider, Subject: "provider-123", Email: "new@example.test"}
-			got, err := repo.ResolveAccount(t.Context(), identity)
+			got, err := repo.ResolveAccount(t.Context(), domainuser.NewProvisioning(identity, time.Now()))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -36,7 +36,7 @@ func TestNewAccountProvisionsPlanAtomically(t *testing.T) {
 			if diff := cmp.Diff(want, got); diff != "" {
 				t.Fatal(diff)
 			}
-			repeated, err := repo.ResolveAccount(t.Context(), identity)
+			repeated, err := repo.ResolveAccount(t.Context(), domainuser.NewProvisioning(identity, time.Now()))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -79,7 +79,7 @@ func TestExistingProviderKeepsLegacyIdentityAndPlan(t *testing.T) {
 		t.Fatal(err)
 	}
 	repo := repositoryuser.NewUserRepository(pool)
-	got, err := repo.ResolveAccount(t.Context(), domainuser.Identity{Provider: domainuser.Google, Subject: "old-subject", Email: "changed@example.test"})
+	got, err := repo.ResolveAccount(t.Context(), domainuser.NewProvisioning(domainuser.Identity{Provider: domainuser.Google, Subject: "old-subject", Email: "changed@example.test"}, time.Now()))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +97,7 @@ func TestExistingProviderKeepsLegacyIdentityAndPlan(t *testing.T) {
 	if diff := cmp.Diff(expected, saved); diff != "" {
 		t.Fatal(diff)
 	}
-	_, err = repo.ResolveAccount(t.Context(), domainuser.Identity{Provider: domainuser.GitHub, Subject: "different-provider", Email: "ORIGINAL@example.test"})
+	_, err = repo.ResolveAccount(t.Context(), domainuser.NewProvisioning(domainuser.Identity{Provider: domainuser.GitHub, Subject: "different-provider", Email: "ORIGINAL@example.test"}, time.Now()))
 	if !errors.Is(err, domainuser.ErrAccountNotLinked) {
 		t.Fatalf("expected explicit provider link rejection, got %v", err)
 	}
@@ -117,7 +117,9 @@ func TestConcurrentFirstLoginCreatesOneAccount(t *testing.T) {
 	var failures [count]error
 	var group sync.WaitGroup
 	for index := range count {
-		group.Go(func() { results[index], failures[index] = repo.ResolveAccount(t.Context(), identity) })
+		group.Go(func() {
+			results[index], failures[index] = repo.ResolveAccount(t.Context(), domainuser.NewProvisioning(identity, time.Now()))
+		})
 	}
 	group.Wait()
 	for index, err := range failures {
@@ -144,7 +146,7 @@ func TestFailedProvisioningLeavesNoPartialAccount(t *testing.T) {
 		t.Fatal(err)
 	}
 	repo := repositoryuser.NewUserRepository(pool)
-	_, err := repo.ResolveAccount(t.Context(), domainuser.Identity{Provider: domainuser.Google, Subject: "rollback", Email: "rollback@example.test"})
+	_, err := repo.ResolveAccount(t.Context(), domainuser.NewProvisioning(domainuser.Identity{Provider: domainuser.Google, Subject: "rollback", Email: "rollback@example.test"}, time.Now()))
 	var pgerr *pgconn.PgError
 	if !errors.As(err, &pgerr) || pgerr.Code != "23514" {
 		t.Fatalf("expected preserved constraint failure, got %v", err)

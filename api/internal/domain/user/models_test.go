@@ -2,8 +2,11 @@ package user_test
 
 import (
 	"errors"
+	"github.com/google/go-cmp/cmp"
+	"github.com/pl3lee/uwplan/api/internal/domain/term"
 	"strings"
 	"testing"
+	"time"
 
 	domainuser "github.com/pl3lee/uwplan/api/internal/domain/user"
 )
@@ -30,5 +33,18 @@ func TestIdentityValidation(t *testing.T) {
 				t.Fatalf("expected %v, got %v", tc.want, err)
 			}
 		})
+	}
+}
+
+func TestDefaultProvisioning(t *testing.T) {
+	t.Parallel()
+	identity := domainuser.Identity{Provider: domainuser.Google, Subject: "subject", Email: "user@example.test"}
+	got := domainuser.NewProvisioning(identity, time.Date(2026, time.June, 1, 0, 0, 0, 0, time.UTC))
+	want := domainuser.Provisioning{Identity: identity, ScheduleName: "Default", TermRange: term.Range{Start: term.Term{Season: term.Fall, Year: 2026}, End: term.Term{Season: term.Fall, Year: 2031}}}
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Fatal(diff)
+	}
+	if err := got.Validate(); err != nil {
+		t.Fatal(err)
 	}
 }

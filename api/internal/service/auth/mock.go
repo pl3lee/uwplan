@@ -106,8 +106,8 @@ func (_c *UserRepositoryMock_GetUser_Call) RunAndReturn(run func(context1 contex
 }
 
 // ResolveAccount provides a mock function for the type UserRepositoryMock
-func (_mock *UserRepositoryMock) ResolveAccount(context1 context.Context, identity user.Identity) (user.User, error) {
-	ret := _mock.Called(context1, identity)
+func (_mock *UserRepositoryMock) ResolveAccount(context1 context.Context, provisioning user.Provisioning) (user.User, error) {
+	ret := _mock.Called(context1, provisioning)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ResolveAccount")
@@ -115,16 +115,16 @@ func (_mock *UserRepositoryMock) ResolveAccount(context1 context.Context, identi
 
 	var r0 user.User
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, user.Identity) (user.User, error)); ok {
-		return returnFunc(context1, identity)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, user.Provisioning) (user.User, error)); ok {
+		return returnFunc(context1, provisioning)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, user.Identity) user.User); ok {
-		r0 = returnFunc(context1, identity)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, user.Provisioning) user.User); ok {
+		r0 = returnFunc(context1, provisioning)
 	} else {
 		r0 = ret.Get(0).(user.User)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, user.Identity) error); ok {
-		r1 = returnFunc(context1, identity)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, user.Provisioning) error); ok {
+		r1 = returnFunc(context1, provisioning)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -138,20 +138,20 @@ type UserRepositoryMock_ResolveAccount_Call struct {
 
 // ResolveAccount is a helper method to define mock.On call
 //   - context1 context.Context
-//   - identity user.Identity
-func (_e *UserRepositoryMock_Expecter) ResolveAccount(context1 interface{}, identity interface{}) *UserRepositoryMock_ResolveAccount_Call {
-	return &UserRepositoryMock_ResolveAccount_Call{Call: _e.mock.On("ResolveAccount", context1, identity)}
+//   - provisioning user.Provisioning
+func (_e *UserRepositoryMock_Expecter) ResolveAccount(context1 interface{}, provisioning interface{}) *UserRepositoryMock_ResolveAccount_Call {
+	return &UserRepositoryMock_ResolveAccount_Call{Call: _e.mock.On("ResolveAccount", context1, provisioning)}
 }
 
-func (_c *UserRepositoryMock_ResolveAccount_Call) Run(run func(context1 context.Context, identity user.Identity)) *UserRepositoryMock_ResolveAccount_Call {
+func (_c *UserRepositoryMock_ResolveAccount_Call) Run(run func(context1 context.Context, provisioning user.Provisioning)) *UserRepositoryMock_ResolveAccount_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 user.Identity
+		var arg1 user.Provisioning
 		if args[1] != nil {
-			arg1 = args[1].(user.Identity)
+			arg1 = args[1].(user.Provisioning)
 		}
 		run(
 			arg0,
@@ -166,7 +166,7 @@ func (_c *UserRepositoryMock_ResolveAccount_Call) Return(user1 user.User, err er
 	return _c
 }
 
-func (_c *UserRepositoryMock_ResolveAccount_Call) RunAndReturn(run func(context1 context.Context, identity user.Identity) (user.User, error)) *UserRepositoryMock_ResolveAccount_Call {
+func (_c *UserRepositoryMock_ResolveAccount_Call) RunAndReturn(run func(context1 context.Context, provisioning user.Provisioning) (user.User, error)) *UserRepositoryMock_ResolveAccount_Call {
 	_c.Call.Return(run)
 	return _c
 }

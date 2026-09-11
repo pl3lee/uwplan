@@ -7,7 +7,7 @@ import (
 )
 
 type UserRepository interface {
-	ResolveAccount(context.Context, domainuser.Identity) (domainuser.User, error)
+	ResolveAccount(context.Context, domainuser.Provisioning) (domainuser.User, error)
 	GetUser(context.Context, domainuser.User) (domainuser.User, error)
 }
 

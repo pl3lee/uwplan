@@ -30,7 +30,7 @@ func (s *AuthServiceImpl) Login(ctx context.Context, identity domainuser.Identit
 	if err := identity.Validate(); err != nil {
 		return domainsession.Grant{}, err
 	}
-	person, err := s.users.ResolveAccount(ctx, identity)
+	person, err := s.users.ResolveAccount(ctx, domainuser.NewProvisioning(identity, time.Now()))
 	if err != nil {
 		return domainsession.Grant{}, fmt.Errorf("resolve account: %w", err)
 	}

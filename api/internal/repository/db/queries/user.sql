@@ -20,7 +20,7 @@ INSERT INTO account(user_id,type,provider,provider_account_id) VALUES ($1,'oauth
 INSERT INTO plan(id,user_id) VALUES ($1,$2);
 
 -- name: CreateDefaultSchedule :exec
-INSERT INTO schedule(id,name,plan_id) VALUES ($1,'Default',$2);
+INSERT INTO schedule(id,name,plan_id) VALUES ($1,$2,$3);
 
 -- name: CreateDefaultTermRange :exec
-INSERT INTO user_term_range(user_id,start_term,start_year,end_term,end_year) VALUES ($1,'Fall',$2,'Fall',$2+5);
+INSERT INTO user_term_range(user_id,start_term,start_year,end_term,end_year) VALUES ($1,$2,$3,$4,$5);

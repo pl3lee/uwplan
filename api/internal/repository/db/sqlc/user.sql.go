@@ -12,30 +12,40 @@ import (
 )
 
 const createDefaultSchedule = `-- name: CreateDefaultSchedule :exec
-INSERT INTO schedule(id,name,plan_id) VALUES ($1,'Default',$2)
+INSERT INTO schedule(id,name,plan_id) VALUES ($1,$2,$3)
 `
 
 type CreateDefaultScheduleParams struct {
 	ID     uuid.UUID
+	Name   string
 	PlanID uuid.UUID
 }
 
 func (q *Queries) CreateDefaultSchedule(ctx context.Context, arg CreateDefaultScheduleParams) error {
-	_, err := q.db.Exec(ctx, createDefaultSchedule, arg.ID, arg.PlanID)
+	_, err := q.db.Exec(ctx, createDefaultSchedule, arg.ID, arg.Name, arg.PlanID)
 	return err
 }
 
 const createDefaultTermRange = `-- name: CreateDefaultTermRange :exec
-INSERT INTO user_term_range(user_id,start_term,start_year,end_term,end_year) VALUES ($1,'Fall',$2,'Fall',$2+5)
+INSERT INTO user_term_range(user_id,start_term,start_year,end_term,end_year) VALUES ($1,$2,$3,$4,$5)
 `
 
 type CreateDefaultTermRangeParams struct {
 	UserID    string
+	StartTerm Season
 	StartYear int32
+	EndTerm   Season
+	EndYear   int32
 }
 
 func (q *Queries) CreateDefaultTermRange(ctx context.Context, arg CreateDefaultTermRangeParams) error {
-	_, err := q.db.Exec(ctx, createDefaultTermRange, arg.UserID, arg.StartYear)
+	_, err := q.db.Exec(ctx, createDefaultTermRange,
+		arg.UserID,
+		arg.StartTerm,
+		arg.StartYear,
+		arg.EndTerm,
+		arg.EndYear,
+	)
 	return err
 }
 
