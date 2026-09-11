@@ -37,8 +37,6 @@ Build and run the production server:
 
 ```sh
 pnpm build:web
-pnpm --filter @uwplan/web exec playwright install chromium
-pnpm --filter @uwplan/web test:browser
 API_ORIGIN=http://127.0.0.1:8080 pnpm --filter @uwplan/web start
 ```
 
@@ -55,6 +53,8 @@ pnpm generate:web
 pnpm check:web
 pnpm test:web
 pnpm build:web
+pnpm --filter @uwplan/web exec playwright install chromium
+pnpm --filter @uwplan/web test:browser
 ```
 
 Commit `app/generated/` with API changes. CI regenerates it and rejects drift.

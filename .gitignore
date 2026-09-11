@@ -55,4 +55,5 @@ __pycache__/
 /web/node_modules/
 /web/build/
 /web/.react-router/
+/output/playwright-web/
 /web/coverage/
