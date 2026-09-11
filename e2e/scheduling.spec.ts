@@ -8,7 +8,12 @@ import {
   reloadSavedPage,
 } from "./fixtures";
 
-async function dragCourse(page: Page, source: Locator, target: Locator) {
+async function dragCourse(
+  page: Page,
+  source: Locator,
+  target: Locator,
+  waitForSave = true,
+) {
   await source.scrollIntoViewIfNeeded();
   const from = await source.boundingBox();
   const to = await target.boundingBox();
@@ -25,8 +30,129 @@ async function dragCourse(page: Page, source: Locator, target: Locator) {
     to.y + Math.min(to.height / 2, 100),
     { steps: 20 },
   );
-  await mutate(page, () => page.mouse.up());
+  if (waitForSave) await mutate(page, () => page.mouse.up());
+  else await page.mouse.up();
 }
+
+test("schedule drag updates immediately and rolls back failed saves @smoke", async ({
+  page,
+  user,
+  signIn,
+}) => {
+  await signIn(user);
+  await selectCoreCourse(page, user);
+  await page.goto("/schedule");
+  const boards = ["Available Courses", "Fall 2026", "Winter 2027", "Available Courses"]
+    .map((name) => page.getByRole("region", { name, exact: true }));
+  const course = (board: Locator) => board.getByRole("button", { name: /CS135/ });
+  const assignmentURL = `**/api/v1/schedules/${user.scheduleId}/courses/*`;
+
+  for (let index = 0; index < boards.length - 1; index++) {
+    const source = boards[index];
+    const target = boards[index + 1];
+    // Reject each operation once, then retry it against the real API.
+    for (const fail of [true, false]) {
+      await page.waitForLoadState("networkidle");
+      let release!: () => void;
+      const held = new Promise<void>((resolve) => { release = resolve; });
+      let releaseRefresh!: () => void;
+      const heldRefresh = new Promise<void>((resolve) => { releaseRefresh = resolve; });
+      let refreshing!: () => void;
+      const refreshStarted = new Promise<void>((resolve) => { refreshing = resolve; });
+      const scheduleURL = `**/api/v1/schedules/${user.scheduleId}`;
+      if (!fail) {
+        await page.route(scheduleURL, async (route) => {
+          refreshing();
+          await heldRefresh;
+          await route.continue();
+        });
+      }
+      await page.route(assignmentURL, async (route) => {
+        await held;
+        if (fail) {
+          await route.fulfill({
+            status: 500,
+            contentType: "application/problem+json",
+            body: JSON.stringify({ title: "Save failed", status: 500 }),
+          });
+        } else await route.continue();
+      });
+      const response = page.waitForResponse((response) =>
+        response.url().includes(`/api/v1/schedules/${user.scheduleId}/courses/`));
+      try {
+        await dragCourse(page, course(source), target, false);
+        await expect(course(target)).toBeVisible();
+        await expect(course(source)).toHaveCount(0);
+        await expect(course(target)).toBeDisabled();
+      } finally {
+        release();
+      }
+      try {
+        expect((await response).status()).toBe(fail ? 500 : 204);
+        if (!fail) {
+          await refreshStarted;
+          await expect(course(target)).toBeVisible();
+          await expect(course(source)).toHaveCount(0);
+          await expect(course(target)).toBeDisabled();
+        }
+      } finally {
+        releaseRefresh();
+      }
+      const saved = fail ? source : target;
+      await expect(course(saved)).toBeEnabled();
+      await expect(course(fail ? target : source)).toHaveCount(0);
+      await expect(page.getByRole("alert")).toHaveCount(fail ? 1 : 0);
+      await page.unroute(assignmentURL);
+      if (!fail) await page.unroute(scheduleURL);
+      await reloadSavedPage(page);
+      await expect(course(saved)).toBeVisible();
+    }
+  }
+});
+
+test("mobile course assignment previews and restores a failed save @mobile", async ({
+  page,
+  user,
+  signIn,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await signIn(user);
+  await selectCoreCourse(page, user);
+  await page.goto("/schedule");
+  const term = page.getByRole("combobox", { name: "Term for CS135", exact: true });
+  const fall = page.getByRole("region", { name: "Fall 2026", exact: true });
+  const assignmentURL = `**/api/v1/schedules/${user.scheduleId}/courses/*`;
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => { release = resolve; });
+  await page.route(assignmentURL, async (route) => {
+    await held;
+    await route.fulfill({ status: 500, body: "Save failed" });
+  });
+  try {
+    await term.click();
+    await page.getByRole("option", { name: "Fall 2026", exact: true }).click();
+    await expect(term).toHaveText("Fall 2026");
+    await expect(term).toBeDisabled();
+    await expect(
+      fall.getByText("Designing Functional Programs", { exact: true }),
+    ).toBeVisible();
+  } finally {
+    release();
+  }
+  await expect(term).toBeEnabled();
+  await expect(term).toHaveText("Unscheduled");
+  await expect(fall).toHaveCount(0);
+  await expect(page.getByRole("alert")).toBeVisible();
+  await page.unroute(assignmentURL);
+  await term.click();
+  await mutate(page, () =>
+    page.getByRole("option", { name: "Fall 2026", exact: true }).click(),
+  );
+  await expect(term).toHaveText("Fall 2026");
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await reloadSavedPage(page);
+  await expect(term).toHaveText("Fall 2026");
+});
 
 test("create, rename, and delete schedules while retaining the final schedule @smoke", async ({
   page,

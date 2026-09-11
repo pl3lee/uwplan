@@ -1,6 +1,7 @@
 import { Dialog } from "@base-ui/react/dialog";
 import { PreviewCard } from "@base-ui/react/preview-card";
 import { DndContext, useDraggable, useDroppable } from "@dnd-kit/core";
+import { useState } from "react";
 import {
   assignScheduleCourse,
   removeScheduleCourse,
@@ -139,8 +140,21 @@ function TermBoard({
 
 export function CourseScheduler({ view }: { view: ScheduleViewResponseBody }) {
   const mutation = usePlanningMutation(`schedule:${view.schedule.id}`);
+  const [pendingAssignment, setPendingAssignment] = useState<{
+    course: CourseBody;
+    term: string;
+  } | null>(null);
   const terms = termLabels(view.term_range);
-  const assigned = view.assigned ?? [];
+  // Keep the preview through the mutation's query refresh. Clearing it after a
+  // failed save restores server data without changing the shared query cache.
+  let assigned = view.assigned ?? [];
+  if (pendingAssignment) {
+    assigned = assigned.filter(
+      (item) => item.course.id !== pendingAssignment.course.id,
+    );
+    if (pendingAssignment.term !== "available")
+      assigned = [...assigned, pendingAssignment];
+  }
   const selected = [
     ...new Map(
       (view.selected ?? []).map((course) => [course.id, course]),
@@ -161,12 +175,18 @@ export function CourseScheduler({ view }: { view: ScheduleViewResponseBody }) {
       ]),
     ).values(),
   ]);
-  const changeTerm = (courseId: string, term: string) =>
-    mutation.mutate(() =>
-      term === "available"
-        ? removeScheduleCourse(view.schedule.id, courseId)
-        : assignScheduleCourse(view.schedule.id, courseId, { term }),
+  const changeTerm = (courseId: string, term: string) => {
+    const course = allCourses.find((item) => item.id === courseId);
+    if (!course || mutation.isPending) return;
+    setPendingAssignment({ course, term });
+    mutation.mutate(
+      () =>
+        term === "available"
+          ? removeScheduleCourse(view.schedule.id, courseId)
+          : assignScheduleCourse(view.schedule.id, courseId, { term }),
+      { onSettled: () => setPendingAssignment(null) },
     );
+  };
   return (
     <>
       <ApiErrorMessage error={mutation.error} />
