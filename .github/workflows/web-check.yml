@@ -25,6 +25,7 @@ jobs:
       - run: pnpm check:web
       - run: pnpm test:web
       - run: pnpm build:web
+      - run: pnpm --filter @uwplan/web test:server
       - run: pnpm --filter @uwplan/web exec playwright install --with-deps chromium
       - run: pnpm --filter @uwplan/web test:browser
       - uses: actions/upload-artifact@v4

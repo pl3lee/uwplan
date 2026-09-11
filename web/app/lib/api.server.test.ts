@@ -23,7 +23,7 @@ it("preserves authentication and Origin through generated JSON mutations", async
         headers: {
           Cookie: "__Host-uwplan_session=session-token",
           Origin: "https://uwplan.com",
-          "Content-Type": "application/json",
+          "Content-Type": "application/x-www-form-urlencoded",
         },
       }),
     ),

@@ -53,12 +53,17 @@ pnpm generate:web
 pnpm check:web
 pnpm test:web
 pnpm build:web
+pnpm --filter @uwplan/web test:server
 pnpm --filter @uwplan/web exec playwright install chromium
 pnpm --filter @uwplan/web test:browser
 ```
 
 Commit `app/generated/` with API changes. CI regenerates it and rejects drift.
-Vitest covers the transport, session lookup, and proxy boundary. The web browser
+Vitest covers the transport, session lookup, and proxy boundary. The production
+server test sends callback credential sentinels and verifies redacted output.
+The custom server emits structured request logs without URLs, cookies, or other
+request headers; OTLP export and release correlation are pending the deployment
+stage. The web browser
 checks exercise public pages and native provider form submission on the production
 build in desktop/mobile Chromium. They intercept provider-entry navigation and
 do not claim OAuth or planner parity. Shared Playwright assertions

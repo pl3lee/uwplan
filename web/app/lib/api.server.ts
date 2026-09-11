@@ -21,7 +21,7 @@ export function serverApiOptions(request: Request): ApiRequestOptions {
   // Orval merges JSON headers with object spread; use a plain record so the
   // generated mutation functions retain cookies and Origin during that merge.
   const headers: Record<string, string> = {};
-  for (const name of ["Accept", "Content-Type", "Origin", "Sec-Fetch-Site"]) {
+  for (const name of ["Accept", "Origin", "Sec-Fetch-Site"]) {
     const value = request.headers.get(name);
     if (value !== null) headers[name] = value;
   }
@@ -84,15 +84,19 @@ export async function proxyApiRequest(request: Request): Promise<Response> {
     if (!incoming.pathname.startsWith("/api/"))
       return new Response(null, { status: 404 });
     const { baseUrl, ...options } = serverApiOptions(request);
+    const headers = new Headers(options.headers);
+    const contentType = request.headers.get("Content-Type");
+    if (contentType !== null) headers.set("Content-Type", contentType);
     const target = new URL(baseUrl ?? "");
     target.pathname = incoming.pathname;
     target.search = incoming.search;
     const response = await fetch(target.toString(), {
       ...options,
+      headers,
       method: request.method,
       body: await boundedBody(request),
     });
-    const headers = new Headers(response.headers);
+    const responseHeaders = new Headers(response.headers);
     for (const name of [
       "connection",
       "content-length",
@@ -106,14 +110,14 @@ export async function proxyApiRequest(request: Request): Promise<Response> {
       "upgrade",
       "set-cookie",
     ])
-      headers.delete(name);
+      responseHeaders.delete(name);
     for (const cookie of response.headers.getSetCookie())
-      headers.append("Set-Cookie", cookie);
-    headers.set("Cache-Control", "no-store");
+      responseHeaders.append("Set-Cookie", cookie);
+    responseHeaders.set("Cache-Control", "no-store");
     return new Response(response.body, {
       status: response.status,
       statusText: response.statusText,
-      headers,
+      headers: responseHeaders,
     });
   } catch (error) {
     if (error instanceof Response) return error;
