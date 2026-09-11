@@ -1,0 +1,109 @@
+name: uwplan-production
+
+x-application: &application
+  init: true
+  restart: unless-stopped
+  mem_limit: 128m
+  memswap_limit: 256m
+  pids_limit: 128
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  stop_grace_period: 30s
+  logging: &logging
+    driver: json-file
+    options: {max-size: 10m, max-file: "3"}
+
+services:
+  web:
+    <<: *application
+    image: ${UWPLAN_WEB_IMAGE:?immutable web image required}
+    env_file:
+      - path: ${UWPLAN_CONFIG_DIR:-/etc/uwplan-production}/web.env
+        format: raw
+    environment:
+      API_ORIGIN: http://api:8080
+      RELEASE_DIGEST: ${RELEASE_WEB_DIGEST:?web digest required}
+      RELEASE_REVISION: ${RELEASE_REVISION:?revision required}
+    ports: ["127.0.0.1:5002:3000"]
+    depends_on:
+      api:
+        condition: service_healthy
+  api:
+    <<: *application
+    image: ${UWPLAN_API_IMAGE:?immutable API image required}
+    env_file:
+      - path: ${UWPLAN_CONFIG_DIR:-/etc/uwplan-production}/api.env
+        format: raw
+    environment:
+      HTTP_ADDR: :8080
+      RELEASE_DIGEST: ${RELEASE_DIGEST:?API digest required}
+      RELEASE_REVISION: ${RELEASE_REVISION:?revision required}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+  redis:
+    image: redis:7@sha256:71da9275c5f3fcb97d0fa0c8c5b36cc995327265420f17a04bfd544f458059f7
+    user: redis
+    restart: unless-stopped
+    mem_limit: 64m
+    memswap_limit: 128m
+    pids_limit: 64
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    env_file:
+      - path: ${UWPLAN_CONFIG_DIR:-/etc/uwplan-production}/redis.env
+        format: raw
+    command:
+      - /bin/sh
+      - -ec
+      - 'test -n "$${REDIS_PASSWORD}"; exec redis-server --requirepass "$${REDIS_PASSWORD}" --maxmemory 32mb --maxmemory-policy noeviction --appendonly yes --appendfsync everysec --save ""'
+    volumes: [redis_data:/data]
+    healthcheck:
+      test: [CMD-SHELL, 'REDISCLI_AUTH="$${REDIS_PASSWORD}" redis-cli ping | grep -q PONG']
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    stop_grace_period: 30s
+    logging: *logging
+  db:
+    image: postgres:16.14-bookworm@sha256:92620daddcd947f8d5ab5ba66e848702fe443d87fed30c4cea8e389fd78dfc55
+    restart: unless-stopped
+    mem_limit: 160m
+    memswap_limit: 512m
+    shm_size: 64m
+    command: [postgres, -c, shared_buffers=32MB, -c, max_connections=30, -c, work_mem=2MB, -c, maintenance_work_mem=16MB]
+    environment:
+      POSTGRES_DB: uwplan
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_admin_password
+    secrets: [postgres_admin_password]
+    volumes: [postgres_data:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -h 127.0.0.1 -U postgres -d uwplan]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    stop_grace_period: 60s
+    logging: *logging
+  migrator:
+    <<: *application
+    image: ${UWPLAN_API_IMAGE:?immutable API image required}
+    profiles: [migration]
+    restart: "no"
+    env_file:
+      - path: ${UWPLAN_CONFIG_DIR:-/etc/uwplan-production}/migrator.env
+        format: raw
+    environment:
+      RELEASE_DIGEST: ${RELEASE_DIGEST:?API digest required}
+      RELEASE_REVISION: ${RELEASE_REVISION:?revision required}
+    command: [/app/migrate]
+
+secrets:
+  postgres_admin_password:
+    file: ${UWPLAN_CONFIG_DIR:-/etc/uwplan-production}/postgres-admin-password
+volumes:
+  postgres_data:
+  redis_data:

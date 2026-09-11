@@ -16,7 +16,11 @@ ROOT = Path('/opt/uwplan-production')
 STATE = Path('/var/lib/uwplan-production')
 REPOSITORY = 'docker.io/pl3lee/uwplan'
 RELEASE = STATE / 'release.env'
-COMPOSE = ['docker', 'compose', '-p', 'uwplan-production', '-f', str(ROOT / 'compose.yaml')]
+COMPOSE = ['docker', 'compose', '-p', 'uwplan-production']
+ARCHITECTURE = 'amd64'
+READINESS_URL = 'http://127.0.0.1:5002/api/ready'
+READINESS_ATTEMPTS = 60
+READINESS_INTERVAL = 2
 
 
 @dataclass(frozen=True)
@@ -75,9 +79,8 @@ def run(args, **kwargs):
 
 
 def compose(env, *args):
-    command = COMPOSE
-    if Release.decode(env.read_bytes()).web_digest:
-        command = COMPOSE[:-1] + [str(ROOT / 'compose.rewrite.yaml')]
+    filename = 'compose.rewrite.yaml' if Release.decode(env.read_bytes()).web_digest else 'compose.yaml'
+    command = COMPOSE + ['-f', str(ROOT / filename)]
     return run(command + ['--env-file', str(env), *args])
 
 
@@ -90,9 +93,9 @@ def atomic_write(path, data):
 
 
 def ready(digest, revision, web_digest=None):
-    for _ in range(60):
+    for _ in range(READINESS_ATTEMPTS):
         try:
-            with urllib.request.urlopen('http://127.0.0.1:5002/api/ready', timeout=3) as response:
+            with urllib.request.urlopen(READINESS_URL, timeout=3) as response:
                 data = json.load(response)
                 web_matches = not web_digest or (
                     response.headers.get('X-UWPlan-Web-Release-Digest') == web_digest and
@@ -101,7 +104,7 @@ def ready(digest, revision, web_digest=None):
                 return True
         except Exception:
             pass
-        time.sleep(2)
+        time.sleep(READINESS_INTERVAL)
     return False
 
 
@@ -122,9 +125,9 @@ def deploy(digest, revision, web_digest=None):
         old_release = Release.decode(previous)
         new_release = Release(digest, revision, web_digest)
         for image in new_release.images:
-            run(['docker', 'pull', '--platform', 'linux/amd64', image])
+            run(['docker', 'pull', '--platform', f'linux/{ARCHITECTURE}', image])
             metadata = json.loads(run(['docker', 'image', 'inspect', image]).stdout)[0]
-            if metadata['Architecture'] != 'amd64' or metadata['Config']['Labels'].get('org.opencontainers.image.revision') != revision:
+            if metadata['Architecture'] != ARCHITECTURE or metadata['Config']['Labels'].get('org.opencontainers.image.revision') != revision:
                 raise RuntimeError('Image architecture or source revision mismatch')
         candidate = STATE / 'candidate.env'
         atomic_write(candidate, new_release.encode())

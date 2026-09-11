@@ -1,4 +1,5 @@
 import importlib.util
+import io
 import json
 from pathlib import Path
 import tempfile
@@ -16,6 +17,24 @@ OLD_REVISION = 'd' * 40
 WEB_DIGEST = 'sha256:' + 'e' * 64
 
 class DeploymentTests(unittest.TestCase):
+    def test_readiness_requires_matching_web_and_api_identities(self):
+        cases = [
+            (DIGEST, REVISION, WEB_DIGEST, REVISION, True),
+            (OLD_DIGEST, REVISION, WEB_DIGEST, REVISION, False),
+            (DIGEST, OLD_REVISION, WEB_DIGEST, REVISION, False),
+            (DIGEST, REVISION, OLD_DIGEST, REVISION, False),
+            (DIGEST, REVISION, WEB_DIGEST, OLD_REVISION, False),
+            (DIGEST, REVISION, None, None, False),
+        ]
+        for api_digest, api_revision, web_digest, web_revision, expected in cases:
+            with self.subTest(api_digest=api_digest, api_revision=api_revision, web_digest=web_digest, web_revision=web_revision):
+                def response(*args, **kwargs):
+                    body = io.BytesIO(json.dumps({'status': 'ready', 'release': {'digest': api_digest, 'revision': api_revision}}).encode())
+                    body.headers = {'X-UWPlan-Web-Release-Digest': web_digest, 'X-UWPlan-Web-Release-Revision': web_revision}
+                    return body
+                with patch.object(deploy.urllib.request, 'urlopen', side_effect=response), patch.object(deploy.time, 'sleep'):
+                    self.assertEqual(deploy.ready(DIGEST, REVISION, WEB_DIGEST), expected)
+
     def test_paired_command_accepts_only_two_digests_and_one_revision(self):
         self.assertEqual(deploy.parse_command(f'deploy-pair {DIGEST} {WEB_DIGEST} {REVISION}'), (DIGEST, REVISION, WEB_DIGEST))
         for command in [
