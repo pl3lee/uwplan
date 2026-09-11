@@ -2,7 +2,6 @@ package schedule
 
 import (
 	"context"
-	"github.com/google/uuid"
 	domainschedule "github.com/pl3lee/uwplan/api/internal/domain/schedule"
 	"github.com/pl3lee/uwplan/api/internal/domain/term"
 	"github.com/pl3lee/uwplan/api/internal/domain/user"
@@ -50,11 +49,8 @@ func (s *ScheduleServiceImpl) Assign(ctx context.Context, input domainschedule.A
 	return s.repository.Assign(ctx, input)
 }
 func (s *ScheduleServiceImpl) RemoveCourse(ctx context.Context, input domainschedule.RemoveCourse) error {
-	if err := input.Reference.Validate(); err != nil {
+	if err := input.Validate(); err != nil {
 		return err
-	}
-	if input.CourseID == uuid.Nil {
-		return domainschedule.ErrInvalid
 	}
 	return s.repository.RemoveCourse(ctx, input)
 }
@@ -65,11 +61,8 @@ func (s *ScheduleServiceImpl) GetTermRange(ctx context.Context, actor user.User)
 	return s.repository.GetTermRange(ctx, actor)
 }
 func (s *ScheduleServiceImpl) ChangeTermRange(ctx context.Context, input domainschedule.TermRangeChange) error {
-	if input.UserID == "" {
-		return domainschedule.ErrInvalid
-	}
-	if _, err := input.Range.Terms(); err != nil {
-		return domainschedule.ErrInvalid
+	if err := input.Validate(); err != nil {
+		return err
 	}
 	return s.repository.ChangeTermRange(ctx, input)
 }

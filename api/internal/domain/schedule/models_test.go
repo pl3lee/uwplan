@@ -43,6 +43,12 @@ func TestScheduleMutationValidation(t *testing.T) {
 		{"valid assignment", (schedule.Assign{Reference: ref, CourseID: id, Term: term.Term{Season: term.Fall, Year: 2027}}).Validate, true},
 		{"invalid term", (schedule.Assign{Reference: ref, CourseID: id, Term: term.Term{Season: "Summer", Year: 2027}}).Validate, false},
 		{"missing course", (schedule.Assign{Reference: ref, Term: term.Term{Season: term.Fall, Year: 2027}}).Validate, false},
+		{"valid removal", (schedule.RemoveCourse{Reference: ref, CourseID: id}).Validate, true},
+		{"removal without course", (schedule.RemoveCourse{Reference: ref}).Validate, false},
+		{"removal without owner", (schedule.RemoveCourse{CourseID: id}).Validate, false},
+		{"valid range", (schedule.TermRangeChange{UserID: "user", Range: term.Range{Start: term.Term{Season: term.Fall, Year: 2026}, End: term.Term{Season: term.Fall, Year: 2031}}}).Validate, true},
+		{"range without owner", (schedule.TermRangeChange{Range: term.Range{Start: term.Term{Season: term.Fall, Year: 2026}, End: term.Term{Season: term.Fall, Year: 2031}}}).Validate, false},
+		{"reversed range", (schedule.TermRangeChange{UserID: "user", Range: term.Range{Start: term.Term{Season: term.Fall, Year: 2031}, End: term.Term{Season: term.Fall, Year: 2026}}}).Validate, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			err := tc.validate()

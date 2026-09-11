@@ -80,6 +80,26 @@ func (a Assign) Validate() error {
 	return nil
 }
 
+func (r RemoveCourse) Validate() error {
+	if err := r.Reference.Validate(); err != nil {
+		return err
+	}
+	if r.CourseID == uuid.Nil {
+		return ErrInvalid
+	}
+	return nil
+}
+
+func (c TermRangeChange) Validate() error {
+	if c.UserID == "" {
+		return ErrInvalid
+	}
+	if _, err := c.Range.Terms(); err != nil {
+		return ErrInvalid
+	}
+	return nil
+}
+
 func (c Collection) ValidateRemoval(id uuid.UUID) error {
 	found := false
 	for _, item := range c.Schedules {
