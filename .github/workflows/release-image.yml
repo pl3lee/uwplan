@@ -14,9 +14,6 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  e2e:
-    uses: ./.github/workflows/browser-tests.yml
-
   api:
     uses: ./.github/workflows/api-check.yml
 
@@ -27,24 +24,13 @@ jobs:
     uses: ./.github/workflows/rewrite-images.yml
 
   release:
-    needs: [e2e, api, web, images]
+    needs: [api, web, images]
     runs-on: ubuntu-latest
     outputs:
       api_digest: ${{ steps.api.outputs.digest }}
       web_digest: ${{ steps.web.outputs.digest }}
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-          cache: npm
-
-      - run: npm ci
-      - run: SKIP_ENV_VALIDATION=1 npm run check
-      - run: SKIP_ENV_VALIDATION=1 npm test -- --runInBand
-      - run: node --import tsx --test tests/github-issuer.test.mjs
-      - run: python3 -m unittest discover -s tests -p test_production_deploy.py
 
       - name: Derive reproducible build timestamp
         id: source
@@ -122,10 +108,12 @@ jobs:
             --arg revision "$RELEASE_REVISION" \
             '{schemaVersion: 2, revision: $revision, api: {image: $api_image, digest: $api_digest, manifestReference: ($api_image + "@" + $api_digest)}, web: {image: $web_image, digest: $web_digest, manifestReference: ($web_image + "@" + $web_digest)}}' \
             > release-manifest.json
-          echo "### Immutable UWPlan release" >> "$GITHUB_STEP_SUMMARY"
-          echo '```json' >> "$GITHUB_STEP_SUMMARY"
-          cat release-manifest.json >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "### Immutable UWPlan release"
+            echo '```json'
+            cat release-manifest.json
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@v4
         with:

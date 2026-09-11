@@ -3,12 +3,9 @@
 React Router SSR application with React, TypeScript, Vite, Tailwind, Base UI,
 TanStack Query, and an Orval-generated Huma client.
 
-The rewrite is in progress. Public pages, the sign-in entry point, course
-selection, scheduling, template creation/copying/management, and administration
-are ported, including shared OAuth browser-provider parity. Deployment and live
-telemetry rehearsals are still pending. Production continues
-to use the existing application until the cutover checks in
-[`docs/rewrite-plan.md`](../docs/rewrite-plan.md) pass.
+Public pages, authentication, selection, scheduling, templates, and administration
+use the Go API. Paired admission and rollback are covered by the production
+rehearsal. Track live verification in [`docs/rewrite-plan.md`](../docs/rewrite-plan.md).
 
 ## Development
 

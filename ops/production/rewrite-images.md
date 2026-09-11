@@ -1,9 +1,7 @@
 # Replacement release artifacts
 
-The Go API and React Router server have separate production images. This stage
-builds and checks them without changing the current production deployment path.
-Paired immutable manifests, host admission, and rollback must be rehearsed before
-cutover, as required by `docs/rewrite-plan.md`.
+The Go API and React Router server have separate production images. CI builds and checks them before paired publication and admission.
+The rollback rehearsal uses the retained immutable legacy production artifact.
 
 Build from the repository root:
 

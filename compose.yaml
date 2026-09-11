@@ -1,129 +1,27 @@
-name: uwplan
-
-x-application-environment: &application-environment
-  env_file:
-    - path: ${UWPLAN_ENV_FILE:?Set UWPLAN_ENV_FILE to the protected application environment file}
-      required: true
-  environment:
-    RELEASE_DIGEST: ${RELEASE_DIGEST:?Set RELEASE_DIGEST to the deployed manifest digest}
-    RELEASE_REVISION: ${RELEASE_REVISION:?Set RELEASE_REVISION to the source revision}
-    OTEL_EXPORTER_OTLP_ENDPOINT: http://alloy:4318
-    OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: http://alloy:4318/v1/metrics
-    OTEL_METRIC_EXPORT_INTERVAL: "10000"
-
+name: uwplan-development
 services:
-  app:
-    <<: *application-environment
-    image: ${UWPLAN_IMAGE:?Set UWPLAN_IMAGE to an immutable application image reference}
-    init: true
-    restart: unless-stopped
-    mem_limit: 256m
-    ports:
-      - target: 5000
-        published: "5000"
-        host_ip: 127.0.0.1
-        protocol: tcp
-    depends_on:
-      db:
-        condition: service_healthy
-      alloy:
-        condition: service_healthy
-    stop_grace_period: 30s
-    networks:
-      - runtime
-    logging:
-      driver: syslog
-      options:
-        syslog-address: udp://127.0.0.1:1514
-        syslog-format: rfc5424micro
-        tag: uwplan
-
   db:
-    image: docker.io/library/postgres:16.14-bookworm@sha256:92620daddcd947f8d5ab5ba66e848702fe443d87fed30c4cea8e389fd78dfc55
-    command:
-      - postgres
-      - -c
-      - shared_buffers=32MB
-      - -c
-      - max_connections=30
-      - -c
-      - work_mem=2MB
-      - -c
-      - maintenance_work_mem=16MB
-    restart: unless-stopped
-    mem_limit: 160m
+    image: postgres:16.14-bookworm
     environment:
       POSTGRES_DB: uwplan
-      POSTGRES_USER: uwplan_app
-      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
-    secrets:
-      - postgres_password
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+      POSTGRES_PASSWORD: uwplan-local
+    ports: ["127.0.0.1:5432:5432"]
+    volumes: ["postgres_data:/var/lib/postgresql/data"]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready --username=uwplan_app --dbname=uwplan"]
-      interval: 5s
-      timeout: 3s
-      start_period: 10s
-      retries: 12
-    stop_grace_period: 60s
-    networks:
-      - runtime
-
-  migrator:
-    <<: *application-environment
-    image: ${UWPLAN_IMAGE:?Set UWPLAN_IMAGE to an immutable application image reference}
-    profiles: [migration]
-    init: true
-    restart: "no"
-    command: ["node", "/app/ops/deploy/migrate-release.mjs"]
-    depends_on:
-      db:
-        condition: service_healthy
-    networks:
-      - runtime
-
-  alloy:
-    image: docker.io/grafana/alloy:v1.18.0@sha256:491b0578c04983fd54fe99b587b6fab4404dc46d0dc16677bd6b00cc1140b308
-    restart: unless-stopped
-    mem_limit: 128m
-    command:
-      - run
-      - --server.http.listen-addr=0.0.0.0:12345
-      - --storage.path=/var/lib/alloy/data
-      - /etc/alloy/config.alloy
-    env_file:
-      - path: ${UWPLAN_ALLOY_ENV_FILE:?Set UWPLAN_ALLOY_ENV_FILE to the protected observability environment file}
-        required: true
-    ports:
-      - target: 1514
-        published: "1514"
-        host_ip: 127.0.0.1
-        protocol: udp
-    volumes:
-      - ./ops/alloy/config.alloy:/etc/alloy/config.alloy:ro
-      - alloy_data:/var/lib/alloy/data
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d uwplan"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+  redis:
+    image: redis:7@sha256:71da9275c5f3fcb97d0fa0c8c5b36cc995327265420f17a04bfd544f458059f7
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "64mb", "--maxmemory-policy", "noeviction"]
+    ports: ["127.0.0.1:6379:6379"]
+    volumes: ["redis_data:/data"]
     healthcheck:
-      test:
-        - CMD
-        - /bin/bash
-        - -ec
-        - "exec 3<>/dev/tcp/127.0.0.1/12345; printf 'GET /-/ready HTTP/1.0\\r\\n\\r\\n' >&3; IFS=$'\\r' read -r status <&3; [[ \"$$status\" == *\" 200 \"* ]]"
-      interval: 15s
-      timeout: 5s
-      start_period: 10s
-      retries: 3
-    networks:
-      - runtime
-
-secrets:
-  postgres_password:
-    file: ${POSTGRES_PASSWORD_FILE:?Set POSTGRES_PASSWORD_FILE to the protected PostgreSQL password file}
-
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
 volumes:
   postgres_data:
-  alloy_data:
-
-networks:
-  runtime:
-    driver: bridge
+  redis_data:

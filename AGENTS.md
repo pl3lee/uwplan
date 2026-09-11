@@ -18,9 +18,9 @@
 - Keep intermediate releases deployable. Migrations must preserve compatibility
   with the retained rollback release; verify both legacy upgrade and empty setup.
 - Keep browser behavior assertions across implementations. Isolate test data and
-  provider fixtures from production. Run Next-based HTTP/browser suites serially
-  in a checkout because they share `.next` output.
+  provider fixtures from production. Run generation before checks that consume generated files; do not
+  build concurrently with browser tests in the same checkout.
 - Before changing deployment or observability, read `ops/production/README.md`
-  and the relevant files under `ops/deploy/` and `ops/observability/`.
+  and `ops/production/paired-releases.md`.
 - Keep generated artifacts checked in and reproducible. Complete the relevant
   test, build, generation, and deployment checks before merging.

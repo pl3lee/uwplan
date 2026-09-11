@@ -59,8 +59,8 @@ selected free course. The browser baseline asserts the visible result before
 reloading, so it detects this failure rather than accepting persistence alone.
 
 The legacy baseline uses the development server to capture intended behavior.
-`E2E_PRODUCTION=1 npm run test:e2e` preserves a reproduction against the legacy
-production build. Explicit router refreshes did not reliably fix this failure
+The pre-cleanup Git history retains the legacy production reproduction with
+`E2E_PRODUCTION=1 npm run test:e2e`. Explicit router refreshes did not reliably fix this failure
 and were removed. The production-only refresh failure remains unresolved in the
 legacy runtime; it is not accepted as successful behavior for the replacement.
 Run the complete unchanged behavior suite against the replacement production
@@ -79,7 +79,7 @@ legacy action responses. Template creation/copy/rename/delete, owned-plan visibi
 and admin cross-owner rename now have replacement implementations too. The
 complete 33-case suite also exercises Google/GitHub provisioning and returning
 accounts through the production Go binary and isolated provider transport.
-Run it with `E2E_RUNTIME=go pnpm test:e2e`; CI requires every case. Real provider
+Run it with `pnpm test:e2e`; CI requires every case. Real provider
 sign-in and stored data after application restarts remain cutover/rehearsal checks.
 
 The baseline also found that the drag context generated different accessibility

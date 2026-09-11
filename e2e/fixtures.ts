@@ -7,7 +7,6 @@ import {
 import { randomUUID } from "node:crypto";
 import postgres from "postgres";
 import {
-  isGoRuntime,
   sessionCookieName,
   sessionToken as newSessionToken,
   seedRedisSession,
@@ -41,7 +40,7 @@ export const test = base.extend<Fixtures>({
     const url = process.env.E2E_DATABASE_URL;
     if (!url || new URL(url).pathname !== "/uwplan_e2e") {
       throw new Error(
-        "Use npm run test:e2e; fixtures require the disposable E2E database",
+        "Use pnpm test:e2e; fixtures require the disposable E2E database",
       );
     }
     const sql = postgres(url, { max: 1 });
@@ -60,9 +59,6 @@ export const test = base.extend<Fixtures>({
           await tx`insert into schedule (id, name, plan_id) values (${scheduleId}, 'Default', ${planId})`;
           await tx`insert into user_term_range (user_id, start_term, start_year, end_term, end_year)
             values (${id}, 'Fall', 2026, 'Spring', 2027)`;
-          if (!isGoRuntime)
-            await tx`insert into session (session_token, user_id, expires) values
-            (${sessionToken}, ${id}, ${new Date(Date.now() + (options.expired ? -60_000 : 3_600_000))})`;
           await tx`insert into course (code, name, useful_rating, liked_rating, easy_rating, num_ratings, description)
             values ('CS135', 'Designing Functional Programs', .8, .7, .6, 100, 'Learn functional programming'),
               ('CS136', 'Elementary Algorithm Design', .9, .8, .5, 80, 'Design algorithms'),
@@ -86,8 +82,7 @@ export const test = base.extend<Fixtures>({
             select ${fixed}, 'fixed', id from course where code in ('CS135', 'MATH135')`;
           await tx`insert into course_item (requirement_id, type) values (${free}, 'free')`;
         });
-        if (isGoRuntime)
-          seedRedisSession(id, sessionToken, options.expired ?? false);
+        seedRedisSession(id, sessionToken, options.expired ?? false);
         return { id, scheduleId, templateName, sessionToken };
       });
     } finally {
@@ -131,8 +126,7 @@ export async function mutate(page: Page, action: () => Promise<unknown>) {
   // Mutation responses acknowledge the write. The flow then asserts rendered
   // state and reloads it; it does not rely on optimistic updates alone.
   expect(response.status()).toBeLessThan(500);
-  // The legacy UI can repaint from an earlier action while another is pending.
-  // Settle the action and its refresh before the next user interaction.
+  // Settle the mutation and query refresh before the next user interaction.
   await page.waitForLoadState("networkidle");
 }
 

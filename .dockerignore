@@ -1,9 +1,7 @@
 .git
 .github
-.next
 .env*
 **/.env*
-Dockerfile*
 README.md
 coverage
 node_modules

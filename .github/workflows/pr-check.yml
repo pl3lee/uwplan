@@ -4,148 +4,19 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
-  e2e:
-    uses: ./.github/workflows/browser-tests.yml
-
-  lint:
+  workflow:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-go@v6
         with:
-          node-version: "24"
-      - name: Cache node modules
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-      - run: npm ci
-      - run: SKIP_ENV_VALIDATION=1 npm run check
-
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-      - name: Cache node modules
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-      - run: npm ci
-      # HTTP suites start Next.js against the same .next directory.
-      - run: SKIP_ENV_VALIDATION=1 npm run test -- --runInBand
-      - run: node --import tsx --test tests/github-issuer.test.mjs
-      - run: python3 -m unittest discover -s tests -p test_production_deploy.py
-
-  image:
-    needs: [lint, test, e2e]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Derive reproducible build timestamp
-        id: source
-        run: echo "epoch=$(git show -s --format=%ct HEAD)" >> "$GITHUB_OUTPUT"
-
-      - uses: docker/setup-buildx-action@v3
-
-      - name: Build the production candidate once (loaded, non-pushed)
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          build-args: |
-            RELEASE_REVISION=${{ github.sha }}
-            SOURCE_DATE_EPOCH=${{ steps.source.outputs.epoch }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          outputs: type=docker,rewrite-timestamp=true
-          platforms: linux/amd64
-          provenance: false
-          sbom: false
-          tags: uwplan-ci:candidate
-
-      # Next.js generates action and preview security keys for every clean build.
-      # Validate one immutable candidate and exercise that same artifact below.
-      - name: Validate candidate platform and source identity
-        env:
-          EXPECTED_REVISION: ${{ github.sha }}
-        run: |
-          docker image inspect uwplan-ci:candidate | jq -e --arg revision "$EXPECTED_REVISION" '
-            .[0].Architecture == "amd64" and
-            .[0].Os == "linux" and
-            .[0].Config.Labels["org.opencontainers.image.revision"] == $revision
-          '
-          docker image inspect --format '{{.Id}}' uwplan-ci:candidate >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Probe the production container and redacted logs
-        env:
-          EXPECTED_DIGEST: sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-          RELEASE_REVISION: ${{ github.sha }}
-        run: |
-          CONTAINER=uwplan-pr-health
-          DB_SENTINEL=ci-database-secret-must-not-leak
-          LIVE_BODY="$RUNNER_TEMP/uwplan-live.json"
-          READY_BODY="$RUNNER_TEMP/uwplan-ready.json"
-          CONTAINER_LOG="$RUNNER_TEMP/uwplan-container.log"
-          cleanup() {
-            docker logs "$CONTAINER" > "$CONTAINER_LOG" 2>&1 || true
-            docker rm --force "$CONTAINER" >/dev/null 2>&1 || true
-          }
-          trap cleanup EXIT
-
-          docker run --detach --name "$CONTAINER" --platform linux/amd64 \
-            --publish 127.0.0.1::5000 \
-            --env AUTH_GITHUB_ID=test-github-id \
-            --env AUTH_GITHUB_SECRET=test-github-secret \
-            --env AUTH_GOOGLE_ID=test-google-id \
-            --env AUTH_GOOGLE_SECRET=test-google-secret \
-            --env AUTH_SECRET=test-auth-secret \
-            --env "DATABASE_URL=postgresql://uwplan:${DB_SENTINEL}@127.0.0.1:1/uwplan" \
-            --env "RELEASE_DIGEST=$EXPECTED_DIGEST" \
-            --env "RELEASE_REVISION=$RELEASE_REVISION" \
-            uwplan-ci:candidate
-
-          HOST_PORT=$(docker port "$CONTAINER" 5000/tcp | awk -F: '{print $NF}')
-          LIVE_CODE=""
-          for attempt in {1..30}; do
-            LIVE_CODE=$(curl --silent --show-error --output "$LIVE_BODY" \
-              --write-out '%{http_code}' "http://127.0.0.1:${HOST_PORT}/api/live" || true)
-            [[ "$LIVE_CODE" == "200" ]] && break
-            sleep 1
-          done
-          [[ "$LIVE_CODE" == "200" ]]
-          jq -e '. == {status: "live"}' "$LIVE_BODY"
-
-          READY_CODE=$(curl --silent --show-error --output "$READY_BODY" \
-            --write-out '%{http_code}' "http://127.0.0.1:${HOST_PORT}/api/ready")
-          [[ "$READY_CODE" == "503" ]]
-          jq -e --arg digest "$EXPECTED_DIGEST" --arg revision "$RELEASE_REVISION" '
-            .status == "unready" and
-            .release == {digest: $digest, revision: $revision} and
-            .dependencies == {database: "unavailable"}
-          ' "$READY_BODY"
-
-          sleep 1
-          docker logs "$CONTAINER" > "$CONTAINER_LOG" 2>&1
-          grep --fixed-strings '"event":"health.request"' "$CONTAINER_LOG"
-          if grep --fixed-strings --quiet "$DB_SENTINEL" \
-            "$LIVE_BODY" "$READY_BODY" "$CONTAINER_LOG"; then
-            echo "Database credential sentinel leaked from the container" >&2
-            exit 1
-          fi
-
-      - name: Exercise the production Compose stack
-        env:
-          UWPLAN_IMAGE: uwplan-ci:candidate
-          COMPOSE_PROJECT_NAME: uwplan-ci-${{ github.run_id }}-${{ github.run_attempt }}
-        run: bash tests/production-stack.sh
+          go-version-file: api/go.mod
+          cache-dependency-path: api/go.sum
+      - name: Validate workflow contracts
+        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
+      - name: Check release admission failure paths
+        run: python3 -m unittest discover -s tests -p test_production_deploy.py
