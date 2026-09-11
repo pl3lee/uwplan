@@ -34,19 +34,20 @@ request authorization independently of what the UI exposes.
 
 | Surface | Verification |
 | --- | --- |
-| `/api/live`, `/api/ready` | Existing HTTP/production-stack tests; liveness during DB failure, dependency readiness and release identity |
-| Rehearsal readiness control | Existing HTTP tests; retain access controls and production gating |
-| Migrations, backups and deployment | Existing deployment tests plus legacy-to-Go migration, restore, and paired-image rollback rehearsal |
+| `/api/live`, `/api/ready` | Go health/telemetry tests and `tests/rewrite-images.sh`; liveness during dependency failure, dependency readiness, redaction, and both release identities |
+| Rehearsal readiness failure | `tests/paired-production-stack.py` uses a deliberately unhealthy test artifact to exercise real admission/rollback; no production readiness-control endpoint or auth bypass |
+| Migrations, backups and deployment | `tests/test_production_deploy.py`, Go schema adoption tests, and the real paired migration/rollback/usable-restore rehearsal |
 | Course refresh/seed commands | Port CLI entry points and test a controlled upstream fixture; retain the real catalog |
-| Telemetry | Existing contracts plus unique web/API events found in Grafana after deployment |
+| Telemetry | Go/web OTLP and redaction tests plus unique production web/API events, linked Tempo spans, and fresh Mimir counters; see `migration-verification.md` |
 
-## Gaps to resolve
+## Baseline findings and replacement coverage
 
-- Source inspection found schedule assignment/removal/export actions authenticate
-  users without checking schedule ownership. Direct-request regression tests must
-  catch cross-owner access; UI-only visibility tests are insufficient.
-- Verify duplicate course-selection cleanup and template-copy behavior explicitly
-  when porting services.
+- Legacy schedule assignment/removal/export actions authenticated users without
+  checking schedule ownership. The replacement service and repository enforce
+  ownership, and direct API tests reject cross-owner assignment, removal, and CSV
+  requests with the same 404 response used for unknown schedules.
+- Duplicate course-selection cleanup is covered by service/repository tests;
+  template copying remains in the shared browser assertions.
 - The existing course tables offer sorting, and the template selector offers
   name search. There is no general course-search/filter control to preserve.
 
