@@ -81,7 +81,12 @@ def run(args, **kwargs):
 def compose(env, *args):
     filename = 'compose.rewrite.yaml' if Release.decode(env.read_bytes()).web_digest else 'compose.yaml'
     command = COMPOSE + ['-f', str(ROOT / filename)]
-    return run(command + ['--env-file', str(env), *args])
+    # Shell variables outrank --env-file in Compose. Only the admitted file may
+    # choose image references or release identity, including during rollback.
+    release_variables = {'UWPLAN_IMAGE', 'UWPLAN_API_IMAGE', 'UWPLAN_WEB_IMAGE',
+                         'RELEASE_DIGEST', 'RELEASE_WEB_DIGEST', 'RELEASE_REVISION'}
+    environment = {key: value for key, value in os.environ.items() if key not in release_variables}
+    return run(command + ['--env-file', str(env), *args], env=environment)
 
 
 def atomic_write(path, data):

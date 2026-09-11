@@ -90,17 +90,18 @@ def main():
         admission.READINESS_ATTEMPTS = 60
         admission.READINESS_INTERVAL = 0.25
         try:
-            command('docker', 'create', '--name', registry_name, '-p', '127.0.0.1::5000', '--memory', '96m', REGISTRY)
+            registry_port = port()
+            command('docker', 'create', '--name', registry_name, '--network', 'host',
+                    '-e', f'REGISTRY_HTTP_ADDR=127.0.0.1:{registry_port}', '--memory', '96m', REGISTRY)
             registry_created = True
             command('docker', 'start', registry_name)
-            registry_port = command('docker', 'port', registry_name, '5000/tcp').decode().strip().rsplit(':', 1)[1]
             repository = f'127.0.0.1:{registry_port}/uwplan'
             admission.REPOSITORY = repository
             for attempt in range(40):
                 try:
-                    with urllib.request.urlopen(f'http://127.0.0.1:{registry_port}/v2/', timeout=1):
-                        break
-                except OSError:
+                    command('docker', 'exec', registry_name, 'wget', '-qO-', f'http://127.0.0.1:{registry_port}/v2/')
+                    break
+                except RuntimeError:
                     time.sleep(0.25)
             else:
                 raise RuntimeError('Disposable registry did not start')
@@ -111,6 +112,7 @@ def main():
                 owned_tags.append(target)
                 command('docker', 'push', target)
                 reference = next(value for value in metadata(target)['RepoDigests'] if value.startswith(f'{repository}{suffix}@'))
+                assert metadata(reference)['Id'] == metadata(source)['Id'], 'Published digest must identify the source image'
                 return reference.split('@', 1)[1]
 
             legacy_digest = publish(sources['legacy'], '', 'legacy')
@@ -153,10 +155,10 @@ def main():
             command('docker', 'exec', '-e', f'REDISCLI_AUTH={redis_password}', redis, 'redis-cli', 'SET',
                     f'uwplan:session:{token_hash}', session, 'EX', '3600')
 
-            def request(path, body=None, legacy_cookie=False):
+            def request(path, body=None, legacy_cookie=False, method=None):
                 cookie = 'authjs.session-token=legacy-release-session' if legacy_cookie else f'uwplan_session={token}'
                 payload = json.dumps(body).encode() if body is not None else None
-                req = urllib.request.Request(f'{origin}{path}', data=payload,
+                req = urllib.request.Request(f'{origin}{path}', data=payload, method=method,
                     headers={'Cookie': cookie, 'Origin': origin, 'Content-Type': 'application/json'})
                 with urllib.request.urlopen(req, timeout=10) as response:
                     return response.status, response.read()
@@ -188,7 +190,9 @@ def main():
                     try:
                         with urllib.request.urlopen(admission.READINESS_URL, timeout=1) as response:
                             identity = json.load(response).get('release')
+                            web_identity = response.headers.get('X-UWPlan-Web-Release-Digest')
                         if identity == {'digest': bad.digest, 'revision': bad.revision}:
+                            assert web_identity == 'deliberately-invalid-release', f'Fault image did not serve the request: {web_identity}'
                             status, content = request('/api/v1/schedules', {'name': 'Written by rejected candidate'})
                             assert status == 201
                             written.append(json.loads(content))
@@ -238,6 +242,27 @@ def main():
             for database in ('uwplan', 'restore_probe'):
                 assert json.loads(sql((FIXTURES / 'relationships.sql').read_text(), database)) == expected
             print('Backup restoration preserves account links, ownership, templates, choices, assignments, and candidate writes', flush=True)
+            sql('GRANT USAGE ON SCHEMA public TO uwplan_app; '
+                'GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO uwplan_app; '
+                'GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO uwplan_app;', 'restore_probe')
+            admission.compose(admission.RELEASE, 'stop', 'app')
+            api_environment = config / 'api.env'
+            api_environment.write_text(api_environment.read_text().replace('@db:5432/uwplan', '@db:5432/restore_probe'))
+            admission.atomic_write(admission.RELEASE, pair.encode())
+            admission.compose(admission.RELEASE, 'up', '-d', '--no-deps', '--force-recreate', 'api', 'web')
+            assert admission.ready(pair.digest, pair.revision, pair.web_digest)
+            restored_schedules = json.loads(request('/api/v1/schedules')[1])['schedules']
+            expected_schedules = [*schedules['schedules'], written[0]]
+            assert sorted(restored_schedules, key=lambda item: item['id']) == sorted(expected_schedules, key=lambda item: item['id'])
+            assert request('/api/v1/schedules/22222222-2222-4222-8222-222222222222/export')[1].decode() == csv
+            status, content = request('/api/v1/schedules', {'name': 'Restored database write probe'})
+            assert status == 201
+            restored_write = json.loads(content)
+            assert restored_write in json.loads(request('/api/v1/schedules')[1])['schedules']
+            assert request(f'/api/v1/schedules/{restored_write["id"]}', method='DELETE')[0] == 204
+            assert sorted(json.loads(request('/api/v1/schedules')[1])['schedules'], key=lambda item: item['id']) == sorted(expected_schedules, key=lambda item: item['id'])
+            print('Restored database supports authenticated application reads, CSV export, writes, and deletion through the restricted role', flush=True)
+
         finally:
             cleanup_errors = []
 

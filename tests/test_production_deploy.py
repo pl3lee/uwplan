@@ -17,6 +17,19 @@ OLD_REVISION = 'd' * 40
 WEB_DIGEST = 'sha256:' + 'e' * 64
 
 class DeploymentTests(unittest.TestCase):
+    def test_compose_uses_admitted_file_instead_of_shell_image_overrides(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            release = Path(temporary) / 'release.env'
+            release.write_bytes(deploy.Release(DIGEST, REVISION, WEB_DIGEST).encode())
+            overrides = {key: 'untrusted-override' for key in (
+                'UWPLAN_IMAGE', 'UWPLAN_API_IMAGE', 'UWPLAN_WEB_IMAGE',
+                'RELEASE_DIGEST', 'RELEASE_WEB_DIGEST', 'RELEASE_REVISION')}
+            with patch.dict(deploy.os.environ, {**overrides, 'PATH': '/usr/bin'}, clear=True), patch.object(deploy, 'run') as run:
+                deploy.compose(release, 'up', '-d', 'api', 'web')
+            self.assertEqual(run.call_args.kwargs['env'], {'PATH': '/usr/bin'})
+            self.assertIn(str(release), run.call_args.args[0])
+            self.assertIn(str(deploy.ROOT / 'compose.rewrite.yaml'), run.call_args.args[0])
+
     def test_readiness_requires_matching_web_and_api_identities(self):
         cases = [
             (DIGEST, REVISION, WEB_DIGEST, REVISION, True),
