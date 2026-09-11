@@ -41,6 +41,10 @@ test("production web exports safe correlated requests and forwards API trace con
       res
         .writeHead(200, { "content-type": "application/json" })
         .end('{"status":"live"}');
+    } else if (req.headers.cookie?.includes("private-canary")) {
+      res
+        .writeHead(500, { "content-type": "application/json" })
+        .end('{"title":"private-canary","status":500}');
     } else {
       res
         .writeHead(401, { "content-type": "application/json" })
@@ -82,6 +86,14 @@ test("production web exports safe correlated requests and forwards API trace con
     status: 502,
     detail: "API unavailable",
   });
+  const renderFailure = await fetch(`${origin}/signin?code=private-canary`, {
+    headers: {
+      Cookie: "uwplan_session=private-canary",
+      traceparent: `00-${"6".repeat(32)}-${"7".repeat(16)}-01`,
+    },
+  });
+  assert.equal(renderFailure.status, 500);
+  assert.ok(!(await renderFailure.text()).includes("private-canary"));
   child.kill("SIGTERM");
   const [exitCode] = await exited;
   assert.equal(exitCode, 0);
@@ -113,6 +125,15 @@ test("production web exports safe correlated requests and forwards API trace con
     },
   );
   assert.equal(requestLog.record.body.stringValue, "http.request");
+  assert.ok(
+    records.some(
+      ({ record }) =>
+        record.body.stringValue === "render.failed" &&
+        record.traceId === "6".repeat(32) &&
+        record.severityNumber === 17,
+    ),
+    "loader/render failure reaches collector with request context",
+  );
   const failedLogs = records.filter(
     ({ record }) => record.traceId === "4".repeat(32),
   );
@@ -219,6 +240,39 @@ test("fatal startup errors reach the collector before the web process exits", {
   assert.equal(records[0].severityNumber, 17);
   assert.ok(!JSON.stringify(payloads).includes("private-canary"));
   assert.ok(!output().includes("private-canary"));
+});
+
+test("collector error bodies stay redacted when OTEL_LOG_LEVEL is configured", {
+  timeout: 10_000,
+}, async (t) => {
+  let requests = 0;
+  const collector = createServer((req, res) => {
+    requests++;
+    req.resume();
+    res.writeHead(400).end("private-canary");
+  });
+  const collectorOrigin = await listen(collector);
+  t.after(() => {
+    collector.closeAllConnections();
+    collector.close();
+  });
+  const { origin, child, exited, output } = await startWeb(
+    t,
+    collectorOrigin,
+    "http://127.0.0.1:1",
+    {
+      OTEL_LOG_LEVEL: "error",
+    },
+  );
+  await waitReady(origin);
+  child.kill("SIGTERM");
+  assert.equal((await exited)[0], 0);
+  assert.ok(requests > 0);
+  assert.ok(
+    !output().includes("private-canary"),
+    "collector response bodies never reach application logs",
+  );
+  assert.match(output(), /telemetry\.(export|shutdown)\.failed/);
 });
 
 async function startWeb(t, collectorOrigin, apiOrigin, overrides = {}) {

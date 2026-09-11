@@ -81,16 +81,18 @@ export function setupObservability() {
   // Exporter diagnostics may contain endpoint credentials. Keep only a fixed
   // local event, and never route exporter errors back through the exporter.
   const ignore = () => {};
-  diag.setLogger(
-    {
-      error: () => localLog("error", "telemetry.export.failed"),
-      warn: ignore,
-      info: ignore,
-      debug: ignore,
-      verbose: ignore,
-    },
-    DiagLogLevel.ERROR,
-  );
+  const diagnosticLogger = {
+    error: () => localLog("error", "telemetry.export.failed"),
+    warn: ignore,
+    info: ignore,
+    debug: ignore,
+    verbose: ignore,
+  };
+  const diagnosticOptions = {
+    logLevel: DiagLogLevel.ERROR,
+    suppressOverrideMessage: true,
+  };
+  diag.setLogger(diagnosticLogger, diagnosticOptions);
   const identity = release();
   const batch = {
     maxQueueSize: 512,
@@ -100,6 +102,7 @@ export function setupObservability() {
   };
   const sdk = new NodeSDK({
     autoDetectResources: false,
+    metricReaders: [],
     resource: resourceFromAttributes({
       "service.name": service,
       "service.version": identity.release_digest,
@@ -119,6 +122,9 @@ export function setupObservability() {
       ),
     ],
   });
+  // NodeSDK honors OTEL_LOG_LEVEL by replacing the global diagnostic logger.
+  // Restore redaction before starting any background exports.
+  diag.setLogger(diagnosticLogger, diagnosticOptions);
   sdk.start();
   let stopping;
   return () => {

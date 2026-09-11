@@ -3,17 +3,14 @@ import { createReadableStreamFromReadable } from "@react-router/node";
 import { isbot } from "isbot";
 import { renderToPipeableStream } from "react-dom/server";
 import { type EntryContext, ServerRouter } from "react-router";
+import { logEvent } from "../observability.mjs";
 
 export const streamTimeout = 5000;
 
 export function handleError(error: unknown) {
-  console.error(
-    JSON.stringify({
-      service: "uwplan-web",
-      event: "render.failed",
-      error_type: error instanceof Error ? error.name : "unknown",
-    }),
-  );
+  logEvent("error", "render.failed", {
+    error_type: error instanceof Error ? error.name : "unknown",
+  });
 }
 
 export default function handleRequest(
