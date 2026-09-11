@@ -24,7 +24,7 @@ export function SelectField({
     >
       <Select.Trigger
         aria-label={label}
-        className="flex h-9 min-w-25 items-center justify-between gap-2 rounded-md border bg-background px-3 text-sm shadow-sm outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
+        className="flex h-9 min-w-25 shrink-0 items-center justify-between gap-2 whitespace-nowrap rounded-md border bg-background px-3 text-sm shadow-sm outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
       >
         <Select.Value />
         <Select.Icon aria-hidden="true">

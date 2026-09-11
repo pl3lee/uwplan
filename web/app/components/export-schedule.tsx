@@ -23,6 +23,7 @@ export function ExportSchedule({ id }: { id: string }) {
     <div>
       <Button
         variant="outline"
+        className="w-full md:w-auto"
         disabled={mutation.isPending}
         onClick={() => mutation.mutate()}
       >
