@@ -1,3 +1,4 @@
+import { Dialog } from "@base-ui/react/dialog";
 import { PreviewCard } from "@base-ui/react/preview-card";
 import { DndContext, useDraggable, useDroppable } from "@dnd-kit/core";
 import {
@@ -11,6 +12,8 @@ import type {
 import { usePlanningMutation } from "~/lib/planning-mutation";
 import { cn } from "~/lib/utils";
 import { ApiErrorMessage } from "./api-error";
+import { Button } from "./button";
+import { SelectField } from "./select-field";
 import { termLabels } from "./term-range";
 
 function CourseDetails({ course }: { course: CourseBody }) {
@@ -31,6 +34,31 @@ function CourseDetails({ course }: { course: CourseBody }) {
           ),
       )}
     </div>
+  );
+}
+
+function CourseInfoDialog({ course }: { course: CourseBody }) {
+  return (
+    <Dialog.Root>
+      <Dialog.Trigger
+        render={<Button variant="ghost" size="icon" />}
+        aria-label={`Information about ${course.name}`}
+      >
+        ⓘ
+      </Dialog.Trigger>
+      <Dialog.Portal>
+        <Dialog.Backdrop className="fixed inset-0 z-50 bg-black/50" />
+        <Dialog.Popup className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 space-y-4 rounded-lg border bg-background p-6 shadow-lg">
+          <Dialog.Title className="text-lg font-semibold">
+            {course.code}
+          </Dialog.Title>
+          <CourseDetails course={course} />
+          <Dialog.Close render={<Button variant="outline" />}>
+            Close
+          </Dialog.Close>
+        </Dialog.Popup>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }
 
@@ -145,9 +173,94 @@ export function CourseScheduler({ view }: { view: ScheduleViewResponseBody }) {
       (course) => !assigned.some((item) => item.course.id === course.id),
     ),
   );
+  const allCourses = sort([
+    ...new Map(
+      [...selected, ...assigned.map((item) => item.course)].map((course) => [
+        course.id,
+        course,
+      ]),
+    ).values(),
+  ]);
+  const changeTerm = (courseId: string, term: string) =>
+    mutation.mutate(() =>
+      term === "available"
+        ? removeScheduleCourse(view.schedule.id, courseId)
+        : assignScheduleCourse(view.schedule.id, courseId, { term }),
+    );
   return (
     <>
       <ApiErrorMessage error={mutation.error} />
+      <div className="space-y-4 lg:hidden">
+        <section className="rounded-xl border bg-card shadow">
+          <h2 className="p-6 text-lg font-semibold">Your Selected Courses</h2>
+          <div className="space-y-4 px-6 pb-6">
+            {allCourses.map((course) => {
+              const currentTerm =
+                assigned.find((item) => item.course.id === course.id)?.term ??
+                "available";
+              const options = [
+                { value: "available", label: "Unscheduled" },
+                ...terms.map((value) => ({ value, label: value })),
+              ];
+              if (!options.some((option) => option.value === currentTerm))
+                options.push({ value: currentTerm, label: currentTerm });
+              return (
+                <div
+                  key={course.id}
+                  className="flex items-center justify-between gap-2 rounded-xl border p-4 shadow-sm"
+                >
+                  <div>
+                    <p className="font-medium">
+                      {course.code}
+                      <CourseInfoDialog course={course} />
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {course.name}
+                    </p>
+                  </div>
+                  <SelectField
+                    label={`Term for ${course.code}`}
+                    value={currentTerm}
+                    options={options}
+                    disabled={mutation.isPending}
+                    onChange={(term) => changeTerm(course.id, term)}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </section>
+        {terms.map((term) => {
+          const courses = sort(
+            assigned
+              .filter((item) => item.term === term)
+              .map((item) => item.course),
+          );
+          if (!courses.length) return null;
+          return (
+            <section
+              key={term}
+              aria-label={term}
+              className="rounded-xl border bg-card shadow"
+            >
+              <h2 className="p-6 text-lg font-semibold">{term}</h2>
+              <div className="space-y-2 px-6 pb-6">
+                {courses.map((course) => (
+                  <div key={course.id}>
+                    <p className="font-medium">
+                      {course.code}
+                      <CourseInfoDialog course={course} />
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {course.name}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          );
+        })}
+      </div>
       <div className="hidden lg:block">
         <DndContext
           id={`schedule-${view.schedule.id}`}
@@ -155,11 +268,7 @@ export function CourseScheduler({ view }: { view: ScheduleViewResponseBody }) {
             if (!over || mutation.isPending) return;
             const courseId = String(active.id);
             const term = String(over.id);
-            mutation.mutate(() =>
-              term === "available"
-                ? removeScheduleCourse(view.schedule.id, courseId)
-                : assignScheduleCourse(view.schedule.id, courseId, { term }),
-            );
+            changeTerm(courseId, term);
           }}
         >
           <div className="grid grid-cols-[1fr_3fr] gap-6">
