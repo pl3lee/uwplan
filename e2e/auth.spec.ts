@@ -1,24 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { test, expect } from "./fixtures";
+import { useProviderFixture } from "./provider-browser";
 
 for (const provider of ["Google", "GitHub"]) {
   test(`${provider} callback provisions a user and returns to their saved schedule @smoke`, async ({
     page,
   }) => {
-    // GitHub's built-in authorization endpoint is fixed; all server exchanges
-    // still execute through Auth.js, using the controlled provider transport.
-    await page.route(
-      "https://github.com/login/oauth/authorize**",
-      async (route) => {
-        const url = new URL(route.request().url());
-        // WebKit cannot fulfill intercepted requests with 3xx responses.
-        const target = `${process.env.E2E_OAUTH_ORIGIN}/github/authorize${url.search}`;
-        await route.fulfill({
-          contentType: "text/html",
-          body: `<script>location.replace(${JSON.stringify(target)})</script>`,
-        });
-      },
-    );
+    await useProviderFixture(page);
     const account = `${randomUUID()}@example.test`;
     async function login() {
       await page.goto("/signin");
