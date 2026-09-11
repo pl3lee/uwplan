@@ -10,5 +10,8 @@ export default [
   route("privacy", "routes/privacy.tsx"),
   route("signin", "routes/signin.tsx"),
   route("api/*", "routes/api.proxy.ts"),
-  layout("routes/planning.tsx", [route("select", "routes/select.tsx")]),
+  layout("routes/planning.tsx", [
+    route("select", "routes/select.tsx"),
+    route("schedule", "routes/schedule.tsx"),
+  ]),
 ] satisfies RouteConfig;
