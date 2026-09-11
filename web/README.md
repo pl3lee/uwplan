@@ -4,7 +4,7 @@ React Router SSR application with React, TypeScript, Vite, Tailwind, Base UI,
 TanStack Query, and an Orval-generated Huma client.
 
 The rewrite is in progress. Public pages, the sign-in entry point, and course
-selection are ported. Scheduling, template management, administration, and full
+selection and scheduling are ported. Template management, administration, and full
 browser parity are still pending. Production continues
 to use the existing application until the cutover checks in
 [`docs/rewrite-plan.md`](../docs/rewrite-plan.md) pass.
@@ -79,6 +79,15 @@ It covers academic-plan search/membership, fixed and free choices, selected-cour
 sorting/removal, and persistence after reload. Query invalidation reloads confirmed
 API state after writes. Private loaders forward only authentication cookies,
 responses are not cacheable, and expired API sessions return to sign-in.
-The other shared Playwright assertions
-remain in the repository's `e2e/` directory and must pass against the replacement
+Scheduling uses the same generated client for owned schedules, term ranges,
+assignment/removal, and CSV export. It retains desktop drag/drop and mobile term
+selectors. Schedule lists refresh after writes; deleting the active schedule moves
+to the next owned schedule before refreshing. The original scheduling assertions
+pass on the replacement production build, including exact downloaded CSV content:
+
+```sh
+E2E_RUNTIME=go pnpm test:e2e e2e/scheduling.spec.ts
+```
+
+The other shared Playwright assertions remain in the repository's `e2e/` directory and must pass against the replacement
 production build before it is deployed.
