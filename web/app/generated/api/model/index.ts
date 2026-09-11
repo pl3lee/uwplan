@@ -13,6 +13,8 @@ export * from './courseBodyEasyRating';
 export * from './courseBodyLikedRating';
 export * from './courseBodyNumRatings';
 export * from './courseBodyUsefulRating';
+export * from './courseListResponseBody';
+export * from './courseListResponseBodyCourses';
 export * from './errorDetail';
 export * from './errorModel';
 export * from './errorModelErrors';
