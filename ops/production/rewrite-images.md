@@ -41,5 +41,4 @@ real workloads and telemetry on the shared host.
 
 The test owns and removes its named containers and network. It never mounts a
 production volume or reads production credentials. Failure output includes
-fixture-container logs. The harness requires Docker, Bash, curl, jq, Python 3,
-and ripgrep.
+fixture-container logs. The harness requires Docker, Bash, curl, jq, and Python 3.

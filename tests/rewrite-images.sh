@@ -81,8 +81,6 @@ curl --fail --silent --show-error "$origin/api/ready" | \
   jq -e --arg digest "$digest" --arg revision "$revision" \
   '.status == "ready" and .release == {digest: $digest, revision: $revision}'
 curl --fail --silent --show-error "$origin/signin" > "$work_directory/signin.html"
-rg -q 'Sign in with Google' "$work_directory/signin.html"
-rg -q 'Sign in with GitHub' "$work_directory/signin.html"
 asset_path="$(python3 - "$work_directory/signin.html" <<'PY'
 from html.parser import HTMLParser
 from pathlib import Path
@@ -94,7 +92,10 @@ class Assets(HTMLParser):
         if href.startswith('/assets/') and href.endswith('.js'):
             self.paths.append(href)
 parser = Assets()
-parser.feed(Path(sys.argv[1]).read_text())
+html = Path(sys.argv[1]).read_text()
+assert 'Sign in with Google' in html
+assert 'Sign in with GitHub' in html
+parser.feed(html)
 print(parser.paths[0])
 PY
 )"
