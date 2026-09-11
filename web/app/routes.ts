@@ -13,6 +13,7 @@ export default [
   layout("routes/planning.tsx", [
     route("select", "routes/select.tsx"),
     route("schedule", "routes/schedule.tsx"),
+    route("create/template", "routes/create-template.tsx"),
     route("manage/template", "routes/manage-template.tsx"),
     route("admin", "routes/admin.tsx"),
   ]),

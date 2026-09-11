@@ -1,28 +1,19 @@
 import { AlertDialog } from "@base-ui/react/alert-dialog";
 import { Dialog } from "@base-ui/react/dialog";
 import { useForm } from "@tanstack/react-form";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { deleteTemplate, renameTemplate } from "~/generated/api/client";
 import type { TemplateBody } from "~/generated/api/model";
-import { ApiError } from "~/lib/api-fetch";
 import { useTemplateMutation } from "~/lib/template-management";
 import { ApiErrorMessage } from "./api-error";
 import { Button } from "./button";
+import { TemplateError } from "./template-error";
 
 const popupClass =
   "fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 space-y-4 rounded-lg border bg-background p-6 shadow-lg";
 
-function TemplateError({ error }: { error: unknown }) {
-  return error instanceof ApiError && error.status === 409 ? (
-    <p role="alert" className="text-sm text-destructive">
-      Academic plan name already exists
-    </p>
-  ) : (
-    <ApiErrorMessage error={error} />
-  );
-}
-
 function RenameTemplate({ template }: { template: TemplateBody }) {
+  const descriptionId = useId();
   const [open, setOpen] = useState(false);
   const [unchanged, setUnchanged] = useState(false);
   const mutation = useTemplateMutation();
@@ -102,9 +93,15 @@ function RenameTemplate({ template }: { template: TemplateBody }) {
               </form.Field>
               <form.Field name="description">
                 {(field) => (
-                  <label className="block space-y-2">
-                    <span className="text-sm font-medium">Description</span>
+                  <div className="space-y-2">
+                    <label
+                      htmlFor={descriptionId}
+                      className="block text-sm font-medium"
+                    >
+                      Description
+                    </label>
                     <textarea
+                      id={descriptionId}
                       className="min-h-20 w-full rounded-md border bg-transparent px-3 py-2 text-sm"
                       placeholder="Enter plan description"
                       value={field.state.value}
@@ -113,7 +110,7 @@ function RenameTemplate({ template }: { template: TemplateBody }) {
                         field.handleChange(event.target.value)
                       }
                     />
-                  </label>
+                  </div>
                 )}
               </form.Field>
               {unchanged && (
