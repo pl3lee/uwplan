@@ -9,6 +9,31 @@ permissions:
   contents: read
 
 jobs:
+  planning:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: api/go.mod
+          cache-dependency-path: api/go.sum
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium firefox webkit
+      - name: Verify shared course-selection behavior on the replacement production build
+        run: pnpm test:e2e --grep 'template choices and fixed/free course selections persist|free-course typing preserves suffixes'
+        env:
+          E2E_RUNTIME: go
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-go-${{ github.run_id }}-${{ github.run_attempt }}
+          path: output/playwright-go/
+          retention-days: 7
   web:
     runs-on: ubuntu-latest
     steps:

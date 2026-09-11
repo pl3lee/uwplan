@@ -6,6 +6,12 @@ import {
 } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import postgres from "postgres";
+import {
+  isGoRuntime,
+  sessionCookieName,
+  sessionToken as newSessionToken,
+  seedRedisSession,
+} from "./session-adapter";
 
 export type TestUser = {
   id: string;
@@ -23,6 +29,14 @@ type Fixtures = {
 };
 
 export const test = base.extend<Fixtures>({
+  page: async ({ page }, use) => {
+    // The landing-page demo is external media. Keep its frame deterministic so
+    // the browser load event cannot hang on video advertising requests.
+    await page.route("https://www.youtube.com/embed/**", (route) =>
+      route.fulfill({ contentType: "text/html", body: "<!doctype html><title>Demo video fixture</title>" }),
+    );
+    await use(page);
+  },
   createUser: async ({}, use) => {
     const url = process.env.E2E_DATABASE_URL;
     if (!url || new URL(url).pathname !== "/uwplan_e2e") {
@@ -38,7 +52,7 @@ export const test = base.extend<Fixtures>({
         const scheduleId = randomUUID();
         const templateId = randomUUID();
         const templateName = `Mathematics ${id.slice(0, 8)}`;
-        const sessionToken = randomUUID();
+        const sessionToken = newSessionToken();
         await sql.begin(async (tx) => {
           await tx`insert into "user" (id, name, email, role) values
             (${id}, 'Browser Student', ${`${id}@example.test`}, ${options.admin ? "admin" : "user"})`;
@@ -46,11 +60,14 @@ export const test = base.extend<Fixtures>({
           await tx`insert into schedule (id, name, plan_id) values (${scheduleId}, 'Default', ${planId})`;
           await tx`insert into user_term_range (user_id, start_term, start_year, end_term, end_year)
             values (${id}, 'Fall', 2026, 'Spring', 2027)`;
-          await tx`insert into session (session_token, user_id, expires) values
+          if (!isGoRuntime)
+            await tx`insert into session (session_token, user_id, expires) values
             (${sessionToken}, ${id}, ${new Date(Date.now() + (options.expired ? -60_000 : 3_600_000))})`;
           await tx`insert into course (code, name, useful_rating, liked_rating, easy_rating, num_ratings, description)
             values ('CS135', 'Designing Functional Programs', .8, .7, .6, 100, 'Learn functional programming'),
               ('CS136', 'Elementary Algorithm Design', .9, .8, .5, 80, 'Design algorithms'),
+              ('CS245', 'Logic and Computation', .8, .7, .5, 50, 'Study logic'),
+              ('CS245E', 'Logic and Computation (Enriched)', .9, .8, .4, 20, 'Study enriched logic'),
               ('MATH135', 'Algebra for Honours Mathematics', .7, .6, .4, 60, 'Learn algebra'),
               ('ECON101', 'Introduction to Microeconomics', .6, .5, .8, 40, 'Study markets')
             on conflict (code) do nothing`;
@@ -69,6 +86,8 @@ export const test = base.extend<Fixtures>({
             select ${fixed}, 'fixed', id from course where code in ('CS135', 'MATH135')`;
           await tx`insert into course_item (requirement_id, type) values (${free}, 'free')`;
         });
+        if (isGoRuntime)
+          seedRedisSession(id, sessionToken, options.expired ?? false);
         return { id, scheduleId, templateName, sessionToken };
       });
     } finally {
@@ -82,7 +101,7 @@ export const test = base.extend<Fixtures>({
     await use(async (user, target = context) => {
       await target.addCookies([
         {
-          name: "authjs.session-token",
+          name: sessionCookieName,
           value: user.sessionToken,
           url: baseURL!,
           httpOnly: true,
