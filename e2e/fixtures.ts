@@ -58,6 +58,8 @@ export const test = base.extend<Fixtures>({
           await tx`insert into course (code, name, useful_rating, liked_rating, easy_rating, num_ratings, description)
             values ('CS135', 'Designing Functional Programs', .8, .7, .6, 100, 'Learn functional programming'),
               ('CS136', 'Elementary Algorithm Design', .9, .8, .5, 80, 'Design algorithms'),
+              ('CS245', 'Logic and Computation', .8, .7, .5, 50, 'Study logic'),
+              ('CS245E', 'Logic and Computation (Enriched)', .9, .8, .4, 20, 'Study enriched logic'),
               ('MATH135', 'Algebra for Honours Mathematics', .7, .6, .4, 60, 'Learn algebra'),
               ('ECON101', 'Introduction to Microeconomics', .6, .5, .8, 40, 'Study markets')
             on conflict (code) do nothing`;

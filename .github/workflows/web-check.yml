@@ -25,7 +25,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium firefox webkit
       - name: Verify shared course-selection behavior on the replacement production build
-        run: pnpm test:e2e --grep 'template choices and fixed/free course selections persist'
+        run: pnpm test:e2e --grep 'template choices and fixed/free course selections persist|free-course typing preserves suffixes'
         env:
           E2E_RUNTIME: go
       - uses: actions/upload-artifact@v4

@@ -8,7 +8,7 @@ import {
   type SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import {
   changeFreeCourse,
   removeSelectedCourse,
@@ -311,15 +311,22 @@ function FreeCourseCode({
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => setHydrated(true), []);
   const [value, setValue] = useState(course?.code ?? "");
-  const mutation = usePlanningMutation();
+  const input = useRef<HTMLInputElement>(null);
+  // A valid code may be a prefix of another code. Keep typing uninterrupted,
+  // and serialize this slot's writes so an earlier save cannot win a race.
+  const mutation = usePlanningMutation(`free-course:${slot.id}`);
+  useEffect(() => {
+    if (document.activeElement !== input.current) setValue(course?.code ?? "");
+  }, [course?.code]);
   return (
     <div className="space-y-1">
       <input
+        ref={input}
         aria-label="Course code"
         placeholder="Course code"
         className="h-9 w-28 rounded-md border bg-transparent px-3 py-1 text-sm shadow-sm outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
         value={value}
-        disabled={!hydrated || mutation.isPending}
+        disabled={!hydrated}
         onChange={(event) => {
           const code = event.target.value.replace(/\s+/g, "").toUpperCase();
           setValue(code);
@@ -372,7 +379,7 @@ export function RequirementCourses({
       code:
         slot.type === "free" ? (
           <FreeCourseCode
-            key={`${slot.id}:${course?.id ?? "empty"}`}
+            key={slot.id}
             slot={slot}
             course={course}
             courses={courses}

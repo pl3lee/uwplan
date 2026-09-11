@@ -162,3 +162,48 @@ test("admin can view users and manage templates", async ({
     page.getByText(admin.templateName, { exact: true }),
   ).toBeVisible();
 });
+
+
+test("free-course typing preserves suffixes while a save is delayed @smoke", async ({
+  page,
+  user,
+  signIn,
+}) => {
+  await signIn(user);
+  await page.goto("/select");
+  await chooseTemplate(page, user.templateName);
+  const input = page.getByPlaceholder("Course code", { exact: true });
+  const free = page.getByRole("row").filter({ has: input });
+  let release!: () => void;
+  const heldResponse = new Promise<void>((resolve) => { release = resolve; });
+  let saving!: () => void;
+  const firstSave = new Promise<void>((resolve) => { saving = resolve; });
+  let held = false;
+  await page.route("**/*", async (route) => {
+    if (held || !["POST", "PUT", "PATCH"].includes(route.request().method())) {
+      await route.continue();
+      return;
+    }
+    held = true;
+    const response = await route.fetch();
+    saving();
+    await heldResponse;
+    await route.fulfill({ response });
+  });
+  try {
+    await input.pressSequentially("CS245");
+    await firstSave;
+    await expect(input).toBeEnabled();
+    await expect(input).toBeFocused();
+    await page.keyboard.type("E");
+    await expect(input).toHaveValue("CS245E");
+  } finally {
+    release();
+  }
+  await expect(free).toContainText("Logic and Computation (Enriched)");
+  await expect(input).toBeFocused();
+  await expect(input).toHaveValue("CS245E");
+  await reloadSavedPage(page);
+  await expect(input).toHaveValue("CS245E");
+  await expect(free).toContainText("Logic and Computation (Enriched)");
+});
