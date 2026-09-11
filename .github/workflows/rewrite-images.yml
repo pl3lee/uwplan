@@ -28,13 +28,11 @@ jobs:
           UWPLAN_API_IMAGE: uwplan-api:ci
           UWPLAN_WEB_IMAGE: uwplan-web:ci
         run: bash tests/rewrite-images.sh
-      - name: Build the retained legacy artifact for recovery rehearsal
-        env:
-          RELEASE_REVISION: ${{ github.sha }}
-        run: docker build --build-arg RELEASE_REVISION="$RELEASE_REVISION" -t uwplan-legacy:ci .
+      - name: Pull the retained production artifact for recovery rehearsal
+        run: docker pull --platform linux/amd64 docker.io/pl3lee/uwplan@sha256:1eb83a3e80ae89ca38c488d7a6f5a975583463b15dfb2b6728841c48e1a37daf
       - name: Rehearse migration, paired rollback, and usable backup restoration
         env:
-          UWPLAN_LEGACY_IMAGE: uwplan-legacy:ci
+          UWPLAN_LEGACY_IMAGE: docker.io/pl3lee/uwplan@sha256:1eb83a3e80ae89ca38c488d7a6f5a975583463b15dfb2b6728841c48e1a37daf
           UWPLAN_API_IMAGE: uwplan-api:ci
           UWPLAN_WEB_IMAGE: uwplan-web:ci
         run: python3 tests/paired-production-stack.py

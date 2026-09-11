@@ -53,8 +53,9 @@ not an application rollback: doing so would discard writes since that backup.
 
 ## Disposable rehearsal
 
-Build the legacy, API, and web AMD64 images with their source-revision labels, then
-run `tests/paired-production-stack.py` with `UWPLAN_LEGACY_IMAGE`,
+Pull the retained legacy AMD64 production artifact pinned in
+`.github/workflows/rewrite-images.yml`; build the API and web images with their
+source-revision labels. Then run `tests/paired-production-stack.py` with `UWPLAN_LEGACY_IMAGE`,
 `UWPLAN_API_IMAGE`, and `UWPLAN_WEB_IMAGE` set to those local images. The driver
 imports the actual admission implementation and uses owned temporary paths,
 a registry bound to the Docker host loopback, and a unique Compose project. It does not change production

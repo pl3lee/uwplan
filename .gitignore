@@ -14,11 +14,6 @@
 /prisma/db.sqlite-journal
 db.sqlite
 
-# next.js
-/.next/
-/out/
-next-env.d.ts
-
 # production
 /build
 
@@ -33,13 +28,10 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # local env files
-# do not commit any .env files to git, except for the .env.example file. https://create.t3.gg/en/usage/env-variables#using-environment-variables
+# Never commit credentials; .env.example contains development placeholders.
 .env
 .env*.local
 .env.production
-
-# vercel
-.vercel
 
 # typescript
 *.tsbuildinfo

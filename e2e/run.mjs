@@ -5,18 +5,12 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import postgres from "postgres";
-import { drizzle } from "drizzle-orm/postgres-js";
-import { migrate } from "drizzle-orm/postgres-js/migrator";
-import { startOAuthFixture } from "./oauth-server.mjs";
 import { startGoStack } from "./go-stack.mjs";
 
 // This runner owns its database. It never uses DATABASE_URL from a developer's env.
 const container = `uwplan-e2e-${randomUUID()}`;
 const password = randomUUID();
-const runtime = process.env.E2E_RUNTIME ?? "next";
-if (!["next", "go"].includes(runtime)) throw new Error("Unknown E2E runtime");
 let child;
-let oauth;
 let temporaryDirectory;
 let redisContainer;
 let goStack;
@@ -63,54 +57,50 @@ try {
       }
     }
     if (!ready) throw new Error("E2E PostgreSQL did not become ready");
-    await migrate(drizzle(sql), { migrationsFolder: "drizzle" });
   } finally {
     await sql.end();
   }
   const appPort = await availablePort();
   process.env.E2E_BASE_URL = `http://localhost:${appPort}`;
-  if (runtime === "go") {
-    temporaryDirectory = mkdtempSync(join(tmpdir(), "uwplan-e2e-go-"));
-    redisContainer = `uwplan-e2e-redis-${randomUUID()}`;
-    docker(
-      "run",
-      "--detach",
-      "--rm",
-      "--name",
-      redisContainer,
-      "--publish",
-      "127.0.0.1::6379",
-      "redis:7@sha256:71da9275c5f3fcb97d0fa0c8c5b36cc995327265420f17a04bfd544f458059f7",
-      "redis-server",
-      "--save",
-      "",
-      "--appendonly",
-      "no",
-      "--maxmemory",
-      "64mb",
-    );
-    execFileSync("go", ["run", "./cmd/migrate"], {
-      cwd: "api",
-      stdio: "inherit",
-      env: { ...process.env, DATABASE_URL: databaseURL },
-    });
-    execFileSync("pnpm", ["build:web"], { stdio: "inherit" });
-    goStack = await startGoStack({
-      directory: temporaryDirectory,
-      database: container,
-      redis: redisContainer,
-      password,
-      publicOrigin: process.env.E2E_BASE_URL,
-    });
-    goEnvironment = {
-      ...goStack.environment,
-      E2E_REDIS_CONTAINER: redisContainer,
-      RELEASE_DIGEST: `sha256:${"a".repeat(64)}`,
-      RELEASE_REVISION: "b".repeat(40),
-    };
-  }
-  if (runtime === "next") oauth = await startOAuthFixture();
-  child = spawn("npx", ["playwright", "test", ...process.argv.slice(2)], {
+  temporaryDirectory = mkdtempSync(join(tmpdir(), "uwplan-e2e-go-"));
+  redisContainer = `uwplan-e2e-redis-${randomUUID()}`;
+  docker(
+    "run",
+    "--detach",
+    "--rm",
+    "--name",
+    redisContainer,
+    "--publish",
+    "127.0.0.1::6379",
+    "redis:7@sha256:71da9275c5f3fcb97d0fa0c8c5b36cc995327265420f17a04bfd544f458059f7",
+    "redis-server",
+    "--save",
+    "",
+    "--appendonly",
+    "no",
+    "--maxmemory",
+    "64mb",
+  );
+  execFileSync("go", ["run", "./cmd/migrate"], {
+    cwd: "api",
+    stdio: "inherit",
+    env: { ...process.env, DATABASE_URL: databaseURL },
+  });
+  execFileSync("pnpm", ["build:web"], { stdio: "inherit" });
+  goStack = await startGoStack({
+    directory: temporaryDirectory,
+    database: container,
+    redis: redisContainer,
+    password,
+    publicOrigin: process.env.E2E_BASE_URL,
+  });
+  goEnvironment = {
+    ...goStack.environment,
+    E2E_REDIS_CONTAINER: redisContainer,
+    RELEASE_DIGEST: `sha256:${"a".repeat(64)}`,
+    RELEASE_REVISION: "b".repeat(40),
+  };
+  child = spawn("pnpm", ["exec", "playwright", "test", ...process.argv.slice(2)], {
     stdio: "inherit",
     env: {
       ...process.env,
@@ -118,17 +108,10 @@ try {
       DATABASE_URL: databaseURL,
       E2E_DATABASE_URL: databaseURL,
       E2E_PORT: String(appPort),
-      E2E_OAUTH_ORIGIN: goStack?.providerOrigin ?? oauth.origin,
+      E2E_OAUTH_ORIGIN: goStack.providerOrigin,
+      E2E_RUNTIME: "go",
       E2E_BASE_URL: process.env.E2E_BASE_URL,
-      AUTH_URL: process.env.E2E_BASE_URL,
-      AUTH_TRUST_HOST: "true",
-      AUTH_SECRET: randomUUID(),
-      AUTH_GOOGLE_ID: "e2e-google",
-      AUTH_GOOGLE_SECRET: "e2e-google-secret",
-      AUTH_GITHUB_ID: "e2e-github",
-      AUTH_GITHUB_SECRET: "e2e-github-secret",
       OTEL_ENABLED: "false",
-      NEXT_TELEMETRY_DISABLED: "1",
     },
   });
   process.exitCode = await new Promise((resolve, reject) => {
@@ -136,7 +119,6 @@ try {
     child.once("exit", (code) => resolve(code ?? 1));
   });
 } finally {
-  await oauth?.close();
   goStack?.close();
   if (redisContainer) docker("rm", "--force", redisContainer);
   if (temporaryDirectory)

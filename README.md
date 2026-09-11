@@ -1,84 +1,82 @@
 # UWPlan
 
-UWPlan is a degree planning tool for University of Waterloo students to help organize and plan their academic journey.
+Plan a University of Waterloo degree, select courses, manage academic-plan
+templates, and compare term schedules. The monorepo contains a Go/Huma API and a
+React Router SSR web application. PostgreSQL retains accounts and saved plans;
+Redis stores opaque sessions. Google and GitHub provide sign-in.
 
-![Select](/public/assets/select.png)
+## Local setup
 
-![Schedule](/public/assets/schedule.png)
+Use Node 24, pnpm 10.34.5, Go 1.26, Docker with Compose, and OpenSSL.
 
-Check it out at [uwplan.com](https://uwplan.com)!
+```sh
+pnpm install --frozen-lockfile
+cp .env.example .env
+docker compose up -d --wait
+set -a
+. ./.env
+set +a
+pnpm db:migrate
+pnpm dev:api
+# In another terminal, load .env as above:
+pnpm dev:web
+```
 
-## Built With
+Open `http://localhost:5173`. Configure provider credentials in `.env` and register
+`http://localhost:5173/api/auth/callback/google` and
+`http://localhost:5173/api/auth/callback/github` with the corresponding providers.
+Keep `PUBLIC_ORIGIN` equal to the browser origin. The local Compose project owns
+separate development volumes and publishes PostgreSQL/Redis only on loopback.
+`docker compose stop` preserves that data. Do not use production credentials locally.
 
-- Full Stack Framework: [Next.js](https://nextjs.org/)
-- Styling: [Tailwind CSS](https://tailwindcss.com/)
-- Component Library: [shadcn/ui](https://ui.shadcn.com/)
-- Authentication/Authorization: [Auth.js](https://authjs.dev/)
-- ORM: [Drizzle ORM](https://orm.drizzle.team/)
-- Database: [PostgreSQL](https://www.postgresql.org/)
-- Hosting: [Coolify](https://coolify.io/)
+The Go commands read exported environment variables, rather than loading `.env`
+automatically. `pnpm courses:update` atomically refreshes the course catalog;
+`pnpm db:seed` adds the five built-in templates after their courses exist.
+The live course source currently denies requests with HTTP 403; the importer
+fails without changing stored data. See [API tooling](api/README.md).
 
-## Getting Started
+## Architecture and generated contracts
 
-### Development Environment
+Domain models own business rules; services orchestrate repository and gateway
+ports. Repositories translate PostgreSQL records, and HTTP handlers map errors
+and DTOs. Read [architecture guidance](api/AGENTS.md).
 
-The easiest way to get started is using VS Code's DevContainer feature, which includes all required dependencies:
+Huma generates checked-in OpenAPI JSON/YAML. Orval generates the web fetch client
+and TanStack Query hooks. The web uses React 19, React Router 7, Vite, Tailwind 4,
+Base UI, TanStack Form/Table, Biome, and Vitest.
 
-1. Install [VS Code](https://code.visualstudio.com/) and the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
-2. Clone the repository and open it in VS Code
-3. When prompted, click "Reopen in Container" or run the "Dev Containers: Reopen in Container" command
+```sh
+pnpm generate
+pnpm check
+pnpm test
+pnpm build
+pnpm exec playwright install chromium firefox webkit
+pnpm test:e2e
+pnpm test:deploy
+```
 
-### Manual Setup
+Generation is sequential; commit generated files with their source changes.
+Go integration tests and Playwright own disposable PostgreSQL databases; browser
+checks also own Redis and controlled OAuth providers. They never use the
+operator's database. All 33 behavior cases run against the production application
+build. See [browser testing](e2e/README.md), [API setup](api/README.md), and
+[web setup](web/README.md).
 
-If not using DevContainer, you'll need:
+## Data, deployment, and recovery
 
-- Node.js (v20 or higher)
-- npm
-- Docker
+Goose bootstraps an empty database or adopts the verified legacy schema without
+changing existing account IDs, saved data, or provider links. `drizzle/` is retained
+migration history used by upgrade tests; it is not a runtime dependency.
+Existing users sign in once when Redis sessions replace their earlier session.
 
-### Environment Configuration
+CI checks contracts, Go and web tests, browser flows, immutable image smoke tests,
+and real migration/paired rollback/backup restoration. It publishes separate API
+and web digests in one release manifest and deploys them together through the
+restricted DigitalOcean/Tailscale admission command. The prior immutable release
+and legacy Compose configuration remain available for recovery.
 
-1. Run `npm install` to install dependencies.
-2. Copy `.env.example` to `.env` and fill in the required environment variables by following the steps below.
-3. Generate `AUTH_SECRET` by running `npx auth secret` and copying the output into `.env`.
-4. Set up GitHub OAuth by creating a new OAuth app in your [GitHub developer settings](https://github.com/settings/developers) and filling in the `AUTH_GITHUB_ID` and `AUTH_GITHUB_SECRET` in `.env`. For local development, the Homepage URL is `http://localhost:3000` and the Authorization callback URL is `http://localhost:3000/api/auth/callback/github`.
-5. Set up Google OAuth by going to [Google Cloud Console](https://console.cloud.google.com/), creating a new project or choose an existing one, setup OAuth consent screen, then create OAuth client ID in the credentials section. Add `http://localhost:3000` to Authorized JavaScript origins, and `http://localhost:3000/api/auth/callback/google` to Authorized redirect URIs. Copy the client ID and secret to `.env` as `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET`.
-6. Run `./start-database.sh` to start the PostgreSQL database in a Docker container. If this is the first time running the database, it should generate a password and change `DATABASE_URL` in `.env` for you.
-7. Run `npm run db:seed-existing` to seed the database with initial data and migrations.
-8. Run `npm run dev` to start the development server. The application should now be running at `http://localhost:3000`.
-9. If you need to look at the database tables, you can use `npm run db:studio` to run Drizzle Studio, which would then be accessible at `https://local.drizzle.studio`.
-
-## Database Seeding
-
-If you want to seed the database with existing course data (e.g. for development), you can simply run `npm run db:seed-existing` without needing to run `npm run db:migrate` first. If you then want obtain fresh course data, you can run `npm run courses:update`.
-
-If you want to start with a database with fresh course data, you need to first run `npm run db:migrate` to create the tables, then run `npm run db:seed` to seed the database with fresh data.
-
-To export the database to an SQL file, you can run `npm run db:export` to generate a `data.sql` file. This file can then be used to import the database into another environment.
-
-## Database Design
-
-The database design can be found in [DATABASE_DESIGN.md](DATABASE_DESIGN.md).
-
-## Git Branching Strategy
-
-There are two long-lived branches:
-
-- `main`: which gets automatically deployed to the staging environment [staging.uwplan.com](https://staging.uwplan.com).
-- `production`: which gets automatically deployed to the production environment [uwplan.com](https://uwplan.com).
-
-For feature development, create a new branch off of `main` and open a pull request to `main` when ready for review.
-
-Merges to `main` will trigger a deployment to the staging environment. After testing on the staging environment, merge `main` into `production` to trigger a deployment to the production environment.
-
-Note that pull requests to `main` require that the CI checks pass, which includes running tests and linting.
-
-## Contributing
-
-We welcome contributions! Please feel free to submit a Pull Request.
-
-If you encounter any issues or have any feature requests, please open an issue.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+Production exports structured server logs, traces, and health metrics through the
+existing private collector to Grafana's Loki, Tempo, and Mimir. See the
+[production runbook](ops/production/README.md) for release admission, readiness,
+backup, and rollback, and the [migration evidence](docs/rewrite-plan.md) for
+remaining cutover verification.

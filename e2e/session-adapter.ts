@@ -1,12 +1,8 @@
 import { execFileSync } from "node:child_process";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 
-export const isGoRuntime = process.env.E2E_RUNTIME === "go";
-export const sessionCookieName = isGoRuntime
-  ? "uwplan_session"
-  : "authjs.session-token";
-export const sessionToken = () =>
-  isGoRuntime ? randomBytes(32).toString("base64url") : randomUUID();
+export const sessionCookieName = "uwplan_session";
+export const sessionToken = () => randomBytes(32).toString("base64url");
 
 export function seedRedisSession(
   userID: string,
@@ -14,7 +10,7 @@ export function seedRedisSession(
   expired: boolean,
 ) {
   const container = process.env.E2E_REDIS_CONTAINER;
-  if (!isGoRuntime || !container?.startsWith("uwplan-e2e-redis-"))
+  if (!container?.startsWith("uwplan-e2e-redis-"))
     throw new Error("Redis sessions require the disposable Go E2E runner");
   const hash = createHash("sha256").update(token).digest("base64url");
   const value = JSON.stringify({

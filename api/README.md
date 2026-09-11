@@ -10,9 +10,7 @@ required.
 Export `DATABASE_URL` for the target database and run `make courses-update` from
 `api/` (or build/run `cmd/courses-update`). The command does not load `.env`
 automatically or run schema migrations. Use the application database role with
-catalog insert/update permission. The existing root update/seed scripts remain
-available during the runtime transition. Built-in template setup uses the
-separate seed command below.
+catalog insert/update permission. Built-in template setup uses the separate seed command below.
 
 The UWFlow gateway fetches the complete catalog and details before writes, with
 at most eight concurrent detail requests, bounded response bodies, 15-second
@@ -51,11 +49,10 @@ or concurrent seeds do not duplicate definitions. No existing data is deleted.
 The command honors SIGINT/SIGTERM, has a five-minute deadline, reports created
 and existing counts, and exits nonzero on failure. Export configuration explicitly;
 it does not load `.env` files. Logs do not include credentials or raw database
-errors. The legacy root scripts remain available during the runtime transition.
+errors. The root pnpm scripts delegate to these Go commands.
 
 The Go foundation contains the academic-term domain, PostgreSQL schema
-transition, account resolution and provisioning, and Redis session services. The existing application and release migrator remain active
-until the API, authentication, and web replacement are ready for cutover.
+transition, account resolution and provisioning, and Redis session services. The API artifact includes the release migrator used by paired admission.
 
 Use Go 1.26 and Docker. From `api/`, run `make test-unit` for the default suite or
 `make test` for unit and integration coverage. The integration target owns a fresh
@@ -106,9 +103,7 @@ the user's current role from PostgreSQL, so role changes are not cached in a
 session. Missing or expired sessions are distinct from dependency outages.
 
 Huma exposes liveness/readiness, OAuth sign-in and callbacks, the current
-authenticated user, and logout. The existing
-production authentication runtime remains active until the complete replacement
-passes the shared browser suite.
+authenticated user, and logout. The shared browser suite exercises both provider callbacks against the production binary.
 
 OAuth flows expire after ten minutes. Redis stores the state hash, PKCE verifier,
 Google nonce, provider, and validated local return path. Callback processing
@@ -131,7 +126,7 @@ Set `DATABASE_URL`, `REDIS_URL`, and `PUBLIC_ORIGIN`, then run `make run` from
 `api/`. `HTTP_ADDR` defaults to `:8080`. The public origin must use HTTPS except
 on loopback. HTTPS uses a `__Host-uwplan_session` HttpOnly cookie; loopback uses
 `uwplan_session`. Cookies are SameSite=Lax, scoped to `/`, and have no Domain.
-Do not expose this candidate runtime through production routing yet.
+Production publishes only the web server and proxies same-origin API requests privately.
 
 - `GET /api/live` stays live when dependencies are unavailable.
 - `GET /api/ready` requires PostgreSQL, Redis, and valid release identity; probes under a two-second

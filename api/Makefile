@@ -38,3 +38,7 @@ run:
 	$(GO) run ./cmd/api
 build:
 	$(GO) build ./...
+
+.PHONY: vet
+vet:
+	$(GO) vet ./...
