@@ -58,7 +58,7 @@ pnpm test:deploy
 Generation is sequential; commit generated files with their source changes.
 Go integration tests and Playwright own disposable PostgreSQL databases; browser
 checks also own Redis and controlled OAuth providers. They never use the
-operator's database. All 33 behavior cases run against the production application
+operator's database. The complete behavior suite runs against the production application
 build. See [browser testing](e2e/README.md), [API setup](api/README.md), and
 [web setup](web/README.md).
 
@@ -67,7 +67,6 @@ build. See [browser testing](e2e/README.md), [API setup](api/README.md), and
 Goose bootstraps an empty database or adopts the verified legacy schema without
 changing existing account IDs, saved data, or provider links. `drizzle/` is retained
 migration history used by upgrade tests; it is not a runtime dependency.
-Existing users sign in once when Redis sessions replace their earlier session.
 
 CI checks contracts, Go and web tests, browser flows, immutable image smoke tests,
 and real migration/paired rollback/backup restoration. It publishes separate API
@@ -75,8 +74,8 @@ and web digests in one release manifest and deploys them together through the
 restricted DigitalOcean/Tailscale admission command. The prior immutable release
 and legacy Compose configuration remain available for recovery.
 
-Production exports structured server logs, traces, and health metrics through the
-existing private collector to Grafana's Loki, Tempo, and Mimir. See the
+Production exports structured server logs, traces, and health metrics through a
+private VPS collector to PostHog. See the
 [production runbook](ops/production/README.md) for release admission, readiness,
-backup, and rollback, and the [migration evidence](docs/rewrite-plan.md) for
-remaining cutover verification.
+backup, and rollback, [architecture](docs/architecture.md) for system boundaries,
+and [behavior coverage](docs/behavior-coverage.md) for required regression checks.

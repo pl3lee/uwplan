@@ -14,7 +14,7 @@ the web identity in `X-UWPlan-Web-Release-Digest` and
 `X-UWPlan-Web-Release-Revision`. The web proxy discards upstream copies of these
 headers before supplying its own identity.
 
-## Stage before switching publication
+## Host configuration
 
 Install the backward-compatible `deploy.py` and `compose.rewrite.yaml` alongside
 the retained `compose.yaml`. Keep the current release file unchanged until a
@@ -81,4 +81,4 @@ application role grants and serves authenticated reads, CSV export, creation, an
 deletion through that restricted role. Only its own containers, volumes,
 networks, and temporary image tags are removed afterward. OAuth callback behavior
 is separately covered by the shared browser suite; real-provider sign-in remains
-a production cutover check.
+a separate production check.

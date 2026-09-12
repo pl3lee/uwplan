@@ -1,7 +1,6 @@
 import { spawn } from "node:child_process";
 
 if (
-  process.env.E2E_RUNTIME !== "go" ||
   !process.env.E2E_API_CONTAINER?.startsWith("uwplan-e2e-api-") ||
   !process.env.E2E_DATABASE_URL
 )

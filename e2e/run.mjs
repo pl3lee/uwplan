@@ -109,7 +109,6 @@ try {
       E2E_DATABASE_URL: databaseURL,
       E2E_PORT: String(appPort),
       E2E_OAUTH_ORIGIN: goStack.providerOrigin,
-      E2E_RUNTIME: "go",
       E2E_BASE_URL: process.env.E2E_BASE_URL,
       OTEL_ENABLED: "false",
     },

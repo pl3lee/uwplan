@@ -1,4 +1,4 @@
-# Replacement release artifacts
+# Production release artifacts
 
 The Go API and React Router server have separate production images. CI builds and checks them before paired publication and admission.
 The rollback rehearsal uses the retained immutable legacy production artifact.
@@ -28,7 +28,7 @@ liveness endpoint; release admission must additionally check dependency readines
 and both image identities. Base images are pinned by digest. Runtime containers
 need neither source files nor build tools.
 
-The `Replacement Images` workflow builds both artifacts on AMD64 runners and runs
+The `Production Images` workflow builds both artifacts on AMD64 runners and runs
 the same disposable smoke test. That test migrates an empty PostgreSQL 16
 database, starts Redis, checks readiness, sign-in and privacy pages, static assets,
 and protected-route redirects. Only the web port is published on loopback. Web

@@ -51,15 +51,16 @@ and existing counts, and exits nonzero on failure. Export configuration explicit
 it does not load `.env` files. Logs do not include credentials or raw database
 errors. The root pnpm scripts delegate to these Go commands.
 
-The Go foundation contains the academic-term domain, PostgreSQL schema
-transition, account resolution and provisioning, and Redis session services. The API artifact includes the release migrator used by paired admission.
+The API contains the academic-term domain, PostgreSQL persistence, account
+resolution and provisioning, and Redis session services. The API artifact includes
+the release migrator used by paired admission.
 
 Use Go 1.26 and Docker. From `api/`, run `make test-unit` for the default suite or
 `make test` for unit and integration coverage. The integration target owns a fresh
 PostgreSQL 16 container and removes it afterward. Each database test gets its own
 migrated pgtestdb database through `internal/testutil/postgres.NewPool`.
 
-## Schema transition
+## Schema migrations
 
 `DATABASE_URL=... go run ./cmd/migrate` runs Goose with a PostgreSQL advisory lock.
 Run it with the migration role. The application role should not own schema DDL.
@@ -79,9 +80,9 @@ and rejection of schema drift. The canonical schema retains the legacy
 
 Keep this baseline immutable after deployment. Add subsequent migrations with
 new versions. Preserve the legacy migration history for upgrade testing and
-recovery. Coordinate the release migration runner before production adoption;
-rollback should restore the prior application images while retaining compatible
-schema changes.
+recovery. The release admission command runs migrations before replacing application
+images. Rollback restores the prior images while retaining compatible schema
+changes.
 
 ## Account and session boundaries
 
@@ -187,8 +188,8 @@ outside the newly visible range. New schedules receive UUIDv7 IDs; existing
 schedule and course IDs remain unchanged.
 
 Repository and HTTP integration tests exercise ownership, movement/removal,
-term-range persistence, CSV output, and concurrent deletion. The production UI
-continues using its existing runtime until the web replacement is ready.
+term-range persistence, CSV output, and concurrent deletion. The React Router UI
+uses these endpoints through the generated client.
 
 ## Templates
 

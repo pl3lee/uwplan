@@ -5,7 +5,7 @@ TanStack Query, and an Orval-generated Huma client.
 
 Public pages, authentication, selection, scheduling, templates, and administration
 use the Go API. Paired admission and rollback are covered by the production
-rehearsal. Track live verification in [`docs/rewrite-plan.md`](../docs/rewrite-plan.md).
+rehearsal. Follow the [production runbook](../ops/production/README.md) for release verification.
 
 ## Development
 
@@ -70,15 +70,15 @@ It propagates W3C trace context to the API and accepts bounded validation IDs fo
 deployment checks. Query strings, raw paths, cookies, authorization headers, and
 baggage are excluded. OTLP queues and export timeouts are bounded; collector
 outages leave requests available, and shutdown flushes pending events. Live
-collector routing and Grafana verification remain part of deployment. The web browser
+collector routing and PostHog verification are part of deployment. The web browser
 checks exercise public pages and native provider form submission on the production
 build in desktop/mobile Chromium. They intercept provider-entry navigation and
 do not claim OAuth parity. The shared course-selection test also runs against
-the real Go API, PostgreSQL, and Redis on the replacement production build in
+the real Go API, PostgreSQL, and Redis on the production build in
 Chromium, Firefox, and WebKit:
 
 ```sh
-E2E_RUNTIME=go pnpm test:e2e --grep 'template choices and fixed/free course selections persist'
+pnpm test:e2e --grep 'template choices and fixed/free course selections persist'
 ```
 
 It covers academic-plan search/membership, fixed and free choices, selected-course
@@ -89,14 +89,14 @@ Scheduling uses the same generated client for owned schedules, term ranges,
 assignment/removal, and CSV export. It retains desktop drag/drop and mobile term
 selectors. Schedule lists refresh after writes; deleting the active schedule moves
 to the next owned schedule before refreshing. The original scheduling assertions
-pass on the replacement production build, including exact downloaded CSV content:
+pass on the production build, including exact downloaded CSV content:
 
 ```sh
-E2E_RUNTIME=go pnpm test:e2e e2e/scheduling.spec.ts
+pnpm test:e2e e2e/scheduling.spec.ts
 ```
 
-The other shared Playwright assertions remain in the repository's `e2e/` directory and must pass against the replacement
-production build before it is deployed.
+All Playwright assertions in the repository's `e2e/` directory must pass against
+the production build before release.
 
 Template forms use TanStack Form and the generated template API. The editor
 preserves instruction, fixed/free requirement, separator, reorder, and remove
@@ -106,11 +106,11 @@ Owned-template queries back management; the admin loader and API both enforce
 the current admin role. Successful template mutations refresh membership,
 definitions, owned/all lists, and affected schedules.
 
-CI runs all 33 shared cases on the replacement production build, including
+CI runs the complete browser suite on the production build, including
 Google/GitHub provisioning and returning-user sessions:
 
 ```sh
-E2E_RUNTIME=go pnpm test:e2e
+pnpm test:e2e
 ```
 
 The provider fixture uses a temporary CA and restricted HTTPS proxy inside the
