@@ -25,10 +25,8 @@ jobs:
           cache-dependency-path: api/go.sum
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium firefox webkit
-      - name: Verify public and private flows on the replacement production build
+      - name: Verify public and private flows on the production build
         run: pnpm test:e2e
-        env:
-          E2E_RUNTIME: go
       - uses: actions/upload-artifact@v4
         if: always()
         with:

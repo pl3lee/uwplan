@@ -1,4 +1,4 @@
-name: Replacement Images
+name: Production Images
 
 on:
   pull_request:

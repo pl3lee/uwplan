@@ -99,4 +99,4 @@ the reachable Grafana instance listed no alert rules during this migration.
 Do not reinstall the former `uwplan-rehearsal-readiness` rule. No change to
 money-tracker's collector or the shared PostHog project is needed. Historical
 Loki/Tempo/Mimir telemetry remains there; new application records go only to
-PostHog after cutover. PostHog uptime monitoring is not configured by this change.
+PostHog. PostHog uptime monitoring is not configured by this change.

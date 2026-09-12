@@ -14,7 +14,7 @@ The runner creates its own PostgreSQL 16 and Redis containers, bootstraps the
 schema through the Go migrator, builds the production API and React Router web,
 and removes its resources afterward. It ignores the operator's database URL.
 Each fixture creates an isolated user, plan, and template. Tests assert visible
-behavior, persisted changes after reload, and exact CSV downloads. All 33 cases
+behavior, persisted changes after reload, and exact CSV downloads. All behavior cases
 remain required: Chromium runs the full suite, Firefox/WebKit run focused smoke
 cases, and mobile WebKit verifies responsive navigation and scheduling.
 
@@ -38,7 +38,6 @@ by `tests/paired-production-stack.py`; Go integration tests apply the retained
 Drizzle migration history before adopting the baseline.
 
 The landing-page video uses a deterministic iframe fixture so advertising cannot
-hold the load event open. Application requests and the original behavior
-assertions remain intact. The recorded legacy production refresh failure is
-historical evidence in `docs/behavior-parity.md`; tests now always run the
-replacement production build.
+hold the load event open. Application requests and behavior assertions remain
+intact. [`behavior-coverage.md`](../docs/behavior-coverage.md) records the required
+flows and regressions, all exercised against the production Go/web build.

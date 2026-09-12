@@ -13,7 +13,7 @@
   Form/Table where needed, and Base UI primitives styled with Tailwind. Keep
   query clients scoped to each server render and browser application.
 - Preserve the visual design and user-visible assertions in the shared `e2e/`
-  suite during the rewrite. Run that suite on the replacement production build
-  before cutover; compilation alone does not establish parity.
+  suite. Run that suite on the production build before release; compilation
+  alone does not establish behavior coverage.
 - Run `pnpm check:web`, `pnpm test:web`, and `pnpm build:web` for web changes.
   Run generation and verify a clean diff when changing API contracts or Orval.
