@@ -17,6 +17,7 @@ import time
 ROOT = Path('/opt/uwplan-production')
 CONFIG = Path('/etc/uwplan-production')
 STATE = Path('/var/lib/uwplan-production')
+DEPLOYER = Path('/usr/local/sbin/uwplan-deploy')
 SOURCE = Path(__file__).resolve().parent
 IMAGE = 'otel/opentelemetry-collector-contrib:0.160.0@sha256:799dc6cf12c96192af37b5bdba804da8c10b3bc563b43cb90c3f3c58d9572ad6'
 
@@ -57,7 +58,7 @@ def stage(token_env):
             files = {
                 ROOT / 'compose.rewrite.yaml': SOURCE / 'compose.rewrite.yaml',
                 ROOT / 'observability/otel-collector.yaml': SOURCE / 'observability/otel-collector.yaml',
-                Path('/usr/local/sbin/uwplan-deploy'): SOURCE / 'deploy.py',
+                DEPLOYER: SOURCE / 'deploy.py',
                 CONFIG / 'observability.env': env,
             }
             backup = STATE / f'observability-backup-{time.time_ns()}'

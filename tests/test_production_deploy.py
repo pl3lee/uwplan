@@ -236,4 +236,48 @@ class ObservabilityStagingTests(unittest.TestCase):
             self.assertEqual(existing.read_text(), 'retained configuration')
             self.assertFalse(list(work.glob('observability-backup-*')))
 
+    def exercise_install(self, fail_after_first=False):
+        with tempfile.TemporaryDirectory() as temporary:
+            work = Path(temporary)
+            root, config = work / 'installed', work / 'config'
+            root.mkdir()
+            config.mkdir()
+            executable = work / 'uwplan-deploy'
+            executable.write_text('previous deployer')
+            executable.chmod(0o755)
+            compose = root / 'compose.rewrite.yaml'
+            compose.write_text('previous compose')
+            compose.chmod(0o600)
+            token = work / 'token.env'
+            token.write_text('POSTHOG_PROJECT_TOKEN=phc_synthetic\n')
+            original_replace = staging.os.replace
+            def replace(source, destination):
+                if fail_after_first and destination.name == 'otel-collector.yaml':
+                    raise OSError('simulated disk failure')
+                original_replace(source, destination)
+            with patch.multiple(staging, ROOT=root, CONFIG=config, STATE=work, DEPLOYER=executable), patch.object(staging.os, 'geteuid', return_value=0), patch.object(staging, 'run'), patch.object(staging.os, 'replace', side_effect=replace):
+                if fail_after_first:
+                    with self.assertRaisesRegex(OSError, 'simulated disk failure'):
+                        staging.stage(token)
+                    self.assertEqual(compose.read_text(), 'previous compose')
+                    self.assertEqual(executable.read_text(), 'previous deployer')
+                    self.assertFalse((config / 'observability.env').exists())
+                else:
+                    staging.stage(token)
+                    self.assertEqual(compose.read_bytes(), (staging.SOURCE / 'compose.rewrite.yaml').read_bytes())
+                    self.assertEqual(executable.stat().st_mode & 0o777, 0o755)
+                    for installed in (compose, config / 'observability.env', root / 'observability/otel-collector.yaml'):
+                        self.assertEqual(installed.stat().st_mode & 0o777, 0o600)
+                    self.assertEqual((config / 'observability.env').read_text(), 'POSTHOG_PROJECT_TOKEN=phc_synthetic\n')
+                backup = next(work.glob('observability-backup-*'))
+                self.assertEqual(backup.stat().st_mode & 0o777, 0o700)
+                self.assertEqual((backup / str(compose).lstrip('/')).read_text(), 'previous compose')
+
+    def test_successful_staging_preserves_backups_and_private_modes(self):
+        self.exercise_install()
+
+    def test_partial_install_failure_restores_previous_files(self):
+        self.exercise_install(fail_after_first=True)
+
+
 if __name__ == '__main__': unittest.main()
