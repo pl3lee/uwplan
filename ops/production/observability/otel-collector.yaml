@@ -1,0 +1,70 @@
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+  file_storage:
+    directory: /var/lib/otelcol
+    # Each signal has its own queue database, capped at 128 MiB.
+    max_size: 134217728
+    fsync: true
+
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  resource/production:
+    attributes:
+      - key: deployment.environment
+        value: production
+        action: upsert
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 160
+    spike_limit_mib: 32
+
+exporters:
+  otlp_http/posthog:
+    endpoint: ${env:POSTHOG_OTLP_ENDPOINT}
+    headers:
+      Authorization: Bearer ${env:POSTHOG_PROJECT_TOKEN}
+    timeout: 15s
+    retry_on_failure:
+      initial_interval: 1s
+      max_interval: 30s
+      max_elapsed_time: 0s
+    sending_queue:
+      storage: file_storage
+      num_consumers: 2
+      sizer: bytes
+      queue_size: 67108864
+      # Persist before batching, so acknowledged records survive restarts.
+      batch:
+        flush_timeout: 1s
+        min_size: 262144
+        max_size: 1048576
+
+service:
+  extensions: [health_check, file_storage]
+  telemetry:
+    metrics:
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: 0.0.0.0
+                port: 8888
+  pipelines:
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, resource/production]
+      exporters: [otlp_http/posthog]
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resource/production]
+      exporters: [otlp_http/posthog]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, resource/production]
+      exporters: [otlp_http/posthog]

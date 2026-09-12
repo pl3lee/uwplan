@@ -14,6 +14,18 @@ x-application: &application
     driver: json-file
     options: {max-size: 10m, max-file: "3"}
 
+# Explicit signal settings override any retained home-collector configuration.
+x-telemetry: &telemetry
+  OTEL_ENABLED: "true"
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+  OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: http://otel-collector:4318/v1/logs
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://otel-collector:4318/v1/traces
+  OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: http://otel-collector:4318/v1/metrics
+  OTEL_EXPORTER_OTLP_HEADERS: ""
+  OTEL_EXPORTER_OTLP_LOGS_HEADERS: ""
+  OTEL_EXPORTER_OTLP_TRACES_HEADERS: ""
+  OTEL_EXPORTER_OTLP_METRICS_HEADERS: ""
+
 services:
   web:
     <<: *application
@@ -22,6 +34,7 @@ services:
       - path: ${UWPLAN_CONFIG_DIR:-/etc/uwplan-production}/web.env
         format: raw
     environment:
+      <<: *telemetry
       API_ORIGIN: http://api:8080
       RELEASE_DIGEST: ${RELEASE_WEB_DIGEST:?web digest required}
       RELEASE_REVISION: ${RELEASE_REVISION:?revision required}
@@ -36,6 +49,7 @@ services:
       - path: ${UWPLAN_CONFIG_DIR:-/etc/uwplan-production}/api.env
         format: raw
     environment:
+      <<: *telemetry
       HTTP_ADDR: :8080
       RELEASE_DIGEST: ${RELEASE_DIGEST:?API digest required}
       RELEASE_REVISION: ${RELEASE_REVISION:?revision required}
@@ -44,6 +58,29 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.160.0@sha256:799dc6cf12c96192af37b5bdba804da8c10b3bc563b43cb90c3f3c58d9572ad6
+    restart: unless-stopped
+    command: ["--config=/etc/otelcol/config.yaml"]
+    # The queue volume is root-owned. All capabilities remain dropped.
+    user: "0:0"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 256m
+    memswap_limit: 256m
+    pids_limit: 128
+    environment:
+      GOMEMLIMIT: 192MiB
+      POSTHOG_OTLP_ENDPOINT: ${UWPLAN_POSTHOG_ENDPOINT:-https://us.i.posthog.com/i}
+    env_file:
+      - path: ${UWPLAN_CONFIG_DIR:-/etc/uwplan-production}/observability.env
+        format: raw
+    volumes:
+      - ./observability/otel-collector.yaml:/etc/otelcol/config.yaml:ro
+      - otel_queue:/var/lib/otelcol
+    stop_grace_period: 30s
+    logging: *logging
   redis:
     image: redis:7@sha256:71da9275c5f3fcb97d0fa0c8c5b36cc995327265420f17a04bfd544f458059f7
     user: redis
@@ -107,3 +144,4 @@ secrets:
 volumes:
   postgres_data:
   redis_data:
+  otel_queue:

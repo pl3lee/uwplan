@@ -138,7 +138,14 @@ def deploy(digest, revision, web_digest=None):
         atomic_write(candidate, new_release.encode())
         compose(candidate, 'config', '--quiet')
         if web_digest:
-            compose(candidate, 'up', '-d', '--no-deps', '--wait', 'redis')
+            # Start telemetry before replacing writers; leave it running on rollback.
+            compose(candidate, 'up', '-d', '--no-deps', '--wait', 'redis', 'otel-collector')
+            # The distroless collector has no shell for a Compose healthcheck.
+            # Probe privately using Node from the already admitted web image.
+            compose(candidate, 'run', '--rm', '--no-deps', '--entrypoint', 'node', 'web', '-e',
+                    "(async()=>{for(let i=0;i<30;i++){try{if((await fetch('http://otel-collector:13133',"
+                    "{signal:AbortSignal.timeout(1000)})).ok)return}catch{}"
+                    "await new Promise(r=>setTimeout(r,1000))}process.exit(1)})()")
         backups = STATE / 'backups'
         backups.mkdir(mode=0o700, exist_ok=True)
         archive = compose(RELEASE, 'exec', '-T', 'db', 'pg_dump', '-U', 'postgres', '-d', 'uwplan', '-Fc', '--no-owner', '--no-acl').stdout

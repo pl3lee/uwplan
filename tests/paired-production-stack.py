@@ -60,6 +60,10 @@ def main():
             contents = (ROOT / 'ops/production' / filename).read_text()
             contents = contents.replace('127.0.0.1:5002:', f'127.0.0.1:{web_port}:')
             (installed / filename).write_text(contents)
+        (installed / 'observability').mkdir()
+        (installed / 'observability/otel-collector.yaml').write_bytes((ROOT / 'ops/production/observability/otel-collector.yaml').read_bytes())
+        # Never send fixture data to production; exercise a collector outage.
+        os.environ['UWPLAN_POSTHOG_ENDPOINT'] = 'http://127.0.0.1:9/i'
         os.environ['UWPLAN_CONFIG_DIR'] = str(config)
         api_password = 'disposable-app-password'
         redis_password = 'disposable-redis-password'
@@ -68,6 +72,7 @@ def main():
             'migrator.env': 'DATABASE_URL=postgresql://postgres:disposable-admin-password@db:5432/uwplan\n',
             'api.env': (f'DATABASE_URL=postgresql://uwplan_app:{api_password}@db:5432/uwplan\n'
                         f'REDIS_URL=redis://:{redis_password}@redis:6379/0\nPUBLIC_ORIGIN={origin}\nOTEL_ENABLED=false\n'),
+            'observability.env': 'POSTHOG_PROJECT_TOKEN=phc_synthetic\n',
             'web.env': 'OTEL_ENABLED=false\n',
             'redis.env': f'REDIS_PASSWORD={redis_password}\n',
             'app.env': (f'DATABASE_URL=postgresql://uwplan_app:{api_password}@db:5432/uwplan\n'
