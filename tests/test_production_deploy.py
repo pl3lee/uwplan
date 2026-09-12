@@ -66,7 +66,7 @@ class DeploymentTests(unittest.TestCase):
                 deploy.parse_command(command)
         self.assertEqual(deploy.parse_command(f'deploy {DIGEST} {REVISION}'), (DIGEST, REVISION))
 
-    def exercise(self, ready_results, migrate_fails=False, frozen=False, architecture='amd64', web_digest=None, old_web_digest=None, web_revision=REVISION, candidate_stop_fails=False, candidate_remove_fails=False, collector_fails=False):
+    def exercise(self, ready_results, migrate_fails=False, frozen=False, architecture='amd64', web_digest=None, old_web_digest=None, web_revision=REVISION, candidate_stop_fails=False, candidate_remove_fails=False, collector_fails=False, collector_unhealthy=False):
         with tempfile.TemporaryDirectory() as temporary:
             state = Path(temporary)
             release = state/'release.env'
@@ -82,6 +82,7 @@ class DeploymentTests(unittest.TestCase):
             def compose(env, *args):
                 calls.append(args)
                 if 'otel-collector' in args and collector_fails: raise RuntimeError('collector failed')
+                if '--entrypoint' in args and collector_unhealthy: raise RuntimeError('collector unhealthy')
                 if 'migrator' in args and migrate_fails: raise RuntimeError('migration rejected')
                 if args == ('stop', 'api', 'web') and candidate_stop_fails: raise RuntimeError('stop failed')
                 if args == ('rm', '--stop', '--force', 'api', 'web') and candidate_remove_fails: raise RuntimeError('remove failed')
@@ -123,6 +124,13 @@ class DeploymentTests(unittest.TestCase):
         current, previous, calls, error, backups = self.exercise([], web_digest=WEB_DIGEST, collector_fails=True)
         self.assertEqual(current, previous)
         self.assertIn('collector failed', str(error))
+        self.assertEqual(backups, [])
+        self.assertFalse(any('stop' in call or 'migrator' in call for call in calls))
+
+    def test_unhealthy_collector_preserves_running_release(self):
+        current, previous, calls, error, backups = self.exercise([], web_digest=WEB_DIGEST, collector_unhealthy=True)
+        self.assertEqual(current, previous)
+        self.assertIn('collector unhealthy', str(error))
         self.assertEqual(backups, [])
         self.assertFalse(any('stop' in call or 'migrator' in call for call in calls))
 
@@ -197,7 +205,6 @@ class DeploymentTests(unittest.TestCase):
         self.assertEqual(calls,[])
         self.assertIn('architecture',str(error))
 
-if __name__ == '__main__': unittest.main()
 
 stage_spec = importlib.util.spec_from_file_location('stage_observability', Path(__file__).resolve().parents[1] / 'ops/production/stage-observability.py')
 staging = importlib.util.module_from_spec(stage_spec)
@@ -228,3 +235,5 @@ class ObservabilityStagingTests(unittest.TestCase):
                     staging.stage(token)
             self.assertEqual(existing.read_text(), 'retained configuration')
             self.assertFalse(list(work.glob('observability-backup-*')))
+
+if __name__ == '__main__': unittest.main()

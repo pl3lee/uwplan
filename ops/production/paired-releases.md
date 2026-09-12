@@ -45,7 +45,8 @@ PostHog release. It validates both configurations under the deployment lock and
 retains root-only rollback copies. The token is never supplied by CI's restricted
 command. The collector adds a 256 MB hard memory cap (no swap) and bounded durable
 queues; check actual host headroom before staging. Admission starts Redis and the
-collector before migration or stopping writers. Normal releases and application
+collector before migration or stopping writers, and requires a bounded private
+collector health probe to pass. Normal releases and application
 rollbacks do not recreate the collector or its queue volume.
 
 ## Failure and recovery

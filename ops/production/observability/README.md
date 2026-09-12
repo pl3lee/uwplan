@@ -42,7 +42,8 @@ collector configuration, mode-0600 token file, paired Compose, and compatible
 deployer. It does not restart applications. Keep staging and the first merge
 close together: the next paired admission uses these host files. Merge only after
 staging succeeds and checks pass, then follow **Release Image** through deployment.
-Admission starts the collector before it stops either application writer.
+Admission starts the collector and probes its private health endpoint with a
+bounded Node check from the admitted web image before stopping either writer.
 
 Do not copy secret values into commands, commits, screenshots, or CI output.
 Never run a bare `docker compose config` against production; it prints resolved
@@ -92,10 +93,10 @@ and the restored telemetry destination before unfreezing. Keep the local
 collector/queue for draining and investigation; restoring a database backup is
 not an observability rollback.
 
-The retained `readiness.alloy` and `dashboard.json` describe the home Grafana stack.
-The external HTTPS probe and `uwplan-rehearsal-readiness` rule (titled `UWPlan
-production readiness`) remain in place with their existing notification route.
-Those supplementary probes/alerts still depend on the home server. No change to
-them, money-tracker's collector, or the shared PostHog project is needed for this
-migration. Historical Loki/Tempo/Mimir telemetry remains there; new application
-records go only to PostHog after cutover.
+The retained `readiness.alloy` and `dashboard.json` are historical descriptions of
+the home Grafana stack. The user has already removed the Grafana uptime alert;
+the reachable Grafana instance listed no alert rules during this migration.
+Do not reinstall the former `uwplan-rehearsal-readiness` rule. No change to
+money-tracker's collector or the shared PostHog project is needed. Historical
+Loki/Tempo/Mimir telemetry remains there; new application records go only to
+PostHog after cutover. PostHog uptime monitoring is not configured by this change.

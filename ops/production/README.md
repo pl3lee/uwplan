@@ -45,10 +45,10 @@ correlation. Only the collector receives `observability.env`; its token never
 reaches application containers or browsers.
 
 See [PostHog operations](observability/README.md) for root-owned staging, durable
-queues, rollback, and production ingestion verification. Existing Grafana
-readiness probes and alert rules are retained as supplementary legacy monitoring;
-they still depend on the home server. Application telemetry delivery no longer
-does. No PostHog uptime-alert replacement is included in this migration.
+queues, rollback, and production ingestion verification. The former Grafana uptime alert has already been removed (the reachable Grafana
+instance listed no alert rules during this migration). Do not recreate it.
+Application telemetry delivery no longer depends on the home server. No PostHog
+uptime-alert replacement is included in this migration.
 
 Never delete Docker volumes as part of a release or rollback. Backups are retained
 in `/var/lib/uwplan-production/backups`; copy them off-host and manage retention
