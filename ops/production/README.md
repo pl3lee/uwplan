@@ -34,15 +34,21 @@ schema changes or losing candidate writes. Releases are serialized by the existi
 lock. Create `/var/lib/uwplan-production/frozen` to reject CI deployments during
 manual maintenance; remove it only when the production stack is verified.
 
-Auth secrets and OTLP settings remain in root-owned mode-0600 files under
-`/etc/uwplan-production`, outside the repository and images. API and web export
-server logs and traces with `OTEL_ENABLED=true` and
-`OTEL_EXPORTER_OTLP_ENDPOINT=http://ubuntu-hosting-2.tailac98b.ts.net:4318` over the
-private network. The existing collector routes logs to Loki, traces to Tempo, and
-API health metrics to Mimir. Services identify themselves as `uwplan-api` and
-`uwplan-web`; release identity and trace/request correlation accompany events.
-Verify unique validation requests in Grafana after each cutover and check that
-external readiness probes remain healthy.
+Auth secrets and the PostHog ingestion token remain in root-owned mode-0600 files
+under `/etc/uwplan-production`, outside the repository and images. The paired
+Compose file enables server OTLP and overrides retained exporter endpoints/headers
+with `http://otel-collector:4318`. A private collector on this VPS forwards logs,
+traces, and API health metrics to PostHog US Cloud project **606367**, named
+**Default project**. Services remain `uwplan-api` and `uwplan-web`, with
+`deployment.environment=production`, release identity, and trace/request
+correlation. Only the collector receives `observability.env`; its token never
+reaches application containers or browsers.
+
+See [PostHog operations](observability/README.md) for root-owned staging, durable
+queues, rollback, and production ingestion verification. Existing Grafana
+readiness probes and alert rules are retained as supplementary legacy monitoring;
+they still depend on the home server. Application telemetry delivery no longer
+does. No PostHog uptime-alert replacement is included in this migration.
 
 Never delete Docker volumes as part of a release or rollback. Backups are retained
 in `/var/lib/uwplan-production/backups`; copy them off-host and manage retention

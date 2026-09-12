@@ -66,7 +66,7 @@ class DeploymentTests(unittest.TestCase):
                 deploy.parse_command(command)
         self.assertEqual(deploy.parse_command(f'deploy {DIGEST} {REVISION}'), (DIGEST, REVISION))
 
-    def exercise(self, ready_results, migrate_fails=False, frozen=False, architecture='amd64', web_digest=None, old_web_digest=None, web_revision=REVISION, candidate_stop_fails=False, candidate_remove_fails=False):
+    def exercise(self, ready_results, migrate_fails=False, frozen=False, architecture='amd64', web_digest=None, old_web_digest=None, web_revision=REVISION, candidate_stop_fails=False, candidate_remove_fails=False, collector_fails=False):
         with tempfile.TemporaryDirectory() as temporary:
             state = Path(temporary)
             release = state/'release.env'
@@ -81,6 +81,7 @@ class DeploymentTests(unittest.TestCase):
             calls=[]
             def compose(env, *args):
                 calls.append(args)
+                if 'otel-collector' in args and collector_fails: raise RuntimeError('collector failed')
                 if 'migrator' in args and migrate_fails: raise RuntimeError('migration rejected')
                 if args == ('stop', 'api', 'web') and candidate_stop_fails: raise RuntimeError('stop failed')
                 if args == ('rm', '--stop', '--force', 'api', 'web') and candidate_remove_fails: raise RuntimeError('remove failed')
@@ -109,6 +110,21 @@ class DeploymentTests(unittest.TestCase):
         start = calls.index(('up', '-d', '--no-deps', '--force-recreate', 'api', 'web'))
         self.assertLess(stop, start)
         self.assertNotIn('down', [part for call in calls for part in call])
+
+    def test_collector_starts_before_migration_or_writer_replacement(self):
+        _, _, calls, error, _ = self.exercise([True], web_digest=WEB_DIGEST)
+        self.assertIsNone(error)
+        collector = calls.index(('up', '-d', '--no-deps', '--wait', 'redis', 'otel-collector'))
+        migration = next(i for i, call in enumerate(calls) if 'migrator' in call)
+        self.assertLess(collector, migration)
+        self.assertLess(collector, calls.index(('stop', 'app')))
+
+    def test_failed_collector_start_preserves_running_release(self):
+        current, previous, calls, error, backups = self.exercise([], web_digest=WEB_DIGEST, collector_fails=True)
+        self.assertEqual(current, previous)
+        self.assertIn('collector failed', str(error))
+        self.assertEqual(backups, [])
+        self.assertFalse(any('stop' in call or 'migrator' in call for call in calls))
 
     def test_healthy_release_records_previous_and_backup(self):
         current,previous,calls,error,backups=self.exercise([True])
@@ -182,3 +198,33 @@ class DeploymentTests(unittest.TestCase):
         self.assertIn('architecture',str(error))
 
 if __name__ == '__main__': unittest.main()
+
+stage_spec = importlib.util.spec_from_file_location('stage_observability', Path(__file__).resolve().parents[1] / 'ops/production/stage-observability.py')
+staging = importlib.util.module_from_spec(stage_spec)
+stage_spec.loader.exec_module(staging)
+
+
+class ObservabilityStagingTests(unittest.TestCase):
+    def test_personal_api_key_is_rejected_before_installation(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            token = Path(temporary) / 'token.env'
+            token.write_text('POSTHOG_PROJECT_TOKEN=phx_invalid\n')
+            with patch.object(staging.os, 'geteuid', return_value=0), patch.object(staging, 'run') as run:
+                with self.assertRaisesRegex(ValueError, 'project ingestion token'):
+                    staging.stage(token)
+                run.assert_not_called()
+
+    def test_validation_failure_preserves_existing_configuration(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            work = Path(temporary)
+            token = work / 'token.env'
+            token.write_text('POSTHOG_PROJECT_TOKEN=phc_synthetic\n')
+            root = work / 'installed'
+            root.mkdir()
+            existing = root / 'compose.rewrite.yaml'
+            existing.write_text('retained configuration')
+            with patch.multiple(staging, ROOT=root, STATE=work, CONFIG=work), patch.object(staging.os, 'geteuid', return_value=0), patch.object(staging, 'run', side_effect=RuntimeError('validation failed')):
+                with self.assertRaisesRegex(RuntimeError, 'validation failed'):
+                    staging.stage(token)
+            self.assertEqual(existing.read_text(), 'retained configuration')
+            self.assertFalse(list(work.glob('observability-backup-*')))

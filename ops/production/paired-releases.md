@@ -27,7 +27,9 @@ Create root-owned mode-0600 files under `/etc/uwplan-production`:
 - `api.env`: restricted `DATABASE_URL`, authenticated `REDIS_URL`, `PUBLIC_ORIGIN`,
   `AUTH_GOOGLE_ID`/`AUTH_GOOGLE_SECRET`, `AUTH_GITHUB_ID`/`AUTH_GITHUB_SECRET`,
   and server OTLP settings.
-- `web.env`: server OTLP settings. Compose supplies the private API origin.
+- `web.env`: retained server settings. Compose supplies the private API origin and
+  overrides OTLP endpoints/headers for both applications.
+- `observability.env`: `POSTHOG_PROJECT_TOKEN=phc_...`, read only by the collector.
 - `redis.env`: a nonempty `REDIS_PASSWORD` matching the API URL.
 
 Retain `app.env`, `migrator.env`, and `postgres-admin-password` for compatibility.
@@ -35,6 +37,16 @@ Only the web service publishes a port, on loopback for the existing Caddy route.
 Redis persists sessions in its own named volume and uses a 32 MB data limit with
 no eviction, within a 64 MB container limit. API and web each have a 128 MB memory
 limit; PostgreSQL retains its 160 MB limit and current major version.
+
+Stage the PostHog collector and updated deployer using the reviewed
+[`stage-observability.py`](stage-observability.py) procedure in
+[observability/README.md](observability/README.md) before admitting the first
+PostHog release. It validates both configurations under the deployment lock and
+retains root-only rollback copies. The token is never supplied by CI's restricted
+command. The collector adds a 256 MB hard memory cap (no swap) and bounded durable
+queues; check actual host headroom before staging. Admission starts Redis and the
+collector before migration or stopping writers. Normal releases and application
+rollbacks do not recreate the collector or its queue volume.
 
 ## Failure and recovery
 

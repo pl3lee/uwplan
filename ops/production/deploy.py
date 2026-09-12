@@ -138,7 +138,8 @@ def deploy(digest, revision, web_digest=None):
         atomic_write(candidate, new_release.encode())
         compose(candidate, 'config', '--quiet')
         if web_digest:
-            compose(candidate, 'up', '-d', '--no-deps', '--wait', 'redis')
+            # Start telemetry before replacing writers; leave it running on rollback.
+            compose(candidate, 'up', '-d', '--no-deps', '--wait', 'redis', 'otel-collector')
         backups = STATE / 'backups'
         backups.mkdir(mode=0o700, exist_ok=True)
         archive = compose(RELEASE, 'exec', '-T', 'db', 'pg_dump', '-U', 'postgres', '-d', 'uwplan', '-Fc', '--no-owner', '--no-acl').stdout
