@@ -1,7 +1,9 @@
 version: "2"
 sql:
   - engine: postgresql
-    schema: migrations/legacy_schema.sql
+    schema:
+      - migrations/legacy_schema.sql
+      - migrations/sql
     queries: internal/repository/db/queries
     gen:
       go:
@@ -11,5 +13,8 @@ sql:
         emit_empty_slices: true
         emit_pointers_for_null_types: true
         overrides:
+          # CASE in the view may resolve an unfilled free slot to NULL.
+          - column: plan_course_choices.course_id
+            go_type: github.com/jackc/pgx/v5/pgtype.UUID
           - db_type: uuid
             go_type: github.com/google/uuid.UUID

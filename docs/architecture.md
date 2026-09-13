@@ -23,6 +23,12 @@ UUIDv7. Goose owns schema migrations; its immutable baseline supports empty
 setup and verified adoption of existing databases. Retain the Drizzle history
 used by upgrade tests. Rollback compatibility is a release requirement.
 
+The API runs Goose Up under its migration lock before opening the HTTP listener;
+migration failure prevents startup. Production admission still backs up and
+migrates with its separate database owner before starting the restricted API.
+See [schema evolution](schema-evolution.md) for the active-course relation,
+mutation lock order, constraints, and legacy-write compatibility.
+
 [`behavior-coverage.md`](behavior-coverage.md) records current user-visible
 contracts and regression coverage. Browser tests run the production Go/web build
 with isolated PostgreSQL, Redis, and OAuth fixtures. Build and browser tests must

@@ -94,16 +94,25 @@ INSERT INTO course(id,code,name) VALUES ('55555555-5555-4555-8555-555555555555',
 	assertEmpty(request("owner", "PATCH", "/api/v1/schedules/"+createdID.String(), `{"name":"Renamed"}`))
 	assertEmpty(request("owner", "DELETE", "/api/v1/schedules/"+createdID.String(), ""))
 	assertJSON(t, request("owner", "DELETE", path, ""), 409, map[string]any{"title": "Conflict", "status": float64(409), "detail": "Cannot delete the only schedule"})
+	assertJSON(t, request("owner", "PUT", path+"/courses/"+courseID, `{"term":"Fall 2026"}`), 404, map[string]any{"title": "Not Found", "status": float64(404), "detail": "Schedule or course not found"})
+	_, err = pool.Exec(t.Context(), `INSERT INTO template(id,name) VALUES ('66666666-6666-4666-8666-666666666666','Selected core');
+INSERT INTO template_item(id,template_id,type,order_index) VALUES ('77777777-7777-4777-8777-777777777777','66666666-6666-4666-8666-666666666666','requirement',0);
+INSERT INTO course_item(id,requirement_id,type,course_id) VALUES ('88888888-8888-4888-8888-888888888888','77777777-7777-4777-8777-777777777777','fixed','55555555-5555-4555-8555-555555555555');
+INSERT INTO plan_template(plan_id,template_id) VALUES ('11111111-1111-4111-8111-111111111111','66666666-6666-4666-8666-666666666666');
+INSERT INTO selected_course(plan_id,course_item_id,selected) VALUES ('11111111-1111-4111-8111-111111111111','88888888-8888-4888-8888-888888888888',true);`)
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, body := range []string{`{"term":"Fall 2026"}`, `{"term":"Winter 2027"}`} {
 		assertEmpty(request("owner", "PUT", path+"/courses/"+courseID, body))
 	}
 	assertEmpty(request("owner", "PATCH", "/api/v1/term-range", `{"start_term":"Fall","start_year":2026,"end_term":"Winter","end_year":2028}`))
 	assertJSON(t, request("owner", "GET", "/api/v1/term-range", ""), 200, map[string]any{"start_term": "Fall", "start_year": float64(2026), "end_term": "Winter", "end_year": float64(2028)})
-	if diff := cmp.Diff("Selected Courses:\n\nScheduled Courses:\nWinter 2027\nCS135\n", request("owner", "GET", path+"/export", "").Body.String()); diff != "" {
+	if diff := cmp.Diff("Selected Courses:\nCS135 - Designing Functional Programs\n\nScheduled Courses:\nWinter 2027\nCS135\n", request("owner", "GET", path+"/export", "").Body.String()); diff != "" {
 		t.Fatal(diff)
 	}
 	assertEmpty(request("owner", "DELETE", path+"/courses/"+courseID, ""))
-	if diff := cmp.Diff("Selected Courses:\n\nScheduled Courses:\n\n", request("owner", "GET", path+"/export", "").Body.String()); diff != "" {
+	if diff := cmp.Diff("Selected Courses:\nCS135 - Designing Functional Programs\n\nScheduled Courses:\n\n", request("owner", "GET", path+"/export", "").Body.String()); diff != "" {
 		t.Fatal(diff)
 	}
 }

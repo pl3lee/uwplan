@@ -6,10 +6,11 @@ import (
 	"context"
 	"crypto/sha256"
 	"database/sql"
-	_ "embed"
+	"embed"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 
 	"github.com/pressly/goose/v3"
 	"github.com/pressly/goose/v3/lock"
@@ -24,6 +25,11 @@ var fingerprintQuery string
 //go:embed legacy_fingerprint.json
 var legacyFingerprint []byte
 
+//go:embed sql/*.sql
+var migrationFiles embed.FS
+
+const CurrentVersion = 2
+
 var ErrSchemaMismatch = errors.New("public schema does not match the verified legacy baseline")
 
 func Up(ctx context.Context, db *sql.DB) error {
@@ -31,7 +37,11 @@ func Up(ctx context.Context, db *sql.DB) error {
 	if err != nil {
 		return fmt.Errorf("create migration lock: %w", err)
 	}
-	provider, err := goose.NewProvider(goose.DialectPostgres, db, nil, goose.WithDisableGlobalRegistry(true), goose.WithSessionLocker(locker), goose.WithGoMigrations(
+	files, err := fs.Sub(migrationFiles, "sql")
+	if err != nil {
+		return fmt.Errorf("load migrations: %w", err)
+	}
+	provider, err := goose.NewProvider(goose.DialectPostgres, db, files, goose.WithDisableGlobalRegistry(true), goose.WithSessionLocker(locker), goose.WithGoMigrations(
 		goose.NewGoMigration(1, &goose.GoFunc{RunTx: baseline}, nil),
 	))
 	if err != nil {
@@ -85,5 +95,25 @@ func canonicalJSON(data []byte) ([]byte, error) {
 
 // Hash identifies the migration inputs for isolated pgtestdb templates.
 func Hash() string {
-	return fmt.Sprintf("%x", sha256.Sum256([]byte("baseline-v1\n"+legacySchema+fingerprintQuery+string(legacyFingerprint))))
+	hash := sha256.New()
+	fmt.Fprint(hash, "baseline-v1\n", legacySchema, fingerprintQuery, string(legacyFingerprint))
+	err := fs.WalkDir(migrationFiles, ".", func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !entry.IsDir() {
+			data, err := migrationFiles.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			fmt.Fprint(hash, path, "\n", string(data))
+		}
+		return nil
+	})
+	if err != nil {
+		// Embedded files are immutable; an unreadable input is a programming error,
+		// never a reason to reuse a database template with an incomplete hash.
+		panic(fmt.Errorf("hash embedded migrations: %w", err))
+	}
+	return fmt.Sprintf("%x", hash.Sum(nil))
 }

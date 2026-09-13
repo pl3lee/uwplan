@@ -81,11 +81,7 @@ try {
     "--maxmemory",
     "64mb",
   );
-  execFileSync("go", ["run", "./cmd/migrate"], {
-    cwd: "api",
-    stdio: "inherit",
-    env: { ...process.env, DATABASE_URL: databaseURL },
-  });
+  // The production API must migrate this empty database before serving requests.
   execFileSync("pnpm", ["build:web"], { stdio: "inherit" });
   goStack = await startGoStack({
     directory: temporaryDirectory,

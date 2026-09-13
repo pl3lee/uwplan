@@ -197,6 +197,14 @@ type Account struct {
 	SessionState      *string
 }
 
+type ActiveCourseSource struct {
+	PlanID       uuid.UUID
+	UserID       string
+	TemplateID   uuid.UUID
+	CourseItemID uuid.UUID
+	CourseID     uuid.UUID
+}
+
 type Course struct {
 	ID           uuid.UUID
 	Code         string
@@ -212,10 +220,12 @@ type Course struct {
 }
 
 type CourseItem struct {
-	ID            uuid.UUID
-	RequirementID uuid.UUID
-	Type          CourseItemType
-	CourseID      pgtype.UUID
+	ID              uuid.UUID
+	RequirementID   uuid.UUID
+	Type            CourseItemType
+	CourseID        pgtype.UUID
+	OrderIndex      int32
+	RequirementType ItemType
 }
 
 type FreeCourse struct {
@@ -223,11 +233,21 @@ type FreeCourse struct {
 	CourseItemID   uuid.UUID
 	UserID         string
 	FilledCourseID uuid.UUID
+	ItemType       CourseItemType
 }
 
 type Plan struct {
 	ID     uuid.UUID
 	UserID string
+}
+
+type PlanCourseChoice struct {
+	PlanID       uuid.UUID
+	UserID       string
+	TemplateID   uuid.UUID
+	CourseItemID uuid.UUID
+	CourseID     pgtype.UUID
+	Selected     bool
 }
 
 type PlanTemplate struct {

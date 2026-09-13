@@ -325,9 +325,9 @@ function FreeCourseCode({
           const code = event.target.value.replace(/\s+/g, "").toUpperCase();
           setValue(code);
           const match = byCode.get(code);
-          if (match)
+          if (match || code === "")
             mutation.mutate(() =>
-              changeFreeCourse(slot.id, { course_id: match.id }),
+              changeFreeCourse(slot.id, { course_id: match?.id ?? null }),
             );
         }}
       />

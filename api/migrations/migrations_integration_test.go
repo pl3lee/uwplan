@@ -32,7 +32,7 @@ func TestEmptyBootstrap(t *testing.T) {
 	if err := pool.QueryRow(t.Context(), "SELECT max(version_id) FROM goose_db_version WHERE is_applied").Scan(&version); err != nil {
 		t.Fatal(err)
 	}
-	if diff := cmp.Diff(1, version); diff != "" {
+	if diff := cmp.Diff(migrations.CurrentVersion, version); diff != "" {
 		t.Fatal(diff)
 	}
 }

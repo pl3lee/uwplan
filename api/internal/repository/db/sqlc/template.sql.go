@@ -36,34 +36,41 @@ func (q *Queries) CreateBuiltinTemplate(ctx context.Context, arg CreateBuiltinTe
 }
 
 const createFixedTemplateCourse = `-- name: CreateFixedTemplateCourse :one
-INSERT INTO course_item(id,requirement_id,type,course_id)
-SELECT $1,$2,'fixed',c.id FROM course c WHERE c.code=$3 RETURNING id
+INSERT INTO course_item(id,requirement_id,type,course_id,order_index)
+SELECT $1,$2,'fixed',c.id,$3 FROM course c WHERE c.code=$4 RETURNING id
 `
 
 type CreateFixedTemplateCourseParams struct {
 	ID            uuid.UUID
 	RequirementID uuid.UUID
+	OrderIndex    int32
 	Code          string
 }
 
 func (q *Queries) CreateFixedTemplateCourse(ctx context.Context, arg CreateFixedTemplateCourseParams) (uuid.UUID, error) {
-	row := q.db.QueryRow(ctx, createFixedTemplateCourse, arg.ID, arg.RequirementID, arg.Code)
+	row := q.db.QueryRow(ctx, createFixedTemplateCourse,
+		arg.ID,
+		arg.RequirementID,
+		arg.OrderIndex,
+		arg.Code,
+	)
 	var id uuid.UUID
 	err := row.Scan(&id)
 	return id, err
 }
 
 const createFreeTemplateCourse = `-- name: CreateFreeTemplateCourse :exec
-INSERT INTO course_item(id,requirement_id,type) VALUES($1,$2,'free')
+INSERT INTO course_item(id,requirement_id,type,order_index) VALUES($1,$2,'free',$3)
 `
 
 type CreateFreeTemplateCourseParams struct {
 	ID            uuid.UUID
 	RequirementID uuid.UUID
+	OrderIndex    int32
 }
 
 func (q *Queries) CreateFreeTemplateCourse(ctx context.Context, arg CreateFreeTemplateCourseParams) error {
-	_, err := q.db.Exec(ctx, createFreeTemplateCourse, arg.ID, arg.RequirementID)
+	_, err := q.db.Exec(ctx, createFreeTemplateCourse, arg.ID, arg.RequirementID, arg.OrderIndex)
 	return err
 }
 
@@ -171,7 +178,7 @@ func (q *Queries) GetTemplateByName(ctx context.Context, name string) (Template,
 const listTemplateCourseItems = `-- name: ListTemplateCourseItems :many
 SELECT ci.id,ci.requirement_id,ci.type,ci.course_id,c.code AS course_code FROM course_item ci
 JOIN template_item ti ON ti.id=ci.requirement_id LEFT JOIN course c ON c.id=ci.course_id
-WHERE ti.template_id=$1 ORDER BY ci.id
+WHERE ti.template_id=$1 ORDER BY ti.order_index,ci.order_index,ci.id
 `
 
 type ListTemplateCourseItemsRow struct {

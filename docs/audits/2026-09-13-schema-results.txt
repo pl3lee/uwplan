@@ -1,0 +1,69 @@
+UWPlan database schema audit evidence
+Date: 2026-09-13
+Source: 4baa8321ce3be38dd397b812ca70ae3ba43de3eb (fetched origin/main)
+Command: GOFLAGS=-v make test-integration (working directory: api/)
+Result: exit 0; isolated PostgreSQL 16.14 runner
+Scope: existing integration-tagged suite plus temporary audit probes
+These probes assert observed behavior, including defects, not desired behavior.
+Only audit observations and package/migration results are retained below.
+
+schema_audit_integration_test.go:130: AUDIT accepted fixed_without_course
+schema_audit_integration_test.go:130: AUDIT accepted duplicate_email
+schema_audit_integration_test.go:146: AUDIT invalid stored term makes view fail: decode stored assignment term: invalid academic term or range
+schema_audit_integration_test.go:130: AUDIT accepted selection_without_membership
+schema_audit_integration_test.go:130: AUDIT accepted invalid_term_range
+schema_audit_integration_test.go:130: AUDIT accepted fill_fixed_item_without_membership
+schema_audit_integration_test.go:168: AUDIT unattached selection: Select has 0 templates/choices, Schedule has 1 selected course
+schema_audit_integration_test.go:130: AUDIT accepted course_under_separator
+schema_audit_integration_test.go:130: AUDIT accepted duplicate_item_position
+schema_audit_integration_test.go:130: AUDIT accepted free_with_fixed_course
+schema_audit_integration_test.go:107: AUDIT assign_unselected selected=0 assigned=1
+schema_audit_integration_test.go:107: AUDIT detach selected=0 assigned=1
+schema_audit_integration_test.go:107: AUDIT explicit_remove selected=0 assigned=0
+schema_audit_integration_test.go:107: AUDIT template_delete selected=0 assigned=1
+schema_audit_integration_test.go:107: AUDIT shared_last_detach selected=0 assigned=1
+schema_audit_integration_test.go:107: AUDIT shared_detach selected=1 assigned=1
+schema_audit_integration_test.go:107: AUDIT free_clear selected=0 assigned=1
+schema_audit_integration_test.go:107: AUDIT free_replace selected=1 assigned=1
+schema_audit_integration_test.go:107: AUDIT deselect selected=0 assigned=1
+
+ok  	github.com/pl3lee/uwplan/api/cmd/api	(cached)
+ok  	github.com/pl3lee/uwplan/api/cmd/courses-update	0.760s
+ok  	github.com/pl3lee/uwplan/api/cmd/seed	0.754s
+ok  	github.com/pl3lee/uwplan/api/internal/api	1.041s
+ok  	github.com/pl3lee/uwplan/api/internal/config	(cached)
+ok  	github.com/pl3lee/uwplan/api/internal/domain/course	(cached)
+ok  	github.com/pl3lee/uwplan/api/internal/domain/health	(cached)
+ok  	github.com/pl3lee/uwplan/api/internal/domain/oauth	(cached)
+ok  	github.com/pl3lee/uwplan/api/internal/domain/schedule	(cached)
+ok  	github.com/pl3lee/uwplan/api/internal/domain/selection	(cached)
+ok  	github.com/pl3lee/uwplan/api/internal/domain/template	(cached)
+ok  	github.com/pl3lee/uwplan/api/internal/domain/term	(cached)
+ok  	github.com/pl3lee/uwplan/api/internal/domain/user	(cached)
+ok  	github.com/pl3lee/uwplan/api/internal/gateway/health	1.777s
+ok  	github.com/pl3lee/uwplan/api/internal/gateway/oauth	(cached)
+ok  	github.com/pl3lee/uwplan/api/internal/gateway/uwflow	(cached)
+ok  	github.com/pl3lee/uwplan/api/internal/observability	(cached)
+ok  	github.com/pl3lee/uwplan/api/internal/repository/course	0.511s
+ok  	github.com/pl3lee/uwplan/api/internal/repository/oauth	(cached)
+ok  	github.com/pl3lee/uwplan/api/internal/repository/schedule	1.486s
+ok  	github.com/pl3lee/uwplan/api/internal/repository/selection	1.785s
+ok  	github.com/pl3lee/uwplan/api/internal/repository/session	(cached)
+ok  	github.com/pl3lee/uwplan/api/internal/repository/template	2.264s
+ok  	github.com/pl3lee/uwplan/api/internal/repository/user	2.012s
+ok  	github.com/pl3lee/uwplan/api/internal/service/admin	(cached)
+ok  	github.com/pl3lee/uwplan/api/internal/service/auth	(cached)
+ok  	github.com/pl3lee/uwplan/api/internal/service/catalog	(cached)
+ok  	github.com/pl3lee/uwplan/api/internal/service/course	(cached)
+ok  	github.com/pl3lee/uwplan/api/internal/service/oauth	(cached)
+ok  	github.com/pl3lee/uwplan/api/internal/service/schedule	(cached)
+ok  	github.com/pl3lee/uwplan/api/internal/service/seed	(cached)
+ok  	github.com/pl3lee/uwplan/api/internal/service/selection	(cached)
+ok  	github.com/pl3lee/uwplan/api/internal/service/template	(cached)
+--- PASS: TestEmptyBootstrap (0.18s)
+--- PASS: TestLegacyUpgradePreservesData (0.19s)
+--- PASS: TestRejectsSchemaDrift (0.00s)
+    --- PASS: TestRejectsSchemaDrift/timestamp_precision (0.19s)
+    --- PASS: TestRejectsSchemaDrift/added_column (0.19s)
+ok  	github.com/pl3lee/uwplan/api/migrations	2.550s
+ok  	github.com/pl3lee/uwplan/api/scripts	(cached)

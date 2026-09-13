@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/pl3lee/uwplan/api/internal/api"
 	"github.com/pl3lee/uwplan/api/internal/config"
 	healthgateway "github.com/pl3lee/uwplan/api/internal/gateway/health"
@@ -31,6 +32,7 @@ import (
 	scheduleservice "github.com/pl3lee/uwplan/api/internal/service/schedule"
 	selectionservice "github.com/pl3lee/uwplan/api/internal/service/selection"
 	templateservice "github.com/pl3lee/uwplan/api/internal/service/template"
+	"github.com/pl3lee/uwplan/api/migrations"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -80,6 +82,15 @@ func run() (runErr error) {
 		return fmt.Errorf("create database pool: %w", err)
 	}
 	defer database.Close()
+	migrationContext, cancelMigration := context.WithTimeout(ctx, 5*time.Minute)
+	migrationDB := stdlib.OpenDBFromPool(database)
+	err = migrations.Up(migrationContext, migrationDB)
+	migrationDB.Close()
+	cancelMigration()
+	if err != nil {
+		return fmt.Errorf("migrate before API startup: %w", err)
+	}
+	slog.Info("migration.completed", "event", "migration.completed")
 	redisConfig, err := redis.ParseURL(cfg.RedisURL)
 	if err != nil {
 		return fmt.Errorf("configure Redis: %w", err)
