@@ -40,7 +40,7 @@ describe("generated API transport", () => {
       vi.fn().mockResolvedValue(new Response(null, { status: 204 })),
     );
     await expect(
-      apiFetch("/api/v1/auth/logout", { method: "POST" }),
+      apiFetch("/api/v1/session", { method: "DELETE" }),
     ).resolves.toMatchObject({ status: 204, data: undefined });
   });
   it("preserves CSV downloads as blobs", async () => {
@@ -53,7 +53,7 @@ describe("generated API transport", () => {
       ),
     );
     const response = await apiFetch<{ data: Blob }>(
-      "/api/v1/schedules/fixture/export",
+      "/api/v1/schedules/fixture/csv",
     );
     expect(await response.data.text()).toBe("Selected Courses:\n");
   });

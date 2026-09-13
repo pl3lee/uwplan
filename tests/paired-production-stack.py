@@ -170,7 +170,7 @@ def main():
 
             schedules = json.loads(request('/api/v1/schedules')[1])
             assert schedules == {'schedules': [{'id': '22222222-2222-4222-8222-222222222222', 'name': 'Saved release schedule'}]}
-            csv = request('/api/v1/schedules/22222222-2222-4222-8222-222222222222/export')[1].decode()
+            csv = request('/api/v1/schedules/22222222-2222-4222-8222-222222222222/csv')[1].decode()
             assert 'CS135 - Designing Functional Programs' in csv and 'CS136 - Elementary Algorithm Design' in csv
             assert 'Fall 2026' in csv and 'Winter 2027' in csv
             print('Paired release serves the legacy schedules, selections, and assignments', flush=True)
@@ -261,7 +261,7 @@ def main():
             restored_schedules = json.loads(request('/api/v1/schedules')[1])['schedules']
             expected_schedules = [*schedules['schedules'], written[0]]
             assert sorted(restored_schedules, key=lambda item: item['id']) == sorted(expected_schedules, key=lambda item: item['id'])
-            assert request('/api/v1/schedules/22222222-2222-4222-8222-222222222222/export')[1].decode() == csv
+            assert request('/api/v1/schedules/22222222-2222-4222-8222-222222222222/csv')[1].decode() == csv
             status, content = request('/api/v1/schedules', {'name': 'Restored database write probe'})
             assert status == 201
             restored_write = json.loads(content)

@@ -189,7 +189,7 @@ func (r *TemplateRepositoryImpl) Seed(ctx context.Context, input domaintemplate.
 
 func (r *TemplateRepositoryImpl) Rename(ctx context.Context, input domaintemplate.Rename) error {
 	rows, err := sqlc.New(r.pool).RenameManagedTemplate(ctx, sqlc.RenameManagedTemplateParams{
-		ID: input.Reference.ID, ActorID: input.Reference.Actor.ID, IsAdmin: input.Reference.Actor.IsAdmin(), Name: input.Name, Description: input.Description,
+		ID: input.Reference.ID, ActorID: input.Reference.Actor.ID, IsAdmin: input.Reference.Actor.IsAdmin(), Name: input.Name, Description: input.Description, DescriptionSet: input.DescriptionSet,
 	})
 	if err != nil {
 		return fmt.Errorf("rename template: %w", mutationError(err))

@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/google/uuid"
@@ -22,7 +23,10 @@ type TemplateListResponse struct {
 		Templates []TemplateBody `json:"templates"`
 	}
 }
-type TemplateResponse struct{ Body TemplateBody }
+type TemplateResponse struct {
+	Location string `header:"Location"`
+	Body     TemplateBody
+}
 type TemplateListInput struct {
 	Scope string `query:"scope" enum:"all,mine" default:"all"`
 }
@@ -47,8 +51,28 @@ type TemplateDraftBody struct {
 type CreateTemplateInput struct{ Body TemplateDraftBody }
 type RenameTemplateInput struct {
 	TemplatePathInput
-	Body TemplateNameBody
+	Body TemplateRenameBody
 }
+type TemplateRenameBody struct {
+	Name        string       `json:"name" minLength:"1" maxLength:"255"`
+	Description OptionalText `json:"description,omitempty" doc:"Omit to preserve the saved description; null clears it."`
+}
+
+// OptionalText distinguishes an omitted patch field from an explicit null.
+type OptionalText struct {
+	Sent  bool
+	Value *string
+}
+
+func (o *OptionalText) UnmarshalJSON(data []byte) error {
+	o.Sent = true
+	return json.Unmarshal(data, &o.Value)
+}
+
+func (OptionalText) Schema(huma.Registry) *huma.Schema {
+	return &huma.Schema{Type: "string", Nullable: true}
+}
+
 type TemplateCourseItemBody struct {
 	ID         uuid.UUID  `json:"id"`
 	Type       string     `json:"type" enum:"fixed,free"`
@@ -148,14 +172,14 @@ func registerTemplates(app huma.API, cfg config.Config, auth AuthService, servic
 		if err != nil {
 			return nil, templateError(ctx, err)
 		}
-		return &TemplateResponse{Body: templateBody(value)}, nil
+		return &TemplateResponse{Location: "/api/v1/templates/" + value.ID.String(), Body: templateBody(value)}, nil
 	})
 	huma.Register(app, templateOperation("renameTemplate", http.MethodPatch, "/api/v1/templates/{template_id}", "Rename an owned template or administer a template"), func(ctx context.Context, input *RenameTemplateInput) (*struct{}, error) {
 		actor, err := authenticatedActor(ctx, cfg, auth, true)
 		if err != nil {
 			return nil, err
 		}
-		err = service.Rename(ctx, template.Rename{Reference: template.Reference{Actor: actor, ID: input.ID}, Name: input.Body.Name, Description: input.Body.Description})
+		err = service.Rename(ctx, template.Rename{Reference: template.Reference{Actor: actor, ID: input.ID}, Name: input.Body.Name, Description: input.Body.Description.Value, DescriptionSet: input.Body.Description.Sent})
 		return &struct{}{}, templateError(ctx, err)
 	})
 	huma.Register(app, templateOperation("deleteTemplate", http.MethodDelete, "/api/v1/templates/{template_id}", "Delete an owned template or administer a template"), func(ctx context.Context, input *TemplatePathInput) (*struct{}, error) {

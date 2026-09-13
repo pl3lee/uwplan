@@ -86,6 +86,9 @@ func TestTemplateHTTPFlowEnforcesOwnershipAndAtomicCreation(t *testing.T) {
 	}
 	basic := map[string]any{"id": id.String(), "name": "Mathematics", "description": "Demo", "created_by": "owner"}
 	assertJSON(t, created, 201, basic)
+	if diff := cmp.Diff("/api/v1/templates/"+id.String(), created.Header().Get("Location")); diff != "" {
+		t.Fatal(diff)
+	}
 	assertJSON(t, request("other", "GET", "/api/v1/templates?scope=mine", ""), 200, map[string]any{"templates": []any{}})
 	assertJSON(t, request("other", "GET", "/api/v1/templates", ""), 200, map[string]any{"templates": []any{basic}})
 	path := "/api/v1/templates/" + id.String()
@@ -132,6 +135,26 @@ func TestTemplateHTTPFlowEnforcesOwnershipAndAtomicCreation(t *testing.T) {
 	}
 	assertJSON(t, request("admin", "PATCH", path, `{"name":"Stale role"}`), 404, notFound)
 	noContent(request("owner", "PATCH", path, `{"name":"Owner rename","description":"Updated"}`))
+	// A partial rename must preserve omitted fields; explicit null clears one.
+	for _, change := range []struct {
+		body        string
+		description *string
+	}{
+		{`{"name":"Owner rename"}`, text("Updated")},
+		{`{"name":"Owner rename","description":null}`, nil},
+		{`{"name":"Owner rename","description":"Restored"}`, text("Restored")},
+	} {
+		noContent(request("owner", "PATCH", path, change.body))
+		expected.Template.Name = "Owner rename"
+		expected.Template.Description = change.description
+		response := request("owner", "GET", path, "")
+		if err := json.Unmarshal(response.Body.Bytes(), &view.Body); err != nil {
+			t.Fatal(err)
+		}
+		if diff := cmp.Diff(expected, view.Body); diff != "" {
+			t.Fatal(diff)
+		}
+	}
 	noContent(request("owner", "DELETE", path, ""))
 	assertJSON(t, request("owner", "GET", path, ""), 404, notFound)
 	assertJSON(t, request("owner", "GET", "/api/v1/templates", ""), 200, map[string]any{"templates": []any{}})

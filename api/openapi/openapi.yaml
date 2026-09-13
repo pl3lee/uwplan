@@ -456,11 +456,14 @@ components:
       required:
         - templates
       type: object
-    TemplateNameBody:
+    TemplateRenameBody:
       additionalProperties: false
       properties:
         description:
-          type: string
+          description: Omit to preserve the saved description; null clears it.
+          type:
+            - string
+            - "null"
         name:
           maxLength: 255
           minLength: 1
@@ -815,33 +818,6 @@ paths:
       security:
         - session: []
       summary: List user profiles for administration
-  /api/v1/auth/logout:
-    post:
-      description: Requires the configured public origin in the Origin header. Expired sessions can be logged out again.
-      operationId: logout
-      responses:
-        "204":
-          description: No Content
-          headers:
-            Set-Cookie:
-              schema:
-                type: string
-        "403":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Forbidden
-        "500":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Internal Server Error
-      security:
-        - session: []
-        - {}
-      summary: Revoke the current session
   /api/v1/courses:
     get:
       operationId: listCourses
@@ -988,7 +964,7 @@ paths:
       summary: Remove every matching selection and assignment from the current user's plan
   /api/v1/plan/items/{item_id}/course:
     put:
-      operationId: changeFreeCourse
+      operationId: setFreeCourse
       parameters:
         - in: path
           name: item_id
@@ -1157,6 +1133,111 @@ paths:
       security:
         - session: []
       summary: Add or remove a template from the current user's plan
+  /api/v1/plan/term-range:
+    get:
+      operationId: getTermRange
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TermRangeBody"
+          description: OK
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Bad Request
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: Read the user's planning term range
+    put:
+      operationId: setTermRange
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TermRangeBody"
+        required: true
+      responses:
+        "204":
+          description: No Content
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Bad Request
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unauthorized
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Not Found
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Conflict
+        "422":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Unprocessable Entity
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+      summary: Change the user's planning term range
   /api/v1/schedules:
     get:
       operationId: listSchedules
@@ -1197,6 +1278,10 @@ paths:
               schema:
                 $ref: "#/components/schemas/ScheduleBody"
           description: Created
+          headers:
+            Location:
+              schema:
+                type: string
         "400":
           content:
             application/problem+json:
@@ -1550,9 +1635,9 @@ paths:
       security:
         - session: []
       summary: Assign or move a course to a term
-  /api/v1/schedules/{schedule_id}/export:
+  /api/v1/schedules/{schedule_id}/csv:
     get:
-      operationId: exportSchedule
+      operationId: getScheduleCSV
       parameters:
         - in: path
           name: schedule_id
@@ -1620,6 +1705,33 @@ paths:
       security:
         - session: []
       summary: Download an owned schedule as CSV
+  /api/v1/session:
+    delete:
+      description: Requires the configured public origin in the Origin header. Expired sessions can be logged out again.
+      operationId: deleteCurrentSession
+      responses:
+        "204":
+          description: No Content
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Forbidden
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+          description: Internal Server Error
+      security:
+        - session: []
+        - {}
+      summary: Revoke the current session
   /api/v1/templates:
     get:
       operationId: listTemplates
@@ -1700,6 +1812,10 @@ paths:
               schema:
                 $ref: "#/components/schemas/TemplateBody"
           description: Created
+          headers:
+            Location:
+              schema:
+                type: string
         "400":
           content:
             application/problem+json:
@@ -1874,7 +1990,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/TemplateNameBody"
+              $ref: "#/components/schemas/TemplateRenameBody"
         required: true
       responses:
         "204":
@@ -1924,108 +2040,3 @@ paths:
       security:
         - session: []
       summary: Rename an owned template or administer a template
-  /api/v1/term-range:
-    get:
-      operationId: getTermRange
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/TermRangeBody"
-          description: OK
-        "400":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Bad Request
-        "401":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unauthorized
-        "403":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Forbidden
-        "404":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Not Found
-        "409":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Conflict
-        "500":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Internal Server Error
-      security:
-        - session: []
-      summary: Read the user's planning term range
-    patch:
-      operationId: changeTermRange
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/TermRangeBody"
-        required: true
-      responses:
-        "204":
-          description: No Content
-        "400":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Bad Request
-        "401":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unauthorized
-        "403":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Forbidden
-        "404":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Not Found
-        "409":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Conflict
-        "422":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Unprocessable Entity
-        "500":
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/ErrorModel"
-          description: Internal Server Error
-      security:
-        - session: []
-      summary: Change the user's planning term range

@@ -40,8 +40,8 @@ it("preserves authentication and Origin through generated JSON mutations", async
 it("forwards only application cookies and preserves the browser's Origin", async () => {
   const fetch = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
   vi.stubGlobal("fetch", fetch);
-  const request = new Request("https://uwplan.com/api/v1/auth/logout", {
-    method: "POST",
+  const request = new Request("https://uwplan.com/api/v1/session", {
+    method: "DELETE",
     body: "{}",
     headers: {
       "Content-Type": "application/json",
@@ -54,8 +54,8 @@ it("forwards only application cookies and preserves the browser's Origin", async
   expect(response.status).toBe(204);
   expect(fetch).toHaveBeenCalledOnce();
   const [url, options] = fetch.mock.calls[0];
-  expect(url).toBe("http://api.internal:8080/api/v1/auth/logout");
-  expect(options.method).toBe("POST");
+  expect(url).toBe("http://api.internal:8080/api/v1/session");
+  expect(options.method).toBe("DELETE");
   expect(options.redirect).toBe("manual");
   const headers = new Headers(options.headers);
   expect(headers.get("Cookie")).toBe("__Host-uwplan_session=session-token");

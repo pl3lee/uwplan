@@ -14,6 +14,8 @@ Follow [`web/AGENTS.md`](../web/AGENTS.md) for SSR boundaries and browser data f
 Huma generates the checked-in OpenAPI contract; Orval generates the TypeScript
 client and TanStack Query hooks. Generate before running consumers of those files,
 and commit generated output with source changes.
+[API conventions](api-conventions.md) inventories every endpoint and records
+method semantics, protocol exceptions, and the former server-action mapping.
 
 ## Data and behavior
 

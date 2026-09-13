@@ -39,7 +39,7 @@ func TestScheduleViewAndExportContract(t *testing.T) {
 	t.Parallel()
 	id := uuid.MustParse("11111111-1111-4111-8111-111111111111")
 	courseID := uuid.MustParse("22222222-2222-4222-8222-222222222222")
-	for _, suffix := range []string{"", "/export"} {
+	for _, suffix := range []string{"", "/csv"} {
 		t.Run(suffix, func(t *testing.T) {
 			t.Parallel()
 			auth, service := NewAuthServiceMock(t), NewScheduleServiceMock(t)
@@ -54,7 +54,7 @@ func TestScheduleViewAndExportContract(t *testing.T) {
 			r.AddCookie(&http.Cookie{Name: cfg.CookieName(), Value: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"})
 			response := httptest.NewRecorder()
 			router.ServeHTTP(response, r)
-			if suffix == "/export" {
+			if suffix == "/csv" {
 				if diff := cmp.Diff(200, response.Code); diff != "" {
 					t.Fatal(diff)
 				}
@@ -84,7 +84,7 @@ func TestScheduleMutationsRejectForeignOriginsBeforePersistence(t *testing.T) {
 		{"DELETE", "/api/v1/schedules/" + id, ""},
 		{"PUT", "/api/v1/schedules/" + id + "/courses/" + id, `{"term":"Fall 2027"}`},
 		{"DELETE", "/api/v1/schedules/" + id + "/courses/" + id, ""},
-		{"PATCH", "/api/v1/term-range", `{"start_term":"Fall","start_year":2026,"end_term":"Fall","end_year":2031}`},
+		{"PUT", "/api/v1/plan/term-range", `{"start_term":"Fall","start_year":2026,"end_term":"Fall","end_year":2031}`},
 	} {
 		t.Run(tc.method+tc.path, func(t *testing.T) {
 			t.Parallel()
