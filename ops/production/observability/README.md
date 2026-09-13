@@ -93,8 +93,7 @@ and the restored telemetry destination before unfreezing. Keep the local
 collector/queue for draining and investigation; restoring a database backup is
 not an observability rollback.
 
-The retained `readiness.alloy` and `dashboard.json` are historical descriptions of
-the home Grafana stack. The user has already removed the Grafana uptime alert;
+The former home Grafana configuration remains in Git history. The user has already removed the Grafana uptime alert;
 the reachable Grafana instance listed no alert rules during this migration.
 Do not reinstall the former `uwplan-rehearsal-readiness` rule. No change to
 money-tracker's collector or the shared PostHog project is needed. Historical

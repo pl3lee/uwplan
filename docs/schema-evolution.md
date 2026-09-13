@@ -2,7 +2,7 @@
 
 Goose migration 2 repairs the five findings in the
 [September 2026 audit](database-schema-audit-2026-09-13.md). Baseline migration 1,
-its legacy schema/fingerprint, and the retained Drizzle history remain immutable.
+its legacy schema/fingerprint, and the frozen legacy upgrade fixture remain immutable.
 
 ## Selection and scheduling
 
