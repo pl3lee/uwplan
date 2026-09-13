@@ -65,8 +65,9 @@ build. See [browser testing](e2e/README.md), [API setup](api/README.md), and
 ## Data, deployment, and recovery
 
 Goose bootstraps an empty database or adopts the verified legacy schema without
-changing existing account IDs, saved data, or provider links. `drizzle/` is retained
-migration history used by upgrade tests; it is not a runtime dependency.
+changing existing account IDs, saved data, or provider links. Upgrade tests use
+the frozen [legacy SQL fixture](api/migrations/testdata/legacy_upgrade.sql),
+independent of the Goose baseline. Goose is the only migration tooling.
 
 CI checks contracts, Go and web tests, browser flows, immutable image smoke tests,
 and real migration/paired rollback/backup restoration. It publishes separate API

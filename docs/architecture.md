@@ -20,8 +20,9 @@ and commit generated output with source changes.
 Preserve account IDs, provider links, ownership, saved plans, templates,
 selections, schedules, URLs, and responsive flows. New domain identities use
 UUIDv7. Goose owns schema migrations; its immutable baseline supports empty
-setup and verified adoption of existing databases. Retain the Drizzle history
-used by upgrade tests. Rollback compatibility is a release requirement.
+setup and verified adoption of existing databases. Preserve the independent frozen
+legacy upgrade fixture in `api/migrations/testdata/legacy_upgrade.sql`.
+Rollback compatibility is a release requirement.
 
 The API runs Goose Up under its migration lock before opening the HTTP listener;
 migration failure prevents startup. Production admission still backs up and

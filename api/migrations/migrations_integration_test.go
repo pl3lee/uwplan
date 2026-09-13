@@ -3,10 +3,8 @@
 package migrations_test
 
 import (
-	"encoding/json"
 	"errors"
 	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -40,26 +38,12 @@ func TestEmptyBootstrap(t *testing.T) {
 func legacy(t *testing.T) *pgxpool.Pool {
 	t.Helper()
 	pool := postgres.NewUnmigratedPool(t)
-	raw, err := os.ReadFile("../../drizzle/meta/_journal.json")
+	script, err := os.ReadFile("testdata/legacy_upgrade.sql")
 	if err != nil {
 		t.Fatal(err)
 	}
-	var journal struct {
-		Entries []struct {
-			Tag string `json:"tag"`
-		} `json:"entries"`
-	}
-	if err = json.Unmarshal(raw, &journal); err != nil {
+	if _, err = pool.Exec(t.Context(), string(script)); err != nil {
 		t.Fatal(err)
-	}
-	for _, entry := range journal.Entries {
-		script, err := os.ReadFile(filepath.Join("../../drizzle", entry.Tag+".sql"))
-		if err != nil {
-			t.Fatal(err)
-		}
-		if _, err = pool.Exec(t.Context(), string(script)); err != nil {
-			t.Fatal(err)
-		}
 	}
 	return pool
 }
