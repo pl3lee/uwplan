@@ -12,13 +12,17 @@ INSERT INTO course (id,code,name,num_ratings) VALUES
   ('88888888-8888-4888-8888-888888888888','CS136','Elementary Algorithm Design',80);
 INSERT INTO course_item (id,requirement_id,type,course_id) VALUES
   ('55555555-5555-4555-8555-555555555555','44444444-4444-4444-8444-444444444444','fixed','77777777-7777-4777-8777-777777777777'),
-  ('66666666-6666-4666-8666-666666666666','44444444-4444-4444-8444-444444444444','free',null);
+  -- Legacy free slots can retain a catalog reference; the user's fill below wins.
+  ('66666666-6666-4666-8666-666666666666','44444444-4444-4444-8444-444444444444','free','77777777-7777-4777-8777-777777777777');
 INSERT INTO plan_template (plan_id,template_id) VALUES ('11111111-1111-4111-8111-111111111111','33333333-3333-4333-8333-333333333333');
 INSERT INTO free_course (course_item_id,user_id,filled_course_id) VALUES ('66666666-6666-4666-8666-666666666666','legacy-student','88888888-8888-4888-8888-888888888888');
 INSERT INTO selected_course (plan_id,course_item_id,selected) VALUES
   ('11111111-1111-4111-8111-111111111111','55555555-5555-4555-8555-555555555555',true),
   ('11111111-1111-4111-8111-111111111111','66666666-6666-4666-8666-666666666666',true);
 INSERT INTO user_term_range (user_id,start_term,start_year,end_term,end_year) VALUES ('legacy-student','Fall',2026,'Spring',2027);
+-- Preserve historical values even when they violate rules for new writes.
+INSERT INTO "user" (id,name,email,role) VALUES ('legacy-reversed-range','Legacy Range','legacy-range@example.invalid','user');
+INSERT INTO user_term_range (user_id,start_term,start_year,end_term,end_year) VALUES ('legacy-reversed-range','Fall',2026,'Winter',2026);
 INSERT INTO schedule_course (schedule_id,course_id,term) VALUES
   ('22222222-2222-4222-8222-222222222222','77777777-7777-4777-8777-777777777777','Fall 2026'),
   ('22222222-2222-4222-8222-222222222222','88888888-8888-4888-8888-888888888888','Winter 2027');
