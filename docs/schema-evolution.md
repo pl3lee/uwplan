@@ -47,9 +47,25 @@ Template blocks are renumbered in their current `(order_index,id)` display order
 Course slots are assigned positions in their current UUID display order. IDs,
 references, and displayed order survive the backfill. New API writes provide
 explicit positions; legacy inserts omit them, so a trigger locks the parent and
-appends a position. The trigger runs with the caller's privileges. A malformed
-existing value or colliding email stops migration rather than guessing which
-identity or saved data to discard.
+appends a position. The trigger runs with the caller's privileges. Colliding
+emails or invalid values outside the legacy exceptions below stop migration
+rather than guessing which identity or saved data to discard.
+
+Production admission exposed two historical exceptions: free slots containing an
+unused `course_id`, and reversed saved term ranges. Their free-reference/ordering CHECKs use
+`NOT VALID`: PostgreSQL preserves existing rows and enforces the rules on new or
+updated rows. The user's free-course fill still determines the active course;
+the legacy slot reference is retained verbatim. Range endpoints are also retained
+verbatim. Do not run `VALIDATE CONSTRAINT` until these records have been explicitly
+repaired with a data-preserving policy. This is deferred validation of historical
+data, not a claim that all stored rows satisfy the new rules. Fixed-slot references
+and year bounds remain separately validated during migration; those exceptions do
+not admit missing fixed courses or years outside 1–9999.
+
+The first production attempt applied none of migration 2 (Goose remained at
+version 1). Its SQL was corrected while that production migration remained pending;
+baseline 1 is unchanged. Databases that already applied version 2 successfully
+already satisfy these two checks and need no data repair for them.
 
 ## Startup, deployment, and rollback
 
@@ -83,5 +99,7 @@ defaults/triggers while that release remains supported.
    the retained artifact. Include existing selected/scheduled relationships and
    legacy writes that omit the new columns.
 3. Before admission, inspect migration failures in an isolated restored backup
-   if existing constraint violations are suspected. Resolve email collisions by
+   if existing constraint violations are suspected. The retained fixture includes
+   legacy free-slot metadata and a reversed range and compares both verbatim
+   through migration, application rollback, and backup restoration. Resolve email collisions by
    an explicit account-linking decision; never auto-merge accounts by email.

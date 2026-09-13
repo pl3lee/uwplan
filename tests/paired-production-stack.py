@@ -243,6 +243,8 @@ def main():
                 'selected_slots': ['55555555-5555-4555-8555-555555555555', '66666666-6666-4666-8666-666666666666'],
                 'assignments': [{'code': 'CS135', 'term': 'Fall 2026'}, {'code': 'CS136', 'term': 'Winter 2027'}],
                 'range': ['Fall', 2026, 'Spring', 2027], 'candidate_schedule': written[0]['id'],
+                'legacy_reversed_range': ['Fall', 2026, 'Winter', 2026],
+                'legacy_free_reference': '77777777-7777-4777-8777-777777777777',
             }
             for database in ('uwplan', 'restore_probe'):
                 assert json.loads(sql((FIXTURES / 'relationships.sql').read_text(), database)) == expected

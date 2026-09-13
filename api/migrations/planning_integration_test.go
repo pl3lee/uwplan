@@ -105,6 +105,45 @@ func TestPlanningUpgradeRejectsEmailCollisionsWithoutMergingAccounts(t *testing.
 	}
 }
 
+func TestPlanningUpgradeRejectsUnexpectedLegacyCorruption(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name string
+		sql  string
+	}{
+		{"missing_fixed_course", `UPDATE course_item SET course_id=NULL WHERE type='fixed'`},
+		{"out_of_bounds_year", `UPDATE user_term_range SET end_year=10000 WHERE user_id='legacy-student'`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			pool := legacy(t)
+			fixture, err := os.ReadFile("../../tests/fixtures/paired-release/seed.sql")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := pool.Exec(t.Context(), string(fixture)+tc.sql); err != nil {
+				t.Fatal(err)
+			}
+			const snapshot = `SELECT jsonb_build_object(
+				'items',(SELECT jsonb_agg(to_jsonb(t) ORDER BY id) FROM course_item t),
+				'ranges',(SELECT jsonb_agg(to_jsonb(t) ORDER BY user_id) FROM user_term_range t))::text`
+			var before, after string
+			if err := pool.QueryRow(t.Context(), snapshot).Scan(&before); err != nil {
+				t.Fatal(err)
+			}
+			if err := apply(t, pool); err == nil {
+				t.Fatal("unexpected legacy corruption was accepted")
+			}
+			if err := pool.QueryRow(t.Context(), snapshot).Scan(&after); err != nil {
+				t.Fatal(err)
+			}
+			if diff := cmp.Diff(before, after); diff != "" {
+				t.Fatal(diff)
+			}
+		})
+	}
+}
+
 func TestConcurrentMigrationProcessesApplyEachVersionOnce(t *testing.T) {
 	t.Parallel()
 	pool := legacy(t)
