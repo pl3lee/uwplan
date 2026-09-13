@@ -43,6 +43,9 @@ test("detaching plans retains shared courses until their last selection is remov
   await reloadSavedPage(page);
   await expect(page.getByRole("combobox", { name: "Term for CS135", exact: true })).toHaveText("Fall 2026");
   await navigate(page, "Select");
+  // A reload clears the definition cache. The route heading renders before
+  // template details, so confirm the selected template before toggling it.
+  await expect(page.getByRole("heading", { name: other.templateName, exact: true })).toBeVisible();
   await chooseTemplate(page, other.templateName);
   await navigate(page, "Schedule");
   await absent(page, "CS135");
