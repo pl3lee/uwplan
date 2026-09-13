@@ -20,17 +20,17 @@ SELECT * FROM template_item WHERE template_id=$1 ORDER BY order_index,id;
 -- name: ListTemplateCourseItems :many
 SELECT ci.id,ci.requirement_id,ci.type,ci.course_id,c.code AS course_code FROM course_item ci
 JOIN template_item ti ON ti.id=ci.requirement_id LEFT JOIN course c ON c.id=ci.course_id
-WHERE ti.template_id=$1 ORDER BY ci.id;
+WHERE ti.template_id=$1 ORDER BY ti.order_index,ci.order_index,ci.id;
 
 -- name: CreateTemplateItem :exec
 INSERT INTO template_item(id,template_id,type,description,order_index) VALUES($1,$2,$3,$4,$5);
 
 -- name: CreateFixedTemplateCourse :one
-INSERT INTO course_item(id,requirement_id,type,course_id)
-SELECT sqlc.arg(id),sqlc.arg(requirement_id),'fixed',c.id FROM course c WHERE c.code=sqlc.arg(code) RETURNING id;
+INSERT INTO course_item(id,requirement_id,type,course_id,order_index)
+SELECT sqlc.arg(id),sqlc.arg(requirement_id),'fixed',c.id,sqlc.arg(order_index) FROM course c WHERE c.code=sqlc.arg(code) RETURNING id;
 
 -- name: CreateFreeTemplateCourse :exec
-INSERT INTO course_item(id,requirement_id,type) VALUES($1,$2,'free');
+INSERT INTO course_item(id,requirement_id,type,order_index) VALUES($1,$2,'free',$3);
 
 -- name: RenameManagedTemplate :execrows
 UPDATE template SET name=sqlc.arg(name),description=sqlc.narg(description)

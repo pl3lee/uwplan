@@ -122,12 +122,12 @@ func createItems(ctx context.Context, q *sqlc.Queries, id uuid.UUID, items []dom
 		if item.Type != domaintemplate.Requirement {
 			continue
 		}
-		for _, code := range item.CourseCodes {
+		for position, code := range item.CourseCodes {
 			courseItemID, err := uuid.NewV7()
 			if err != nil {
 				return fmt.Errorf("generate fixed course item ID: %w", err)
 			}
-			_, err = q.CreateFixedTemplateCourse(ctx, sqlc.CreateFixedTemplateCourseParams{ID: courseItemID, RequirementID: itemID, Code: code})
+			_, err = q.CreateFixedTemplateCourse(ctx, sqlc.CreateFixedTemplateCourseParams{ID: courseItemID, RequirementID: itemID, Code: code, OrderIndex: int32(position)})
 			if errors.Is(err, pgx.ErrNoRows) {
 				return domaintemplate.ErrCourseNotFound
 			}
@@ -135,12 +135,12 @@ func createItems(ctx context.Context, q *sqlc.Queries, id uuid.UUID, items []dom
 				return fmt.Errorf("create fixed course item: %w", err)
 			}
 		}
-		for range item.CourseCount {
+		for position := range item.CourseCount {
 			courseItemID, err := uuid.NewV7()
 			if err != nil {
 				return fmt.Errorf("generate free course item ID: %w", err)
 			}
-			if err := q.CreateFreeTemplateCourse(ctx, sqlc.CreateFreeTemplateCourseParams{ID: courseItemID, RequirementID: itemID}); err != nil {
+			if err := q.CreateFreeTemplateCourse(ctx, sqlc.CreateFreeTemplateCourseParams{ID: courseItemID, RequirementID: itemID, OrderIndex: int32(position)}); err != nil {
 				return fmt.Errorf("create free course item: %w", err)
 			}
 		}
@@ -201,12 +201,33 @@ func (r *TemplateRepositoryImpl) Rename(ctx context.Context, input domaintemplat
 }
 
 func (r *TemplateRepositoryImpl) Delete(ctx context.Context, input domaintemplate.Reference) error {
-	rows, err := sqlc.New(r.pool).DeleteManagedTemplate(ctx, sqlc.DeleteManagedTemplateParams{ID: input.ID, ActorID: input.Actor.ID, IsAdmin: input.Actor.IsAdmin()})
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin template deletion: %w", err)
+	}
+	defer tx.Rollback(ctx)
+	q := sqlc.New(tx)
+	if err := q.LockTemplateDeletion(ctx); err != nil {
+		return fmt.Errorf("lock template deletion: %w", err)
+	}
+	plans, err := q.LockTemplatePlans(ctx, input.ID)
+	if err != nil {
+		return fmt.Errorf("lock affected plans: %w", err)
+	}
+	rows, err := q.DeleteManagedTemplate(ctx, sqlc.DeleteManagedTemplateParams{ID: input.ID, ActorID: input.Actor.ID, IsAdmin: input.Actor.IsAdmin()})
 	if err != nil {
 		return fmt.Errorf("delete template: %w", err)
 	}
 	if rows == 0 {
 		return domaintemplate.ErrNotFound
+	}
+	for _, plan := range plans {
+		if err := q.ReconcilePlanAssignments(ctx, plan); err != nil {
+			return fmt.Errorf("reconcile deleted template: %w", err)
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit template deletion: %w", err)
 	}
 	return nil
 }

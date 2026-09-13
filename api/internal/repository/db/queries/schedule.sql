@@ -20,17 +20,15 @@ SELECT s.id,s.name FROM schedule s JOIN plan p ON p.id=s.plan_id WHERE p.user_id
 SELECT sqlc.embed(c),sc.term FROM schedule_course sc JOIN course c ON c.id=sc.course_id WHERE sc.schedule_id=$1 ORDER BY c.code;
 
 -- name: ListSelectedCatalogCourses :many
-SELECT sqlc.embed(c) FROM selected_course selected
-JOIN plan p ON p.id=selected.plan_id
-JOIN course_item item ON item.id=selected.course_item_id
-LEFT JOIN free_course free ON free.course_item_id=item.id AND free.user_id=p.user_id
-JOIN course c ON c.id=CASE WHEN item.type='fixed' THEN item.course_id ELSE free.filled_course_id END
-WHERE p.user_id=$1 AND selected.selected=true ORDER BY c.code,item.id;
+SELECT sqlc.embed(c) FROM active_course_sources source
+JOIN course c ON c.id=source.course_id
+WHERE source.user_id=$1 ORDER BY c.code,source.course_item_id;
 
 -- name: AssignOwnedScheduleCourse :execrows
 INSERT INTO schedule_course(schedule_id,course_id,term)
 SELECT s.id,c.id,sqlc.arg(term) FROM schedule s JOIN plan p ON p.id=s.plan_id JOIN course c ON c.id=sqlc.arg(course_id)
 WHERE p.user_id=sqlc.arg(user_id) AND s.id=sqlc.arg(schedule_id)
+AND EXISTS(SELECT 1 FROM active_course_sources source WHERE source.plan_id=p.id AND source.course_id=c.id)
 ON CONFLICT(schedule_id,course_id) DO UPDATE SET term=excluded.term;
 
 -- name: RemoveOwnedScheduleCourse :execrows

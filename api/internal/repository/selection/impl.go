@@ -45,9 +45,6 @@ func (r *SelectionRepositoryImpl) State(ctx context.Context, actor user.User) (d
 	for _, row := range rows {
 		choice := domainselection.Choice{ItemID: row.ID, Selected: row.Selected}
 		courseID := row.CourseID
-		if row.Type == sqlc.CourseItemTypeFree {
-			courseID = row.FilledCourseID
-		}
 		if courseID.Valid {
 			id := uuid.UUID(courseID.Bytes)
 			choice.CourseID = &id
@@ -67,6 +64,9 @@ func (r *SelectionRepositoryImpl) SetTemplate(ctx context.Context, input domains
 	}
 	defer tx.Rollback(ctx)
 	q := sqlc.New(tx)
+	if err := q.LockPlanningMutation(ctx); err != nil {
+		return fmt.Errorf("lock planning mutation: %w", err)
+	}
 	planID, err := q.LockOwnedPlan(ctx, input.UserID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return domainselection.ErrNotFound
@@ -90,6 +90,9 @@ func (r *SelectionRepositoryImpl) SetTemplate(ctx context.Context, input domains
 	if err != nil {
 		return fmt.Errorf("change template membership: %w", err)
 	}
+	if err := q.ReconcilePlanAssignments(ctx, planID); err != nil {
+		return fmt.Errorf("reconcile plan assignments: %w", err)
+	}
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("commit template membership: %w", err)
 	}
@@ -103,6 +106,9 @@ func (r *SelectionRepositoryImpl) SetChoice(ctx context.Context, input domainsel
 	}
 	defer tx.Rollback(ctx)
 	q := sqlc.New(tx)
+	if err := q.LockPlanningMutation(ctx); err != nil {
+		return fmt.Errorf("lock planning mutation: %w", err)
+	}
 	planID, err := q.LockOwnedPlan(ctx, input.UserID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return domainselection.ErrNotFound
@@ -117,6 +123,9 @@ func (r *SelectionRepositoryImpl) SetChoice(ctx context.Context, input domainsel
 	if rows == 0 {
 		return domainselection.ErrNotFound
 	}
+	if err := q.ReconcilePlanAssignments(ctx, planID); err != nil {
+		return fmt.Errorf("reconcile plan assignments: %w", err)
+	}
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("commit course selection: %w", err)
 	}
@@ -130,6 +139,9 @@ func (r *SelectionRepositoryImpl) ChangeFreeCourse(ctx context.Context, input do
 	}
 	defer tx.Rollback(ctx)
 	q := sqlc.New(tx)
+	if err := q.LockPlanningMutation(ctx); err != nil {
+		return fmt.Errorf("lock planning mutation: %w", err)
+	}
 	planID, err := q.LockOwnedPlan(ctx, input.UserID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return domainselection.ErrNotFound
@@ -159,6 +171,9 @@ func (r *SelectionRepositoryImpl) ChangeFreeCourse(ctx context.Context, input do
 	if err != nil {
 		return fmt.Errorf("change free course: %w", err)
 	}
+	if err := q.ReconcilePlanAssignments(ctx, planID); err != nil {
+		return fmt.Errorf("reconcile plan assignments: %w", err)
+	}
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("commit free course change: %w", err)
 	}
@@ -172,6 +187,9 @@ func (r *SelectionRepositoryImpl) RemoveCourse(ctx context.Context, input domain
 	}
 	defer tx.Rollback(ctx)
 	q := sqlc.New(tx)
+	if err := q.LockPlanningMutation(ctx); err != nil {
+		return fmt.Errorf("lock planning mutation: %w", err)
+	}
 	planID, err := q.LockOwnedPlan(ctx, input.UserID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return domainselection.ErrNotFound

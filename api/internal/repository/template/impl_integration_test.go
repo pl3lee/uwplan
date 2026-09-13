@@ -13,6 +13,31 @@ import (
 	"testing"
 )
 
+func TestCoursePositionsPreserveOrderIndependentlyOfUUIDs(t *testing.T) {
+	t.Parallel()
+	pool := postgres.NewPool(t)
+	_, err := pool.Exec(t.Context(), `INSERT INTO template(id,name) VALUES ('11111111-1111-4111-8111-111111111111','Positioned');
+        INSERT INTO template_item(id,template_id,type,order_index) VALUES ('22222222-2222-4222-8222-222222222222','11111111-1111-4111-8111-111111111111','requirement',0);
+        INSERT INTO course(id,code,name) VALUES ('33333333-3333-4333-8333-333333333333','CS135','First'),('44444444-4444-4444-8444-444444444444','CS136','Second');
+        INSERT INTO course_item(id,requirement_id,type,course_id,order_index) VALUES
+        ('66666666-6666-4666-8666-666666666666','22222222-2222-4222-8222-222222222222','fixed','44444444-4444-4444-8444-444444444444',0),
+        ('55555555-5555-4555-8555-555555555555','22222222-2222-4222-8222-222222222222','fixed','33333333-3333-4333-8333-333333333333',1)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	definition, err := repository.NewTemplateRepository(pool).Get(t.Context(), template.Reference{Actor: user.User{ID: "reader"}, ID: uuid.MustParse("11111111-1111-4111-8111-111111111111")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	codes := []string{}
+	for _, slot := range definition.Items[0].Courses {
+		codes = append(codes, *slot.CourseCode)
+	}
+	if diff := cmp.Diff([]string{"CS136", "CS135"}, codes); diff != "" {
+		t.Fatal(diff)
+	}
+}
+
 func TestTemplateCreationAndCopyPreserveItemsAtomically(t *testing.T) {
 	t.Parallel()
 	pool := postgres.NewPool(t)

@@ -15,6 +15,7 @@ const assignOwnedScheduleCourse = `-- name: AssignOwnedScheduleCourse :execrows
 INSERT INTO schedule_course(schedule_id,course_id,term)
 SELECT s.id,c.id,$1 FROM schedule s JOIN plan p ON p.id=s.plan_id JOIN course c ON c.id=$2
 WHERE p.user_id=$3 AND s.id=$4
+AND EXISTS(SELECT 1 FROM active_course_sources source WHERE source.plan_id=p.id AND source.course_id=c.id)
 ON CONFLICT(schedule_id,course_id) DO UPDATE SET term=excluded.term
 `
 
@@ -193,12 +194,9 @@ func (q *Queries) ListScheduleAssignments(ctx context.Context, scheduleID uuid.U
 }
 
 const listSelectedCatalogCourses = `-- name: ListSelectedCatalogCourses :many
-SELECT c.id, c.code, c.name, c.useful_rating, c.liked_rating, c.easy_rating, c.num_ratings, c.description, c.prereqs, c.antireqs, c.coreqs FROM selected_course selected
-JOIN plan p ON p.id=selected.plan_id
-JOIN course_item item ON item.id=selected.course_item_id
-LEFT JOIN free_course free ON free.course_item_id=item.id AND free.user_id=p.user_id
-JOIN course c ON c.id=CASE WHEN item.type='fixed' THEN item.course_id ELSE free.filled_course_id END
-WHERE p.user_id=$1 AND selected.selected=true ORDER BY c.code,item.id
+SELECT c.id, c.code, c.name, c.useful_rating, c.liked_rating, c.easy_rating, c.num_ratings, c.description, c.prereqs, c.antireqs, c.coreqs FROM active_course_sources source
+JOIN course c ON c.id=source.course_id
+WHERE source.user_id=$1 ORDER BY c.code,source.course_item_id
 `
 
 type ListSelectedCatalogCoursesRow struct {

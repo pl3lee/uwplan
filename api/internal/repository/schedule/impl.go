@@ -73,15 +73,34 @@ func (r *ScheduleRepositoryImpl) View(ctx context.Context, input domainschedule.
 	return result, nil
 }
 func (r *ScheduleRepositoryImpl) Assign(ctx context.Context, input domainschedule.Assign) error {
-	rows, err := sqlc.New(r.pool).AssignOwnedScheduleCourse(ctx, sqlc.AssignOwnedScheduleCourseParams{UserID: input.Reference.UserID, ScheduleID: input.Reference.ID, CourseID: input.CourseID, Term: input.Term.String()})
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin assignment: %w", err)
+	}
+	defer tx.Rollback(ctx)
+	q := sqlc.New(tx)
+	if err := q.LockPlanningMutation(ctx); err != nil {
+		return fmt.Errorf("lock planning mutation: %w", err)
+	}
+	if _, err := q.LockOwnedPlan(ctx, input.Reference.UserID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domainschedule.ErrNotFound
+		}
+		return fmt.Errorf("lock assignment plan: %w", err)
+	}
+	rows, err := q.AssignOwnedScheduleCourse(ctx, sqlc.AssignOwnedScheduleCourseParams{UserID: input.Reference.UserID, ScheduleID: input.Reference.ID, CourseID: input.CourseID, Term: input.Term.String()})
 	if err != nil {
 		return fmt.Errorf("assign schedule course: %w", err)
 	}
 	if rows == 0 {
 		return domainschedule.ErrNotFound
 	}
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit assignment: %w", err)
+	}
 	return nil
 }
+
 func (r *ScheduleRepositoryImpl) RemoveCourse(ctx context.Context, input domainschedule.RemoveCourse) error {
 	q := sqlc.New(r.pool)
 	if _, err := q.GetOwnedSchedule(ctx, sqlc.GetOwnedScheduleParams{UserID: input.Reference.UserID, ID: input.Reference.ID}); errors.Is(err, pgx.ErrNoRows) {

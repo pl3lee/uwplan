@@ -35,6 +35,15 @@ unknown schedules. Duplicate selection cleanup and template copying remain
 covered. Course tables support sorting, and the template selector supports name
 search.
 
+`selection-lifecycle.spec.ts` verifies schedule cleanup after the last template
+source disappears, retained assignments across duplicate fixed/free sources,
+free-slot replacement/clearing, every alternative schedule, and template deletion.
+It also holds an assignment request while another tab deselects its course:
+the delayed assignment is rejected and reload confirms the course stays absent.
+Template copying preserves authored course order. Database tests additionally
+cover concurrent deletion/assignment, cross-owner cleanup, invalid persisted
+values, and migration repair with retained account and planning relationships.
+
 ## Regression coverage
 
 Course selection must update visibly before reload, including fixed-course
@@ -72,3 +81,7 @@ stored data after application restarts are separate production checks.
 
 Follow the [production runbook](../ops/production/README.md) for release checks and
 [production verification](production-verification.md) for recorded evidence.
+
+The browser runner starts the production API against an empty database without
+a separate migrator. API process tests verify automatic migration before serving,
+idempotent restart, and failure before serving an incompatible schema.

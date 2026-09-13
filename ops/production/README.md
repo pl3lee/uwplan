@@ -34,6 +34,12 @@ schema changes or losing candidate writes. Releases are serialized by the existi
 lock. Create `/var/lib/uwplan-production/frozen` to reject CI deployments during
 manual maintenance; remove it only when the production stack is verified.
 
+The API also runs Goose Up before opening HTTP. Admission's owner-role migrator
+remains necessary for the restricted application login: startup confirms the
+schema is current and fails closed if pending migrations cannot be applied.
+Do not grant DDL privileges to the runtime to bypass admission. See
+[schema evolution](../../docs/schema-evolution.md) for migration compatibility.
+
 Auth secrets and the PostHog ingestion token remain in root-owned mode-0600 files
 under `/etc/uwplan-production`, outside the repository and images. The paired
 Compose file enables server OTLP and overrides retained exporter endpoints/headers

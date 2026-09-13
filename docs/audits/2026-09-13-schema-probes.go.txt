@@ -1,0 +1,169 @@
+//go:build integration
+
+package selection_test
+
+import (
+	"testing"
+
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/pl3lee/uwplan/api/internal/domain/schedule"
+	"github.com/pl3lee/uwplan/api/internal/domain/selection"
+	"github.com/pl3lee/uwplan/api/internal/domain/template"
+	"github.com/pl3lee/uwplan/api/internal/domain/term"
+	"github.com/pl3lee/uwplan/api/internal/domain/user"
+	schedrepo "github.com/pl3lee/uwplan/api/internal/repository/schedule"
+	selrepo "github.com/pl3lee/uwplan/api/internal/repository/selection"
+	tplrepo "github.com/pl3lee/uwplan/api/internal/repository/template"
+	"github.com/pl3lee/uwplan/api/internal/testutil/postgres"
+)
+
+// Audit probes assert the observed baseline, including defects; these are not
+// desired-behavior regression tests and must not be used as acceptance criteria.
+func auditID(n byte) uuid.UUID { var id uuid.UUID; id[15] = n; return id }
+
+func auditFixture(t *testing.T) *pgxpool.Pool {
+	t.Helper()
+	p := postgres.NewPool(t)
+	_, err := p.Exec(t.Context(), `
+ INSERT INTO "user"(id,email) VALUES ('audit','audit@example.test');
+ INSERT INTO plan(id,user_id) VALUES ('00000000-0000-0000-0000-000000000001','audit');
+ INSERT INTO schedule(id,name,plan_id) VALUES ('00000000-0000-0000-0000-000000000002','Audit','00000000-0000-0000-0000-000000000001');
+ INSERT INTO user_term_range VALUES ('audit','Fall',2026,'Winter',2027);
+ INSERT INTO course(id,code,name) VALUES ('00000000-0000-0000-0000-000000000003','CS135','First'),('00000000-0000-0000-0000-000000000004','CS136','Second');
+ INSERT INTO template(id,name,created_by) VALUES ('00000000-0000-0000-0000-000000000005','Audit','audit'),('00000000-0000-0000-0000-000000000008','Other','audit');
+ INSERT INTO template_item(id,template_id,type,order_index) VALUES ('00000000-0000-0000-0000-000000000006','00000000-0000-0000-0000-000000000005','requirement',0),('00000000-0000-0000-0000-000000000009','00000000-0000-0000-0000-000000000008','requirement',0);
+ INSERT INTO course_item(id,requirement_id,type,course_id) VALUES ('00000000-0000-0000-0000-000000000007','00000000-0000-0000-0000-000000000006','fixed','00000000-0000-0000-0000-000000000003'),('00000000-0000-0000-0000-00000000000a','00000000-0000-0000-0000-000000000009','fixed','00000000-0000-0000-0000-000000000003');
+ `)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return p
+}
+
+func TestSchemaAuditLifecycle(t *testing.T) {
+	t.Parallel()
+	for _, mode := range []string{"detach", "deselect", "free_replace", "free_clear", "template_delete", "shared_detach", "shared_last_detach", "explicit_remove", "assign_unselected"} {
+		t.Run(mode, func(t *testing.T) {
+			t.Parallel()
+			p := auditFixture(t)
+			ctx := t.Context()
+			sr := selrepo.NewSelectionRepository(p)
+			sch := schedrepo.NewScheduleRepository(p)
+			ref := schedule.Reference{UserID: "audit", ID: auditID(2)}
+			must := func(err error) {
+				t.Helper()
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+			must(sr.SetTemplate(ctx, selection.Membership{UserID: "audit", TemplateID: auditID(5), Selected: true}))
+			if mode == "free_replace" || mode == "free_clear" {
+				_, err := p.Exec(ctx, "UPDATE course_item SET type='free',course_id=NULL WHERE id=$1", auditID(7))
+				must(err)
+				id := auditID(3)
+				must(sr.ChangeFreeCourse(ctx, selection.FreeCourseChange{UserID: "audit", ItemID: auditID(7), CourseID: &id}))
+			}
+			if mode != "assign_unselected" {
+				must(sr.SetChoice(ctx, selection.Toggle{UserID: "audit", ItemID: auditID(7), Selected: true}))
+			}
+			if mode == "shared_detach" || mode == "shared_last_detach" {
+				must(sr.SetTemplate(ctx, selection.Membership{UserID: "audit", TemplateID: auditID(8), Selected: true}))
+				must(sr.SetChoice(ctx, selection.Toggle{UserID: "audit", ItemID: auditID(10), Selected: true}))
+			}
+			must(sch.Assign(ctx, schedule.Assign{Reference: ref, CourseID: auditID(3), Term: term.Term{Season: term.Fall, Year: 2026}}))
+			switch mode {
+			case "detach", "shared_detach", "shared_last_detach":
+				must(sr.SetTemplate(ctx, selection.Membership{UserID: "audit", TemplateID: auditID(5)}))
+				if mode == "shared_last_detach" {
+					must(sr.SetTemplate(ctx, selection.Membership{UserID: "audit", TemplateID: auditID(8)}))
+				}
+			case "deselect":
+				must(sr.SetChoice(ctx, selection.Toggle{UserID: "audit", ItemID: auditID(7)}))
+			case "free_replace":
+				id := auditID(4)
+				must(sr.ChangeFreeCourse(ctx, selection.FreeCourseChange{UserID: "audit", ItemID: auditID(7), CourseID: &id}))
+			case "free_clear":
+				must(sr.ChangeFreeCourse(ctx, selection.FreeCourseChange{UserID: "audit", ItemID: auditID(7)}))
+			case "template_delete":
+				must(tplrepo.NewTemplateRepository(p).Delete(ctx, template.Reference{Actor: user.User{ID: "audit"}, ID: auditID(5)}))
+			case "explicit_remove":
+				must(sr.RemoveCourse(ctx, selection.Removal{UserID: "audit", CourseID: auditID(3)}))
+			}
+			view, err := sch.View(ctx, ref)
+			must(err)
+			got := struct{ Selected, Assigned int }{len(view.Selected), len(view.Assigned)}
+			want := struct{ Selected, Assigned int }{0, 1}
+			if mode == "shared_detach" || mode == "free_replace" {
+				want.Selected = 1
+			}
+			if mode == "explicit_remove" {
+				want.Assigned = 0
+			}
+			if diff := cmp.Diff(want, got); diff != "" {
+				t.Fatal(diff)
+			}
+			t.Logf("AUDIT %s selected=%d assigned=%d", mode, got.Selected, got.Assigned)
+		})
+	}
+}
+
+func TestSchemaAuditMissingConstraints(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct{ name, sql string }{
+		{"fixed_without_course", `UPDATE course_item SET course_id=NULL`},
+		{"free_with_fixed_course", `UPDATE course_item SET type='free'`},
+		{"course_under_separator", `UPDATE template_item SET type='separator'`},
+		{"duplicate_item_position", `INSERT INTO template_item(id,template_id,type,order_index) SELECT gen_random_uuid(),template_id,type,order_index FROM template_item`},
+		{"duplicate_email", `INSERT INTO "user"(id,email) VALUES ('duplicate','AUDIT@example.test')`},
+		{"invalid_term_range", `UPDATE user_term_range SET start_year=99999,end_year=-1`},
+		{"selection_without_membership", `INSERT INTO selected_course VALUES ('00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000007',true)`},
+		{"fill_fixed_item_without_membership", `INSERT INTO free_course(course_item_id,user_id,filled_course_id) VALUES ('00000000-0000-0000-0000-000000000007','audit','00000000-0000-0000-0000-000000000003')`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			p := auditFixture(t)
+			if _, err := p.Exec(t.Context(), tc.sql); err != nil {
+				t.Fatal(err)
+			}
+			t.Log("AUDIT accepted " + tc.name)
+		})
+	}
+}
+
+func TestSchemaAuditMalformedStoredTerm(t *testing.T) {
+	t.Parallel()
+	p := auditFixture(t)
+	_, err := p.Exec(t.Context(), `INSERT INTO schedule_course VALUES ('00000000-0000-0000-0000-000000000002','00000000-0000-0000-0000-000000000003','not a term')`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = schedrepo.NewScheduleRepository(p).View(t.Context(), schedule.Reference{UserID: "audit", ID: auditID(2)})
+	if err == nil {
+		t.Fatal("expected stored term decoding failure")
+	}
+	t.Logf("AUDIT invalid stored term makes view fail: %v", err)
+}
+
+func TestSchemaAuditSelectionReadersDisagree(t *testing.T) {
+	t.Parallel()
+	p := auditFixture(t)
+	_, err := p.Exec(t.Context(), `INSERT INTO selected_course VALUES ($1,$2,true)`, auditID(1), auditID(7))
+	if err != nil {
+		t.Fatal(err)
+	}
+	state, err := selrepo.NewSelectionRepository(p).State(t.Context(), user.User{ID: "audit"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	view, err := schedrepo.NewScheduleRepository(p).View(t.Context(), schedule.Reference{UserID: "audit", ID: auditID(2)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := []int{len(state.TemplateIDs), len(state.Choices), len(view.Selected)}
+	if diff := cmp.Diff([]int{0, 0, 1}, got); diff != "" {
+		t.Fatal(diff)
+	}
+	t.Log("AUDIT unattached selection: Select has 0 templates/choices, Schedule has 1 selected course")
+}

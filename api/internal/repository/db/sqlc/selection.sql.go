@@ -107,27 +107,18 @@ func (q *Queries) GetOwnedPlan(ctx context.Context, userID string) (uuid.UUID, e
 }
 
 const listPlanChoices = `-- name: ListPlanChoices :many
-SELECT ci.id,ci.type,ci.course_id,fc.filled_course_id,
-       COALESCE(sc.selected,false)::boolean AS selected
-FROM plan p
-JOIN plan_template pt ON pt.plan_id=p.id
-JOIN template_item ti ON ti.template_id=pt.template_id
-JOIN course_item ci ON ci.requirement_id=ti.id
-LEFT JOIN selected_course sc ON sc.plan_id=p.id AND sc.course_item_id=ci.id
-LEFT JOIN free_course fc ON fc.user_id=p.user_id AND fc.course_item_id=ci.id
-WHERE p.id=$1 ORDER BY ci.id
+SELECT course_item_id AS id,course_id,selected FROM plan_course_choices
+WHERE plan_id=$1 ORDER BY course_item_id
 `
 
 type ListPlanChoicesRow struct {
-	ID             uuid.UUID
-	Type           CourseItemType
-	CourseID       pgtype.UUID
-	FilledCourseID pgtype.UUID
-	Selected       bool
+	ID       uuid.UUID
+	CourseID pgtype.UUID
+	Selected bool
 }
 
-func (q *Queries) ListPlanChoices(ctx context.Context, id uuid.UUID) ([]ListPlanChoicesRow, error) {
-	rows, err := q.db.Query(ctx, listPlanChoices, id)
+func (q *Queries) ListPlanChoices(ctx context.Context, planID uuid.UUID) ([]ListPlanChoicesRow, error) {
+	rows, err := q.db.Query(ctx, listPlanChoices, planID)
 	if err != nil {
 		return nil, err
 	}
@@ -135,13 +126,7 @@ func (q *Queries) ListPlanChoices(ctx context.Context, id uuid.UUID) ([]ListPlan
 	items := []ListPlanChoicesRow{}
 	for rows.Next() {
 		var i ListPlanChoicesRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Type,
-			&i.CourseID,
-			&i.FilledCourseID,
-			&i.Selected,
-		); err != nil {
+		if err := rows.Scan(&i.ID, &i.CourseID, &i.Selected); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
