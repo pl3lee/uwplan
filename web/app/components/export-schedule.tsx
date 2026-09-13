@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { exportSchedule } from "~/generated/api/client";
+import { getScheduleCSV } from "~/generated/api/client";
 import { ApiError } from "~/lib/api-fetch";
 import { ApiErrorMessage } from "./api-error";
 import { Button } from "./button";
@@ -7,7 +7,7 @@ import { Button } from "./button";
 export function ExportSchedule({ id }: { id: string }) {
   const mutation = useMutation({
     mutationFn: async () => {
-      const result = await exportSchedule(id);
+      const result = await getScheduleCSV(id);
       if (result.status !== 200) throw new ApiError(result.status, result.data);
       const url = URL.createObjectURL(result.data);
       const anchor = document.createElement("a");

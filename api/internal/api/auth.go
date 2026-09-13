@@ -38,7 +38,7 @@ func registerAuth(app huma.API, cfg config.Config, service AuthService) {
 		}
 		return &UserResponse{Body: UserBody{ID: person.ID, Email: person.Email, Name: person.Name, Image: person.Image, Role: string(person.Role)}}, nil
 	})
-	huma.Register(app, huma.Operation{OperationID: "logout", Method: http.MethodPost, Path: "/api/v1/auth/logout", Summary: "Revoke the current session", Description: "Requires the configured public origin in the Origin header. Expired sessions can be logged out again.", Security: []map[string][]string{{"session": {}}, {}}, Errors: []int{403, 500}}, func(ctx context.Context, input *struct{}) (*LogoutResponse, error) {
+	huma.Register(app, huma.Operation{OperationID: "deleteCurrentSession", Method: http.MethodDelete, Path: "/api/v1/session", Summary: "Revoke the current session", Description: "Requires the configured public origin in the Origin header. Expired sessions can be logged out again.", Security: []map[string][]string{{"session": {}}, {}}, Errors: []int{403, 500}}, func(ctx context.Context, input *struct{}) (*LogoutResponse, error) {
 		request := getRequest(ctx)
 		if request.Origin == "" || request.Origin != cfg.PublicOrigin || request.FetchSite == "cross-site" {
 			return nil, huma.Error403Forbidden("Forbidden")

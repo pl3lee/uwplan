@@ -164,11 +164,11 @@ func TestTemplateManagementRequiresOwnerOrAdmin(t *testing.T) {
 		t.Fatalf("duplicate rename: %v", err)
 	}
 	description := "Updated description"
-	if err := repo.Rename(t.Context(), template.Rename{Reference: ownRef, Name: "Renamed", Description: &description}); err != nil {
+	if err := repo.Rename(t.Context(), template.Rename{Reference: ownRef, Name: "Renamed", Description: &description, DescriptionSet: true}); err != nil {
 		t.Fatal(err)
 	}
 	adminRef := template.Reference{Actor: admin, ID: created.ID}
-	if err := repo.Rename(t.Context(), template.Rename{Reference: adminRef, Name: "Admin rename", Description: &description}); err != nil {
+	if err := repo.Rename(t.Context(), template.Rename{Reference: adminRef, Name: "Admin rename", Description: &description, DescriptionSet: true}); err != nil {
 		t.Fatal(err)
 	}
 	got, err := repo.Get(t.Context(), ownRef)

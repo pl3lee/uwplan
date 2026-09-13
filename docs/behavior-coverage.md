@@ -9,7 +9,7 @@ what the UI exposes. Run the complete suite with `pnpm test:e2e` before release.
 | Route | Contract | Browser coverage |
 | --- | --- | --- |
 | `/`, `/privacy`, `/signin` | Public pages, both login choices | `planning.spec.ts` |
-| `/api/auth/*` | Provider callbacks, provisioning, returning accounts, rejected unsolicited callbacks, logout and expiry | `auth.spec.ts`, `planning.spec.ts`; real-provider production verification |
+| `/api/auth/*` | Provider callbacks, provisioning, returning accounts, rejected unsolicited callbacks | `auth.spec.ts`, `planning.spec.ts`; real-provider production verification |
 | `/select` | Template search/add/remove, fixed/free choices, select/remove, persistence | `planning.spec.ts` |
 | `/schedule` | Schedule CRUD, final-schedule protection, drag/drop, mobile assignment, term range, CSV, private URLs | `scheduling.spec.ts`, `planning.spec.ts` |
 | `/create/template` | Instruction/fixed/free/separator items; create and copy | `templates.spec.ts` |
@@ -20,6 +20,7 @@ what the UI exposes. Run the complete suite with `pnpm test:e2e` before release.
 
 | Operation | Contract and evidence |
 | --- | --- |
+| Session removal | `DELETE /api/v1/session`; browser logout/expiry and API origin/cookie tests |
 | Template membership | Add/remove templates and clean up related selections; browser persistence and API tests |
 | Free-course choices | Fill/change owned choices; browser typing/reload and API ownership tests |
 | Course selection | Select/deselect, including duplicates across templates; browser state and API duplicate-case tests |
@@ -45,6 +46,11 @@ cover concurrent deletion/assignment, cross-owner cleanup, invalid persisted
 values, and migration repair with retained account and planning relationships.
 
 ## Regression coverage
+
+Template PATCH integration coverage verifies that omitted descriptions survive
+renaming, explicit null clears them, and explicit strings replace them without
+changing ownership or ordered items. Creation responses identify the new template
+or schedule with `Location`. See [the full endpoint inventory](api-conventions.md).
 
 Course selection must update visibly before reload, including fixed-course
 toggles, free-course choices, removal, and template detachment. Delayed saves must

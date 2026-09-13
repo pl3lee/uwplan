@@ -192,6 +192,8 @@ type Rename struct {
 	Reference   Reference
 	Name        string
 	Description *string
+	// DescriptionSet distinguishes omission (preserve) from nil (clear).
+	DescriptionSet bool
 }
 
 func (r Rename) Normalize() (Rename, error) {

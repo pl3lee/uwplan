@@ -74,7 +74,7 @@ func TestLogoutRejectsCrossOriginRequests(t *testing.T) {
 			}
 			cfg := config.Config{PublicOrigin: "https://uwplan.com", SecureCookies: true}
 			router, _ := NewRouter(cfg, Dependencies{Auth: service})
-			request := httptest.NewRequest(http.MethodPost, "/api/v1/auth/logout", nil)
+			request := httptest.NewRequest(http.MethodDelete, "/api/v1/session", nil)
 			request.AddCookie(&http.Cookie{Name: cfg.CookieName(), Value: token})
 			request.Header.Set("Origin", tc.origin)
 			request.Header.Set("Sec-Fetch-Site", tc.site)

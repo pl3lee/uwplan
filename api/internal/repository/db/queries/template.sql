@@ -33,7 +33,8 @@ SELECT sqlc.arg(id),sqlc.arg(requirement_id),'fixed',c.id,sqlc.arg(order_index) 
 INSERT INTO course_item(id,requirement_id,type,order_index) VALUES($1,$2,'free',$3);
 
 -- name: RenameManagedTemplate :execrows
-UPDATE template SET name=sqlc.arg(name),description=sqlc.narg(description)
+UPDATE template SET name=sqlc.arg(name),
+description=CASE WHEN sqlc.arg(description_set)::boolean THEN sqlc.narg(description) ELSE description END
 WHERE id=sqlc.arg(id) AND (created_by=sqlc.arg(actor_id)::text OR sqlc.arg(is_admin)::boolean);
 
 -- name: DeleteManagedTemplate :execrows

@@ -11,9 +11,9 @@ import {
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import {
-  changeFreeCourse,
   removeSelectedCourse,
   setCourseSelection,
+  setFreeCourse,
 } from "~/generated/api/client";
 import type {
   CourseBody,
@@ -327,7 +327,7 @@ function FreeCourseCode({
           const match = byCode.get(code);
           if (match || code === "")
             mutation.mutate(() =>
-              changeFreeCourse(slot.id, { course_id: match?.id ?? null }),
+              setFreeCourse(slot.id, { course_id: match?.id ?? null }),
             );
         }}
       />

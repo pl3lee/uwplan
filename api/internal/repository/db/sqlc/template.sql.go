@@ -280,21 +280,24 @@ func (q *Queries) ListTemplates(ctx context.Context, arg ListTemplatesParams) ([
 }
 
 const renameManagedTemplate = `-- name: RenameManagedTemplate :execrows
-UPDATE template SET name=$1,description=$2
-WHERE id=$3 AND (created_by=$4::text OR $5::boolean)
+UPDATE template SET name=$1,
+description=CASE WHEN $2::boolean THEN $3 ELSE description END
+WHERE id=$4 AND (created_by=$5::text OR $6::boolean)
 `
 
 type RenameManagedTemplateParams struct {
-	Name        string
-	Description *string
-	ID          uuid.UUID
-	ActorID     string
-	IsAdmin     bool
+	Name           string
+	DescriptionSet bool
+	Description    *string
+	ID             uuid.UUID
+	ActorID        string
+	IsAdmin        bool
 }
 
 func (q *Queries) RenameManagedTemplate(ctx context.Context, arg RenameManagedTemplateParams) (int64, error) {
 	result, err := q.db.Exec(ctx, renameManagedTemplate,
 		arg.Name,
+		arg.DescriptionSet,
 		arg.Description,
 		arg.ID,
 		arg.ActorID,

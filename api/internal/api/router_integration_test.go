@@ -52,9 +52,9 @@ func TestLegacyUserSessionAcrossHTTPEndpoints(t *testing.T) {
 	}
 	want["role"] = "admin"
 	assertJSON(t, request(http.MethodGet, "/api/v1/me", ""), 200, want)
-	assertJSON(t, request(http.MethodPost, "/api/v1/auth/logout", "https://evil.example"), 403, map[string]any{"title": "Forbidden", "status": float64(403), "detail": "Forbidden"})
+	assertJSON(t, request(http.MethodDelete, "/api/v1/session", "https://evil.example"), 403, map[string]any{"title": "Forbidden", "status": float64(403), "detail": "Forbidden"})
 	assertJSON(t, request(http.MethodGet, "/api/v1/me", ""), 200, want)
-	if result := request(http.MethodPost, "/api/v1/auth/logout", cfg.PublicOrigin); result.Code != 204 {
+	if result := request(http.MethodDelete, "/api/v1/session", cfg.PublicOrigin); result.Code != 204 {
 		t.Fatalf("logout status %d", result.Code)
 	}
 	assertJSON(t, request(http.MethodGet, "/api/v1/me", ""), 401, map[string]any{"title": "Unauthorized", "status": float64(401), "detail": "Unauthorized"})

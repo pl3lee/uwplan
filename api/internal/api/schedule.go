@@ -22,7 +22,10 @@ type ScheduleListResponse struct {
 		Schedules []ScheduleBody `json:"schedules"`
 	}
 }
-type ScheduleResponse struct{ Body ScheduleBody }
+type ScheduleResponse struct {
+	Location string `header:"Location"`
+	Body     ScheduleBody
+}
 type SchedulePathInput struct {
 	ID uuid.UUID `path:"schedule_id"`
 }
@@ -161,7 +164,7 @@ func registerScheduleReads(app huma.API, cfg config.Config, auth AuthService, se
 		}
 		return response, nil
 	})
-	huma.Register(app, scheduleOperation("getTermRange", http.MethodGet, "/api/v1/term-range", "Read the user's planning term range"), func(ctx context.Context, input *struct{}) (*TermRangeResponse, error) {
+	huma.Register(app, scheduleOperation("getTermRange", http.MethodGet, "/api/v1/plan/term-range", "Read the user's planning term range"), func(ctx context.Context, input *struct{}) (*TermRangeResponse, error) {
 		actor, err := authenticatedActor(ctx, cfg, auth, false)
 		if err != nil {
 			return nil, err
@@ -172,7 +175,7 @@ func registerScheduleReads(app huma.API, cfg config.Config, auth AuthService, se
 		}
 		return &TermRangeResponse{Body: termRangeBody(value)}, nil
 	})
-	export := scheduleOperation("exportSchedule", http.MethodGet, "/api/v1/schedules/{schedule_id}/export", "Download an owned schedule as CSV")
+	export := scheduleOperation("getScheduleCSV", http.MethodGet, "/api/v1/schedules/{schedule_id}/csv", "Download an owned schedule as CSV")
 	export.Responses = map[string]*huma.Response{"200": {Description: "Schedule CSV", Content: map[string]*huma.MediaType{"text/csv": {Schema: &huma.Schema{Type: "string", Format: "binary"}}}}}
 	huma.Register(app, export, func(ctx context.Context, input *SchedulePathInput) (*ScheduleCSVResponse, error) {
 		actor, err := authenticatedActor(ctx, cfg, auth, false)
@@ -203,7 +206,7 @@ func registerScheduleMutations(app huma.API, cfg config.Config, auth AuthService
 		if err != nil {
 			return nil, scheduleError(ctx, err)
 		}
-		return &ScheduleResponse{Body: ScheduleBody{ID: result.ID, Name: result.Name}}, nil
+		return &ScheduleResponse{Location: "/api/v1/schedules/" + result.ID.String(), Body: ScheduleBody{ID: result.ID, Name: result.Name}}, nil
 	})
 	huma.Register(app, scheduleOperation("renameSchedule", http.MethodPatch, "/api/v1/schedules/{schedule_id}", "Rename an owned schedule"), func(ctx context.Context, input *RenameScheduleInput) (*struct{}, error) {
 		actor, err := authenticatedActor(ctx, cfg, auth, true)
@@ -241,7 +244,7 @@ func registerScheduleMutations(app huma.API, cfg config.Config, auth AuthService
 		err = service.RemoveCourse(ctx, schedule.RemoveCourse{Reference: schedule.Reference{UserID: actor.ID, ID: input.ID}, CourseID: input.CourseID})
 		return &struct{}{}, scheduleError(ctx, err)
 	})
-	huma.Register(app, scheduleOperation("changeTermRange", http.MethodPatch, "/api/v1/term-range", "Change the user's planning term range"), func(ctx context.Context, input *ChangeTermRangeInput) (*struct{}, error) {
+	huma.Register(app, scheduleOperation("setTermRange", http.MethodPut, "/api/v1/plan/term-range", "Change the user's planning term range"), func(ctx context.Context, input *ChangeTermRangeInput) (*struct{}, error) {
 		actor, err := authenticatedActor(ctx, cfg, auth, true)
 		if err != nil {
 			return nil, err

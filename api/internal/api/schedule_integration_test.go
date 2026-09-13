@@ -78,7 +78,7 @@ INSERT INTO course(id,code,name) VALUES ('55555555-5555-4555-8555-555555555555',
 	path := "/api/v1/schedules/" + id
 	assertJSON(t, request("", "GET", "/api/v1/schedules", ""), 401, map[string]any{"title": "Unauthorized", "status": float64(401), "detail": "Unauthorized"})
 	assertJSON(t, request("owner", "GET", "/api/v1/schedules", ""), 200, map[string]any{"schedules": []any{map[string]any{"id": id, "name": "Default"}}})
-	for _, tc := range []struct{ method, suffix, body string }{{"GET", "", ""}, {"GET", "/export", ""}, {"PATCH", "", `{"name":"Stolen"}`}, {"DELETE", "", ""}, {"PUT", "/courses/" + courseID, `{"term":"Fall 2026"}`}, {"DELETE", "/courses/" + courseID, ""}} {
+	for _, tc := range []struct{ method, suffix, body string }{{"GET", "", ""}, {"GET", "/csv", ""}, {"PATCH", "", `{"name":"Stolen"}`}, {"DELETE", "", ""}, {"PUT", "/courses/" + courseID, `{"term":"Fall 2026"}`}, {"DELETE", "/courses/" + courseID, ""}} {
 		assertJSON(t, request("other", tc.method, path+tc.suffix, tc.body), 404, map[string]any{"title": "Not Found", "status": float64(404), "detail": "Schedule or course not found"})
 	}
 	created := request("owner", "POST", "/api/v1/schedules", `{"name":"Alternative"}`)
@@ -91,6 +91,9 @@ INSERT INTO course(id,code,name) VALUES ('55555555-5555-4555-8555-555555555555',
 		t.Fatalf("invalid created schedule ID %v", err)
 	}
 	assertJSON(t, created, 201, map[string]any{"id": createdID.String(), "name": "Alternative"})
+	if diff := cmp.Diff("/api/v1/schedules/"+createdID.String(), created.Header().Get("Location")); diff != "" {
+		t.Fatal(diff)
+	}
 	assertEmpty(request("owner", "PATCH", "/api/v1/schedules/"+createdID.String(), `{"name":"Renamed"}`))
 	assertEmpty(request("owner", "DELETE", "/api/v1/schedules/"+createdID.String(), ""))
 	assertJSON(t, request("owner", "DELETE", path, ""), 409, map[string]any{"title": "Conflict", "status": float64(409), "detail": "Cannot delete the only schedule"})
@@ -106,13 +109,13 @@ INSERT INTO selected_course(plan_id,course_item_id,selected) VALUES ('11111111-1
 	for _, body := range []string{`{"term":"Fall 2026"}`, `{"term":"Winter 2027"}`} {
 		assertEmpty(request("owner", "PUT", path+"/courses/"+courseID, body))
 	}
-	assertEmpty(request("owner", "PATCH", "/api/v1/term-range", `{"start_term":"Fall","start_year":2026,"end_term":"Winter","end_year":2028}`))
-	assertJSON(t, request("owner", "GET", "/api/v1/term-range", ""), 200, map[string]any{"start_term": "Fall", "start_year": float64(2026), "end_term": "Winter", "end_year": float64(2028)})
-	if diff := cmp.Diff("Selected Courses:\nCS135 - Designing Functional Programs\n\nScheduled Courses:\nWinter 2027\nCS135\n", request("owner", "GET", path+"/export", "").Body.String()); diff != "" {
+	assertEmpty(request("owner", "PUT", "/api/v1/plan/term-range", `{"start_term":"Fall","start_year":2026,"end_term":"Winter","end_year":2028}`))
+	assertJSON(t, request("owner", "GET", "/api/v1/plan/term-range", ""), 200, map[string]any{"start_term": "Fall", "start_year": float64(2026), "end_term": "Winter", "end_year": float64(2028)})
+	if diff := cmp.Diff("Selected Courses:\nCS135 - Designing Functional Programs\n\nScheduled Courses:\nWinter 2027\nCS135\n", request("owner", "GET", path+"/csv", "").Body.String()); diff != "" {
 		t.Fatal(diff)
 	}
 	assertEmpty(request("owner", "DELETE", path+"/courses/"+courseID, ""))
-	if diff := cmp.Diff("Selected Courses:\nCS135 - Designing Functional Programs\n\nScheduled Courses:\n\n", request("owner", "GET", path+"/export", "").Body.String()); diff != "" {
+	if diff := cmp.Diff("Selected Courses:\nCS135 - Designing Functional Programs\n\nScheduled Courses:\n\n", request("owner", "GET", path+"/csv", "").Body.String()); diff != "" {
 		t.Fatal(diff)
 	}
 }

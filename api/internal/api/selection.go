@@ -99,7 +99,7 @@ func registerSelections(app huma.API, cfg config.Config, auth AuthService, servi
 		}
 		return &struct{}{}, selectionError(ctx, service.SetChoice(ctx, selection.Toggle{UserID: actor.ID, ItemID: input.ItemID, Selected: input.Body.Selected}))
 	})
-	huma.Register(app, selectionOperation("changeFreeCourse", http.MethodPut, "/api/v1/plan/items/{item_id}/course", "Fill or clear a free-course slot in the current user's plan"), func(ctx context.Context, input *FreeCourseInput) (*struct{}, error) {
+	huma.Register(app, selectionOperation("setFreeCourse", http.MethodPut, "/api/v1/plan/items/{item_id}/course", "Fill or clear a free-course slot in the current user's plan"), func(ctx context.Context, input *FreeCourseInput) (*struct{}, error) {
 		actor, err := authenticatedActor(ctx, cfg, auth, true)
 		if err != nil {
 			return nil, err

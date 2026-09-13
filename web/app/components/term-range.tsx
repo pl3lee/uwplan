@@ -1,4 +1,4 @@
-import { changeTermRange } from "~/generated/api/client";
+import { setTermRange } from "~/generated/api/client";
 import {
   type TermRangeBody,
   TermRangeBodyStartTerm,
@@ -38,7 +38,7 @@ export function TermRangeSelector({
     .map((value) => ({ value: String(value), label: String(value) }));
   const seasonOptions = seasons.map((value) => ({ value, label: value }));
   const change = (next: TermRangeBody) =>
-    mutation.mutate(() => changeTermRange(next));
+    mutation.mutate(() => setTermRange(next));
   return (
     <div>
       <div className="flex flex-col items-start gap-4 md:flex-row md:items-center">

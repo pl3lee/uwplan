@@ -2,7 +2,10 @@ import { Combobox } from "@base-ui/react/combobox";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link, NavLink } from "react-router";
-import { logout, setTemplateMembership } from "~/generated/api/client";
+import {
+  deleteCurrentSession,
+  setTemplateMembership,
+} from "~/generated/api/client";
 import type {
   PlanStateBody,
   TemplateBody,
@@ -136,7 +139,7 @@ export function PlanningNav({
 }) {
   const client = useQueryClient();
   const signOut = useMutation({
-    mutationFn: () => logout(),
+    mutationFn: () => deleteCurrentSession(),
     onSuccess: () => {
       client.clear();
       window.location.assign("/");
