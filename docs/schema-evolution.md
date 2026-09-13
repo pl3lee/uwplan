@@ -52,13 +52,15 @@ emails or invalid values outside the legacy exceptions below stop migration
 rather than guessing which identity or saved data to discard.
 
 Production admission exposed two historical exceptions: free slots containing an
-unused `course_id`, and reversed saved term ranges. Their shape/range CHECKs use
+unused `course_id`, and reversed saved term ranges. Their free-reference/ordering CHECKs use
 `NOT VALID`: PostgreSQL preserves existing rows and enforces the rules on new or
 updated rows. The user's free-course fill still determines the active course;
 the legacy slot reference is retained verbatim. Range endpoints are also retained
 verbatim. Do not run `VALIDATE CONSTRAINT` until these records have been explicitly
 repaired with a data-preserving policy. This is deferred validation of historical
-data, not a claim that all stored rows satisfy the new rules.
+data, not a claim that all stored rows satisfy the new rules. Fixed-slot references
+and year bounds remain separately validated during migration; those exceptions do
+not admit missing fixed courses or years outside 1–9999.
 
 The first production attempt applied none of migration 2 (Goose remained at
 version 1). Its SQL was corrected while that production migration remained pending;

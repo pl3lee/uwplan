@@ -40,7 +40,10 @@ ALTER TABLE template_item ADD CONSTRAINT template_item_position_valid CHECK(orde
 -- Legacy free slots can retain an unused catalog reference. Keep that metadata
 -- intact while enforcing shape for new/updated rows; validate after explicit repair.
 ALTER TABLE course_item ADD CONSTRAINT course_item_shape CHECK(
-    (type='fixed' AND course_id IS NOT NULL) OR (type='free' AND course_id IS NULL)
+    type<>'fixed' OR course_id IS NOT NULL
+);
+ALTER TABLE course_item ADD CONSTRAINT course_item_free_reference CHECK(
+    type<>'free' OR course_id IS NULL
 ) NOT VALID;
 -- Constant discriminator columns let ordinary foreign keys enforce subtypes.
 -- Defaults keep inserts from the retained release compatible.
@@ -58,8 +61,10 @@ ALTER TABLE free_course ADD CONSTRAINT free_course_item_kind_fk
 ALTER TABLE schedule_course ADD CONSTRAINT schedule_course_term_valid
     CHECK(term ~ '^(Winter|Spring|Fall) [1-9][0-9]{0,3}$');
 -- Historical reversed ranges are saved user values: do not guess new endpoints.
+ALTER TABLE user_term_range ADD CONSTRAINT user_term_range_years_valid CHECK(
+    start_year BETWEEN 1 AND 9999 AND end_year BETWEEN 1 AND 9999
+);
 ALTER TABLE user_term_range ADD CONSTRAINT user_term_range_valid CHECK(
-    start_year BETWEEN 1 AND 9999 AND end_year BETWEEN 1 AND 9999 AND
     start_year*3 + CASE start_term WHEN 'Winter' THEN 0 WHEN 'Spring' THEN 1 ELSE 2 END <=
     end_year*3 + CASE end_term WHEN 'Winter' THEN 0 WHEN 'Spring' THEN 1 ELSE 2 END
 ) NOT VALID;
